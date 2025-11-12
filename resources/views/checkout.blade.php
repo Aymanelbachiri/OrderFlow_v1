@@ -321,6 +321,8 @@
         // Payment method selection styling and form target handling
         const checkoutForm = document.getElementById('checkoutForm');
         const isInIframe = window.self !== window.top;
+        const isOnCheckoutDomain = window.location.hostname === 'checkout.controlweb.ma' || 
+                                   window.location.hostname.endsWith('.controlweb.ma');
         
         document.querySelectorAll('.payment-method-radio').forEach(radio => {
             radio.addEventListener('change', function() {
@@ -335,9 +337,9 @@
                     card.querySelector('div').classList.add('border-indigo-500', 'bg-indigo-50',
                         'dark:bg-indigo-900/20');
                     
-                    // If Coinbase Commerce is selected and we're in an iframe, set form target to "_top"
-                    // This will break out of the iframe when the form is submitted
-                    if (this.value === 'coinbase_commerce' && isInIframe && checkoutForm) {
+                    // If Coinbase Commerce is selected, we're in an iframe, and NOT on checkout.controlweb.ma
+                    // Set form target to "_top" to break out of the iframe
+                    if (this.value === 'coinbase_commerce' && isInIframe && !isOnCheckoutDomain && checkoutForm) {
                         checkoutForm.target = '_top';
                     } else if (checkoutForm) {
                         checkoutForm.removeAttribute('target');
@@ -367,8 +369,8 @@
             if (selectedPaymentRadio) {
                 selectedPaymentRadio.dispatchEvent(new Event('change'));
                 
-                // Also set form target if Coinbase Commerce is pre-selected and in iframe
-                if (selectedPaymentRadio.value === 'coinbase_commerce' && isInIframe && checkoutForm) {
+                // Also set form target if Coinbase Commerce is pre-selected, in iframe, and NOT on checkout.controlweb.ma
+                if (selectedPaymentRadio.value === 'coinbase_commerce' && isInIframe && !isOnCheckoutDomain && checkoutForm) {
                     checkoutForm.target = '_top';
                 }
             }

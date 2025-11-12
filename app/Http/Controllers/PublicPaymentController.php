@@ -157,17 +157,39 @@ class PublicPaymentController extends Controller
 
             // Redirect to Coinbase Commerce payment link
             // Coinbase Commerce cannot be loaded in iframes due to CSP restrictions
-            // We MUST always use the break-out page to ensure the Coinbase link opens in top window
-            // Even if form has target="_top", the server redirect might still be in iframe context
+            // Only break out of iframe if NOT on checkout.controlweb.ma domain
             $hostedUrl = $chargeData['hosted_url'];
             
-            // Always use the break-out page for Coinbase Commerce
-            // This ensures the Coinbase payment link opens in the top window, not the iframe
-            // The break-out page uses document.write to immediately redirect with target="_top"
-            return response()->view('public.payment.coinbase-commerce-redirect', [
-                'paymentIntent' => $paymentIntent,
-                'hostedUrl' => $hostedUrl,
-            ])->header('X-Frame-Options', 'SAMEORIGIN');
+            // Check if we're on checkout.controlweb.ma
+            $currentHost = parse_url($request->url(), PHP_URL_HOST);
+            $isOnCheckoutDomain = $currentHost === 'checkout.controlweb.ma' || 
+                                 str_ends_with($currentHost, '.controlweb.ma');
+            
+            // Detect iframe context
+            $referer = $request->header('Referer');
+            $origin = $request->header('Origin');
+            $secFetchMode = $request->header('Sec-Fetch-Mode');
+            $secFetchSite = $request->header('Sec-Fetch-Site');
+            
+            $refererHost = $referer ? parse_url($referer, PHP_URL_HOST) : null;
+            $originHost = $origin ? parse_url($origin, PHP_URL_HOST) : null;
+            
+            $isIframe = $secFetchMode === 'nested' || 
+                       $secFetchSite === 'cross-site' ||
+                       ($refererHost && $refererHost !== $currentHost) ||
+                       ($originHost && $originHost !== $currentHost);
+            
+            // Only use break-out page if in iframe AND NOT on checkout.controlweb.ma
+            // If on checkout.controlweb.ma, redirect normally (no break-out needed)
+            if ($isIframe && !$isOnCheckoutDomain) {
+                return response()->view('public.payment.coinbase-commerce-redirect', [
+                    'paymentIntent' => $paymentIntent,
+                    'hostedUrl' => $hostedUrl,
+                ])->header('X-Frame-Options', 'SAMEORIGIN');
+            }
+            
+            // Normal redirect (on checkout.controlweb.ma or not in iframe)
+            return redirect($hostedUrl);
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [
                 'payment_intent_id' => $paymentIntent->id,
