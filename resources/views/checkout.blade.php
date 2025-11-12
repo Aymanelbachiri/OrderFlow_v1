@@ -118,7 +118,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('checkout.submit') }}" class="space-y-4 touch-manipulation">
+                        <form method="POST" action="{{ route('checkout.submit') }}" class="space-y-4 touch-manipulation" id="checkoutForm">
                             @csrf
                             <input type="hidden" name="source" value="{{ request('source', 'main') }}">
                             <input type="hidden" name="pricing_plan_id"
@@ -318,7 +318,10 @@
             }
         });
         
-        // Payment method selection styling
+        // Payment method selection styling and form target handling
+        const checkoutForm = document.getElementById('checkoutForm');
+        const isInIframe = window.self !== window.top;
+        
         document.querySelectorAll('.payment-method-radio').forEach(radio => {
             radio.addEventListener('change', function() {
                 document.querySelectorAll('.payment-method-card').forEach(card => {
@@ -331,6 +334,14 @@
                     card.querySelector('.payment-method-check').classList.remove('hidden');
                     card.querySelector('div').classList.add('border-indigo-500', 'bg-indigo-50',
                         'dark:bg-indigo-900/20');
+                    
+                    // If Coinbase Commerce is selected and we're in an iframe, set form target to "_top"
+                    // This will break out of the iframe when the form is submitted
+                    if (this.value === 'coinbase_commerce' && isInIframe && checkoutForm) {
+                        checkoutForm.target = '_top';
+                    } else if (checkoutForm) {
+                        checkoutForm.removeAttribute('target');
+                    }
                 }
             });
         });
@@ -353,7 +364,14 @@
         // Initialize both payment method and subscription type selections on page load
         document.addEventListener('DOMContentLoaded', function() {
             const selectedPaymentRadio = document.querySelector('.payment-method-radio:checked');
-            if (selectedPaymentRadio) selectedPaymentRadio.dispatchEvent(new Event('change'));
+            if (selectedPaymentRadio) {
+                selectedPaymentRadio.dispatchEvent(new Event('change'));
+                
+                // Also set form target if Coinbase Commerce is pre-selected and in iframe
+                if (selectedPaymentRadio.value === 'coinbase_commerce' && isInIframe && checkoutForm) {
+                    checkoutForm.target = '_top';
+                }
+            }
             
             const selectedSubscriptionRadio = document.querySelector('.subscription-type-radio:checked');
             if (selectedSubscriptionRadio) selectedSubscriptionRadio.dispatchEvent(new Event('change'));

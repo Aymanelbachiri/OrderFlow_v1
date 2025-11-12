@@ -156,11 +156,14 @@ class PublicPaymentController extends Controller
             ]);
 
             // Redirect directly to Coinbase Commerce
-            // Use JavaScript redirect to break out of iframe if needed
-            // The user activation from form submission is still valid
+            // Coinbase Commerce cannot be loaded in iframes due to CSP restrictions
+            // The checkout form should have target="_top" when Coinbase Commerce is selected
+            // This ensures the entire flow happens in the top window, not the iframe
             $hostedUrl = $chargeData['hosted_url'];
             
-            // Detect iframe context
+            // Always redirect directly - no intermediate page
+            // If form was submitted with target="_top", this redirect will be in top window
+            // If somehow still in iframe (shouldn't happen), return break-out page
             $referer = $request->header('Referer');
             $origin = $request->header('Origin');
             $secFetchMode = $request->header('Sec-Fetch-Mode');
@@ -175,8 +178,8 @@ class PublicPaymentController extends Controller
                        ($refererHost && $refererHost !== $currentHost) ||
                        ($originHost && $originHost !== $currentHost);
             
-            // If in iframe, return a page with JavaScript that breaks out
-            // The user activation from form submission is still valid
+            // Only use break-out page if we detect iframe context
+            // This should be rare if form has target="_top"
             if ($isIframe) {
                 return response()->view('public.payment.coinbase-commerce-redirect', [
                     'paymentIntent' => $paymentIntent,
@@ -184,7 +187,7 @@ class PublicPaymentController extends Controller
                 ])->header('X-Frame-Options', 'SAMEORIGIN');
             }
             
-            // Not in iframe, redirect normally
+            // Direct redirect - should be in top window
             return redirect($hostedUrl);
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [
