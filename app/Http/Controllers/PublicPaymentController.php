@@ -157,13 +157,14 @@ class PublicPaymentController extends Controller
 
             // Redirect to Coinbase Commerce payment link
             // Coinbase Commerce cannot be loaded in iframes due to CSP restrictions
-            // Only break out of iframe if NOT on checkout.controlweb.ma domain
+            // Only break out of iframe if NOT on the app's own domain (from APP_URL)
             $hostedUrl = $chargeData['hosted_url'];
             
-            // Check if we're on checkout.controlweb.ma
+            // Check if we're on the app's own domain (from APP_URL in .env)
+            $appUrl = config('app.url');
+            $appHost = $appUrl ? parse_url($appUrl, PHP_URL_HOST) : null;
             $currentHost = parse_url($request->url(), PHP_URL_HOST);
-            $isOnCheckoutDomain = $currentHost === 'checkout.controlweb.ma' || 
-                                 str_ends_with($currentHost, '.controlweb.ma');
+            $isOnAppDomain = $appHost && ($currentHost === $appHost || str_ends_with($currentHost, '.' . $appHost));
             
             // Detect iframe context
             $referer = $request->header('Referer');
@@ -179,16 +180,16 @@ class PublicPaymentController extends Controller
                        ($refererHost && $refererHost !== $currentHost) ||
                        ($originHost && $originHost !== $currentHost);
             
-            // Only use break-out page if in iframe AND NOT on checkout.controlweb.ma
-            // If on checkout.controlweb.ma, redirect normally (no break-out needed)
-            if ($isIframe && !$isOnCheckoutDomain) {
+            // Only use break-out page if in iframe AND NOT on app's own domain
+            // If on app's own domain, redirect normally (no break-out needed)
+            if ($isIframe && !$isOnAppDomain) {
                 return response()->view('public.payment.coinbase-commerce-redirect', [
                     'paymentIntent' => $paymentIntent,
                     'hostedUrl' => $hostedUrl,
                 ])->header('X-Frame-Options', 'SAMEORIGIN');
             }
             
-            // Normal redirect (on checkout.controlweb.ma or not in iframe)
+            // Normal redirect (on app's own domain or not in iframe)
             return redirect($hostedUrl);
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [

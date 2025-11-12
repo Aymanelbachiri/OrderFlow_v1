@@ -321,8 +321,11 @@
         // Payment method selection styling and form target handling
         const checkoutForm = document.getElementById('checkoutForm');
         const isInIframe = window.self !== window.top;
-        const isOnCheckoutDomain = window.location.hostname === 'checkout.controlweb.ma' || 
-                                   window.location.hostname.endsWith('.controlweb.ma');
+        // Get app domain from config (APP_URL in .env)
+        const appUrl = '{{ config("app.url") }}';
+        const appHost = appUrl ? new URL(appUrl).hostname : null;
+        const currentHost = window.location.hostname;
+        const isOnAppDomain = appHost && (currentHost === appHost || currentHost.endsWith('.' + appHost));
         
         document.querySelectorAll('.payment-method-radio').forEach(radio => {
             radio.addEventListener('change', function() {
@@ -337,9 +340,9 @@
                     card.querySelector('div').classList.add('border-indigo-500', 'bg-indigo-50',
                         'dark:bg-indigo-900/20');
                     
-                    // If Coinbase Commerce is selected, we're in an iframe, and NOT on checkout.controlweb.ma
+                    // If Coinbase Commerce is selected, we're in an iframe, and NOT on app's own domain
                     // Set form target to "_top" to break out of the iframe
-                    if (this.value === 'coinbase_commerce' && isInIframe && !isOnCheckoutDomain && checkoutForm) {
+                    if (this.value === 'coinbase_commerce' && isInIframe && !isOnAppDomain && checkoutForm) {
                         checkoutForm.target = '_top';
                     } else if (checkoutForm) {
                         checkoutForm.removeAttribute('target');
@@ -369,8 +372,8 @@
             if (selectedPaymentRadio) {
                 selectedPaymentRadio.dispatchEvent(new Event('change'));
                 
-                // Also set form target if Coinbase Commerce is pre-selected, in iframe, and NOT on checkout.controlweb.ma
-                if (selectedPaymentRadio.value === 'coinbase_commerce' && isInIframe && !isOnCheckoutDomain && checkoutForm) {
+                // Also set form target if Coinbase Commerce is pre-selected, in iframe, and NOT on app's own domain
+                if (selectedPaymentRadio.value === 'coinbase_commerce' && isInIframe && !isOnAppDomain && checkoutForm) {
                     checkoutForm.target = '_top';
                 }
             }
