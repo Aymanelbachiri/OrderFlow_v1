@@ -4,37 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Redirecting to Payment</title>
-    <!-- CRITICAL: Break out of iframe IMMEDIATELY using document.write -->
-    <!-- This replaces the entire page immediately, before anything else loads -->
-    <script>
-    // Execute IMMEDIATELY - must be first thing in head
-    // ALWAYS break out to top window for Coinbase Commerce payment link
-    (function() {
-        'use strict';
-        var paymentUrl = '{{ $hostedUrl }}';
-        var isInIframe = window.self !== window.top;
-        
-        // Always use break-out method to ensure payment opens in top window
-        if (isInIframe) {
-            // In iframe - MUST break out immediately to top window
-            // Use document.write to replace page with auto-submitting form with target="_top"
-            // This maintains user activation from original form submission
-            try {
-                // Method 1: Try direct redirect first (fastest if allowed)
-                window.top.location.href = paymentUrl;
-            } catch (e) {
-                // Method 2: Cross-origin blocked - use document.write to create auto-submit form
-                // Form with target="_top" will break out of iframe and open in top window
-                document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Redirecting...</title></head><body><form id="breakoutForm" method="GET" action="' + paymentUrl + '" target="_top"></form><script>document.getElementById("breakoutForm").submit();<\/script></body></html>');
-                document.close();
-            }
-        } else {
-            // Not in iframe - redirect normally in current window
-            window.location.replace(paymentUrl);
-        }
-    })();
-    </script>
+    <title>Continue to Payment</title>
     <style>
         body {
             margin: 0;
@@ -72,55 +42,81 @@
     
     <div class="container">
         <div class="spinner"></div>
-        <h1 style="margin: 0 0 1rem; font-size: 1.5rem;">Redirecting to Payment</h1>
-        <p style="margin: 0; opacity: 0.9;">Please wait while we redirect you to Coinbase Commerce...</p>
-        <div style="margin-top: 2rem; font-size: 0.875rem; opacity: 0.8;">
-            <p>Payment ID: #{{ $paymentIntent->id }}</p>
-            <p>Amount: ${{ number_format($paymentIntent->amount, 2) }}</p>
+        <h1 style="margin: 0 0 1rem; font-size: 1.5rem;">Continue to Payment</h1>
+        <p style="margin: 0; opacity: 0.9; margin-bottom: 2rem;">Click the button below to complete your payment with Coinbase Commerce</p>
+        <div style="margin-bottom: 2rem; font-size: 0.875rem; opacity: 0.8; background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px;">
+            <p style="margin: 0.5rem 0;">Payment ID: #{{ $paymentIntent->id }}</p>
+            <p style="margin: 0.5rem 0;">Amount: ${{ number_format($paymentIntent->amount, 2) }}</p>
         </div>
-        <p style="margin-top: 2rem; font-size: 0.875rem; opacity: 0.7;">
-            If you are not redirected automatically, 
-            <a href="{{ $hostedUrl }}" target="_top" style="color: white; text-decoration: underline;">click here</a>.
+        <button id="continueButton" onclick="submitPaymentForm()" style="background: white; color: #667eea; border: none; padding: 1rem 2rem; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';">
+            Continue to Payment
+        </button>
+        <p style="margin-top: 1.5rem; font-size: 0.75rem; opacity: 0.6;">
+            You will be redirected to Coinbase Commerce to complete your payment securely
         </p>
     </div>
 
     <script>
-    // Backup: Submit form immediately when body is available
-    // This ensures form submission with target="_top" happens even if head script didn't work
-    (function() {
-        'use strict';
+    // Function to submit payment form - called by button click
+    // This maintains user activation (gesture) required for sandboxed iframes
+    function submitPaymentForm() {
         var paymentUrl = '{{ $hostedUrl }}';
         var isInIframe = window.self !== window.top;
         
+        // Disable button to prevent double-clicks
+        var button = document.getElementById('continueButton');
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Redirecting...';
+            button.style.opacity = '0.7';
+            button.style.cursor = 'not-allowed';
+        }
+        
         if (isInIframe) {
-            // Submit form with target="_top" immediately - this breaks out of iframe
-            // This should have already happened in head, but do it again as backup
+            // In iframe - use form with target="_top" to break out
+            // User activation from button click is preserved
             var form = document.getElementById('redirectForm');
             if (form) {
                 try {
-                    // Form already has target="_top" - submit it to break out
+                    // Form has target="_top" - submit it to break out of iframe
                     form.submit();
                 } catch (e) {
-                    // Create new form with target="_top" if submit fails
-                    var newForm = document.createElement('form');
-                    newForm.method = 'GET';
-                    newForm.action = paymentUrl;
-                    newForm.target = '_top'; // CRITICAL: target="_top" breaks out of iframe
-                    newForm.style.cssText = 'position:absolute;left:-9999px;';
-                    document.body.appendChild(newForm);
-                    newForm.submit();
+                    // Fallback: try direct redirect
+                    try {
+                        window.top.location.href = paymentUrl;
+                    } catch (e2) {
+                        // Last resort: create new form
+                        var newForm = document.createElement('form');
+                        newForm.method = 'GET';
+                        newForm.action = paymentUrl;
+                        newForm.target = '_top';
+                        newForm.style.cssText = 'position:absolute;left:-9999px;';
+                        document.body.appendChild(newForm);
+                        newForm.submit();
+                    }
                 }
             } else {
-                // Form not found, create it with target="_top"
+                // Form not found, create it
                 var newForm = document.createElement('form');
-                newForm.id = 'redirectForm';
                 newForm.method = 'GET';
                 newForm.action = paymentUrl;
-                newForm.target = '_top'; // CRITICAL: target="_top" breaks out of iframe
+                newForm.target = '_top';
                 newForm.style.cssText = 'position:absolute;left:-9999px;';
                 document.body.appendChild(newForm);
                 newForm.submit();
             }
+        } else {
+            // Not in iframe - redirect normally
+            window.location.replace(paymentUrl);
+        }
+    }
+    
+    // Auto-submit if not in iframe (no user activation needed)
+    (function() {
+        var isInIframe = window.self !== window.top;
+        if (!isInIframe) {
+            // Not in iframe - redirect immediately
+            window.location.replace('{{ $hostedUrl }}');
         }
     })();
     </script>
