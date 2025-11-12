@@ -155,40 +155,19 @@ class PublicPaymentController extends Controller
                 'gateway_response' => $chargeData['charge'],
             ]);
 
-            // Redirect directly to Coinbase Commerce
+            // Redirect to Coinbase Commerce payment link
             // Coinbase Commerce cannot be loaded in iframes due to CSP restrictions
-            // The checkout form should have target="_top" when Coinbase Commerce is selected
-            // This ensures the entire flow happens in the top window, not the iframe
+            // We MUST always use the break-out page to ensure the Coinbase link opens in top window
+            // Even if form has target="_top", the server redirect might still be in iframe context
             $hostedUrl = $chargeData['hosted_url'];
             
-            // Always redirect directly - no intermediate page
-            // If form was submitted with target="_top", this redirect will be in top window
-            // If somehow still in iframe (shouldn't happen), return break-out page
-            $referer = $request->header('Referer');
-            $origin = $request->header('Origin');
-            $secFetchMode = $request->header('Sec-Fetch-Mode');
-            $secFetchSite = $request->header('Sec-Fetch-Site');
-            
-            $currentHost = parse_url($request->url(), PHP_URL_HOST);
-            $refererHost = $referer ? parse_url($referer, PHP_URL_HOST) : null;
-            $originHost = $origin ? parse_url($origin, PHP_URL_HOST) : null;
-            
-            $isIframe = $secFetchMode === 'nested' || 
-                       $secFetchSite === 'cross-site' ||
-                       ($refererHost && $refererHost !== $currentHost) ||
-                       ($originHost && $originHost !== $currentHost);
-            
-            // Only use break-out page if we detect iframe context
-            // This should be rare if form has target="_top"
-            if ($isIframe) {
-                return response()->view('public.payment.coinbase-commerce-redirect', [
-                    'paymentIntent' => $paymentIntent,
-                    'hostedUrl' => $hostedUrl,
-                ])->header('X-Frame-Options', 'SAMEORIGIN');
-            }
-            
-            // Direct redirect - should be in top window
-            return redirect($hostedUrl);
+            // Always use the break-out page for Coinbase Commerce
+            // This ensures the Coinbase payment link opens in the top window, not the iframe
+            // The break-out page uses document.write to immediately redirect with target="_top"
+            return response()->view('public.payment.coinbase-commerce-redirect', [
+                'paymentIntent' => $paymentIntent,
+                'hostedUrl' => $hostedUrl,
+            ])->header('X-Frame-Options', 'SAMEORIGIN');
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [
                 'payment_intent_id' => $paymentIntent->id,
