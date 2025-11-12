@@ -39,6 +39,8 @@ class VerifyCsrfTokenIframe extends Middleware
     protected function tokensMatch($request)
     {
         $isIframe = $this->isIframeContext($request);
+        $userAgent = $request->userAgent() ?? '';
+        $isIOS = $this->isIOSDevice($userAgent);
         $method = $request->method();
         $url = $request->fullUrl();
         $tokenFromInput = $request->input('_token');
@@ -49,31 +51,33 @@ class VerifyCsrfTokenIframe extends Middleware
             'method' => $method,
             'url' => $url,
             'is_iframe' => $isIframe,
+            'is_ios' => $isIOS,
             'has_token_input' => !empty($tokenFromInput),
             'has_token_header' => !empty($tokenFromHeader),
             'referer' => $request->header('Referer'),
             'origin' => $request->header('Origin'),
             'sec_fetch_site' => $request->header('Sec-Fetch-Site'),
             'sec_fetch_mode' => $request->header('Sec-Fetch-Mode'),
-            'user_agent' => substr($request->userAgent() ?? '', 0, 100),
+            'user_agent' => substr($userAgent, 0, 100),
         ]);
         
-        // For iframe contexts, use our custom validation first
+        // For iframe contexts OR iOS devices, use our custom validation first
         // This is critical for mobile Safari where cookies are blocked
-        if ($isIframe) {
-            Log::info('CSRF validation: Iframe context detected, using custom validation', [
+        if ($isIframe || $isIOS) {
+            Log::info('CSRF validation: Iframe/iOS context detected, using custom validation', [
                 'url' => $url,
+                'is_ios' => $isIOS,
             ]);
             
             $iframeMatch = $this->validateIframeToken($request);
             if ($iframeMatch) {
-                Log::info('CSRF validation: Iframe token validation succeeded', [
+                Log::info('CSRF validation: Iframe/iOS token validation succeeded', [
                     'url' => $url,
                 ]);
                 return true;
             }
             
-            Log::warning('CSRF validation: Iframe token validation failed, trying standard validation', [
+            Log::warning('CSRF validation: Iframe/iOS token validation failed, trying standard validation', [
                 'url' => $url,
             ]);
         }
@@ -342,13 +346,21 @@ class VerifyCsrfTokenIframe extends Middleware
      */
     public function handle($request, Closure $next)
     {
-        // Cache token for iframe contexts BEFORE processing
-        // This ensures tokens are available even if cookies are blocked
-        if ($this->isIframeContext($request)) {
-            Log::info('CSRF middleware: Iframe context detected, caching tokens', [
+        // Detect iOS/Safari devices
+        $userAgent = $request->userAgent() ?? '';
+        $isIOS = $this->isIOSDevice($userAgent);
+        $isIframe = $this->isIframeContext($request);
+        
+        // Cache token for iframe contexts OR iOS devices BEFORE processing
+        // iOS Safari blocks cookies aggressively, so we need to cache tokens
+        if ($isIframe || $isIOS) {
+            Log::info('CSRF middleware: Iframe/iOS context detected, caching tokens', [
                 'method' => $request->method(),
                 'url' => $request->fullUrl(),
                 'has_session' => $request->hasSession(),
+                'is_ios' => $isIOS,
+                'is_iframe' => $isIframe,
+                'user_agent' => substr($userAgent, 0, 100),
             ]);
             
             // Try to get token from session (if cookies work)
@@ -368,13 +380,13 @@ class VerifyCsrfTokenIframe extends Middleware
                     ]);
                 }
             } else {
-                Log::warning('CSRF middleware: No session in iframe context', [
+                Log::warning('CSRF middleware: No session in iframe/iOS context', [
                     'url' => $request->fullUrl(),
                 ]);
             }
             
             // For GET requests, also check if token is provided in header (from meta tag)
-            // This helps when session doesn't exist but token is in the page
+            // This is critical for iOS where cookies are blocked
             if ($request->isMethod('GET')) {
                 $requestToken = $request->header('X-CSRF-TOKEN');
                 if ($requestToken && is_string($requestToken) && strlen($requestToken) >= 40) {
@@ -390,6 +402,23 @@ class VerifyCsrfTokenIframe extends Middleware
         }
         
         return parent::handle($request, $next);
+    }
+    
+    /**
+     * Detect iOS devices (iPhone, iPad, iPod)
+     */
+    protected function isIOSDevice(string $userAgent): bool
+    {
+        if (empty($userAgent)) {
+            return false;
+        }
+        
+        return (
+            stripos($userAgent, 'iPhone') !== false ||
+            stripos($userAgent, 'iPad') !== false ||
+            stripos($userAgent, 'iPod') !== false ||
+            (stripos($userAgent, 'Safari') !== false && stripos($userAgent, 'Mobile') !== false && stripos($userAgent, 'Chrome') === false)
+        );
     }
 
     /**

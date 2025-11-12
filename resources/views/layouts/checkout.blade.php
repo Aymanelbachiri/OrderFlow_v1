@@ -254,19 +254,25 @@
                 
                 // Register CSRF token with server on page load
                 // This ensures the token is cached even if cookies are blocked
+                // Critical for iOS Safari where cookies are blocked
                 // Reuse the csrfToken variable declared above
                 if (csrfToken) {
-                    // Send token to server to cache it (using a lightweight endpoint)
-                    // We'll use a simple fetch request that doesn't require CSRF
+                    // Send token to server to cache it (using a lightweight GET request)
+                    // The server will cache the token from the X-CSRF-TOKEN header
+                    // For iOS, we need to ensure this happens immediately
                     fetch('{{ route("checkout.show") }}', {
                         method: 'GET',
                         headers: {
                             'X-CSRF-TOKEN': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
                         },
-                        credentials: 'include'
-                    }).catch(function() {
+                        credentials: 'include',
+                        cache: 'no-cache'
+                    }).catch(function(error) {
                         // Ignore errors - this is just to cache the token
+                        // Log for debugging but don't show to user
+                        console.debug('CSRF token cache request failed (non-critical):', error);
                     });
                 }
                 
