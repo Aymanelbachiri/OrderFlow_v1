@@ -146,19 +146,54 @@ class PublicPaymentController extends Controller
         }
 
         try {
-            // Create Coinbase Commerce charge
-            $chargeData = \App\Services\PaymentService::createCoinbaseCommerceCharge($paymentIntent);
+            // Check if payment intent already has a charge (idempotency)
+            // If user goes back or page reloads, reuse existing charge instead of creating new one
+            $hostedUrl = null;
             
-            // Store charge ID in payment intent for webhook verification
-            $paymentIntent->update([
-                'payment_intent_id' => $chargeData['charge_id'],
-                'gateway_response' => $chargeData['charge'],
-            ]);
+            if (!empty($paymentIntent->payment_intent_id) && !empty($paymentIntent->gateway_response)) {
+                // Payment already initialized - reuse existing charge
+                $existingCharge = null;
+                $gatewayResponse = $paymentIntent->gateway_response;
+                
+                if (is_array($gatewayResponse)) {
+                    $existingCharge = $gatewayResponse;
+                } elseif (is_string($gatewayResponse)) {
+                    $decoded = json_decode($gatewayResponse, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $existingCharge = $decoded;
+                    }
+                }
+                
+                if (is_array($existingCharge) && isset($existingCharge['hosted_url'])) {
+                    $hostedUrl = $existingCharge['hosted_url'];
+                    \Log::info('Coinbase Commerce: Reusing existing charge', [
+                        'payment_intent_id' => $paymentIntent->id,
+                        'charge_id' => $paymentIntent->payment_intent_id,
+                    ]);
+                }
+            }
+            
+            // Only create new charge if we don't have an existing one
+            if (!$hostedUrl) {
+                // Create Coinbase Commerce charge
+                $chargeData = \App\Services\PaymentService::createCoinbaseCommerceCharge($paymentIntent);
+                
+                // Store charge ID in payment intent for webhook verification
+                $paymentIntent->update([
+                    'payment_intent_id' => $chargeData['charge_id'],
+                    'gateway_response' => $chargeData['charge'],
+                ]);
+                
+                $hostedUrl = $chargeData['hosted_url'];
+                \Log::info('Coinbase Commerce: Created new charge', [
+                    'payment_intent_id' => $paymentIntent->id,
+                    'charge_id' => $chargeData['charge_id'],
+                ]);
+            }
 
             // Redirect to Coinbase Commerce payment link
             // Coinbase Commerce cannot be loaded in iframes due to CSP restrictions
             // ALWAYS use break-out page to ensure payment link opens in top window (_top)
-            $hostedUrl = $chargeData['hosted_url'];
             
             // Always use the break-out page for Coinbase Commerce
             // This ensures the Coinbase payment link opens in the top window, not the iframe
