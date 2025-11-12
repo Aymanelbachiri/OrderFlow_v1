@@ -155,12 +155,37 @@ class PublicPaymentController extends Controller
                 'gateway_response' => $chargeData['charge'],
             ]);
 
-            // Always show redirect page that opens Coinbase Commerce in popup
-            // This provides better UX and avoids iframe/CSP issues
-            return view('public.payment.coinbase-commerce-redirect', [
-                'paymentIntent' => $paymentIntent,
-                'hostedUrl' => $chargeData['hosted_url'],
-            ]);
+            // Redirect directly to Coinbase Commerce
+            // Use JavaScript redirect to break out of iframe if needed
+            // The user activation from form submission is still valid
+            $hostedUrl = $chargeData['hosted_url'];
+            
+            // Detect iframe context
+            $referer = $request->header('Referer');
+            $origin = $request->header('Origin');
+            $secFetchMode = $request->header('Sec-Fetch-Mode');
+            $secFetchSite = $request->header('Sec-Fetch-Site');
+            
+            $currentHost = parse_url($request->url(), PHP_URL_HOST);
+            $refererHost = $referer ? parse_url($referer, PHP_URL_HOST) : null;
+            $originHost = $origin ? parse_url($origin, PHP_URL_HOST) : null;
+            
+            $isIframe = $secFetchMode === 'nested' || 
+                       $secFetchSite === 'cross-site' ||
+                       ($refererHost && $refererHost !== $currentHost) ||
+                       ($originHost && $originHost !== $currentHost);
+            
+            // If in iframe, return a page with JavaScript that breaks out
+            // The user activation from form submission is still valid
+            if ($isIframe) {
+                return response()->view('public.payment.coinbase-commerce-redirect', [
+                    'paymentIntent' => $paymentIntent,
+                    'hostedUrl' => $hostedUrl,
+                ])->header('X-Frame-Options', 'SAMEORIGIN');
+            }
+            
+            // Not in iframe, redirect normally
+            return redirect($hostedUrl);
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [
                 'payment_intent_id' => $paymentIntent->id,

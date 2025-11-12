@@ -33,21 +33,21 @@
             </div>
 
             <div class="space-y-4">
-                <button id="continuePaymentBtn" 
-                   class="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-lg text-center transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-3">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                    </svg>
-                    <span>Continue to Payment</span>
-                </button>
-                
+                <div class="flex items-center justify-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    Click the button above to complete your payment with Coinbase Commerce.
+                    Redirecting to Coinbase Commerce...
                 </p>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Auto-submit form to break out of iframe and redirect -->
+<!-- This form auto-submits immediately, maintaining user activation from the original form submission -->
+<form id="redirectForm" method="GET" action="{{ $hostedUrl }}" target="_top" style="display: none;">
+</form>
 
 <script>
 (function() {
@@ -56,50 +56,26 @@
     // Detect if we're in an iframe
     const isInIframe = window.self !== window.top;
     
-    // Function to redirect to payment (breaking out of iframe if needed)
-    // MUST be called from user interaction (button click) to work in sandboxed iframes
-    function redirectToPayment() {
-        if (isInIframe) {
-            // Break out of iframe and redirect top window
-            // This requires user activation (button click) to work in sandboxed iframes
-            try {
-                // Try to access top window directly
-                window.top.location.href = paymentUrl;
-            } catch (e) {
-                // Cross-origin restriction - use form with target="_top"
-                // Form submission also requires user activation
-                const form = document.createElement('form');
-                form.method = 'GET';
-                form.action = paymentUrl;
-                form.target = '_top';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        } else {
-            // Not in iframe, redirect normally in current tab
-            window.location.href = paymentUrl;
-        }
-    }
-    
-    // Button click handler - user activation is required for iframe navigation
-    const continueBtn = document.getElementById('continuePaymentBtn');
-    if (continueBtn) {
-        continueBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Disable button to prevent double-clicks
-            continueBtn.disabled = true;
-            continueBtn.innerHTML = '<svg class="w-5 h-5 animate-spin mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>Redirecting...';
-            
-            // Redirect immediately on user click (user activation)
-            redirectToPayment();
-        });
-    }
-    
-    // For non-iframe contexts, we can auto-redirect after a delay
-    // But for iframes, we MUST wait for user click
-    if (!isInIframe) {
-        // Auto-redirect after a short delay (only if not in iframe)
-        setTimeout(redirectToPayment, 1000);
+    // Redirect immediately - user activation from form submission should still be valid
+    // Use form submission for iframe (maintains user activation better than window.location)
+    if (isInIframe) {
+        // In iframe - use form with target="_top" to break out
+        // Form submission maintains user activation from the original form click
+        const form = document.getElementById('redirectForm') || (function() {
+            const f = document.createElement('form');
+            f.method = 'GET';
+            f.action = paymentUrl;
+            f.target = '_top';
+            f.style.display = 'none';
+            document.body.appendChild(f);
+            return f;
+        })();
+        
+        // Submit immediately - this maintains user activation
+        form.submit();
+    } else {
+        // Not in iframe - redirect normally
+        window.location.replace(paymentUrl);
     }
 })();
 </script>
