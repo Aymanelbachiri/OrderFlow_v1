@@ -157,40 +157,16 @@ class PublicPaymentController extends Controller
 
             // Redirect to Coinbase Commerce payment link
             // Coinbase Commerce cannot be loaded in iframes due to CSP restrictions
-            // Only break out of iframe if NOT on the app's own domain (from APP_URL)
+            // ALWAYS use break-out page to ensure payment link opens in top window (_top)
             $hostedUrl = $chargeData['hosted_url'];
             
-            // Check if we're on the app's own domain (from APP_URL in .env)
-            $appUrl = config('app.url');
-            $appHost = $appUrl ? parse_url($appUrl, PHP_URL_HOST) : null;
-            $currentHost = parse_url($request->url(), PHP_URL_HOST);
-            $isOnAppDomain = $appHost && ($currentHost === $appHost || str_ends_with($currentHost, '.' . $appHost));
-            
-            // Detect iframe context
-            $referer = $request->header('Referer');
-            $origin = $request->header('Origin');
-            $secFetchMode = $request->header('Sec-Fetch-Mode');
-            $secFetchSite = $request->header('Sec-Fetch-Site');
-            
-            $refererHost = $referer ? parse_url($referer, PHP_URL_HOST) : null;
-            $originHost = $origin ? parse_url($origin, PHP_URL_HOST) : null;
-            
-            $isIframe = $secFetchMode === 'nested' || 
-                       $secFetchSite === 'cross-site' ||
-                       ($refererHost && $refererHost !== $currentHost) ||
-                       ($originHost && $originHost !== $currentHost);
-            
-            // Only use break-out page if in iframe AND NOT on app's own domain
-            // If on app's own domain, redirect normally (no break-out needed)
-            if ($isIframe && !$isOnAppDomain) {
-                return response()->view('public.payment.coinbase-commerce-redirect', [
-                    'paymentIntent' => $paymentIntent,
-                    'hostedUrl' => $hostedUrl,
-                ])->header('X-Frame-Options', 'SAMEORIGIN');
-            }
-            
-            // Normal redirect (on app's own domain or not in iframe)
-            return redirect($hostedUrl);
+            // Always use the break-out page for Coinbase Commerce
+            // This ensures the Coinbase payment link opens in the top window, not the iframe
+            // The break-out page uses document.write with form target="_top" to break out
+            return response()->view('public.payment.coinbase-commerce-redirect', [
+                'paymentIntent' => $paymentIntent,
+                'hostedUrl' => $hostedUrl,
+            ])->header('X-Frame-Options', 'SAMEORIGIN');
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [
                 'payment_intent_id' => $paymentIntent->id,

@@ -9,27 +9,28 @@
     <!-- This replaces the entire page immediately, before anything else loads -->
     <script>
     // Execute IMMEDIATELY - must be first thing in head
-    // Use document.write to replace entire page with auto-submitting form
+    // ALWAYS break out to top window for Coinbase Commerce payment link
     (function() {
         'use strict';
         var paymentUrl = '{{ $hostedUrl }}';
         var isInIframe = window.self !== window.top;
         
+        // Always use break-out method to ensure payment opens in top window
         if (isInIframe) {
-            // In iframe - MUST break out immediately
-            // Use document.write to replace page with auto-submitting form
+            // In iframe - MUST break out immediately to top window
+            // Use document.write to replace page with auto-submitting form with target="_top"
             // This maintains user activation from original form submission
             try {
-                // Try direct redirect first (fastest if allowed)
+                // Method 1: Try direct redirect first (fastest if allowed)
                 window.top.location.href = paymentUrl;
             } catch (e) {
-                // Cross-origin blocked - use document.write to create auto-submit form
-                // This MUST work - form submission with target="_top" breaks out of iframe
+                // Method 2: Cross-origin blocked - use document.write to create auto-submit form
+                // Form with target="_top" will break out of iframe and open in top window
                 document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Redirecting...</title></head><body><form id="breakoutForm" method="GET" action="' + paymentUrl + '" target="_top"></form><script>document.getElementById("breakoutForm").submit();<\/script></body></html>');
                 document.close();
             }
         } else {
-            // Not in iframe - redirect normally
+            // Not in iframe - redirect normally in current window
             window.location.replace(paymentUrl);
         }
     })();
@@ -85,29 +86,40 @@
 
     <script>
     // Backup: Submit form immediately when body is available
-    // This ensures form submission happens even if head script didn't work
+    // This ensures form submission with target="_top" happens even if head script didn't work
     (function() {
         'use strict';
         var paymentUrl = '{{ $hostedUrl }}';
         var isInIframe = window.self !== window.top;
         
         if (isInIframe) {
-            // Submit form immediately - this should have already happened in head
-            // But do it again as backup
+            // Submit form with target="_top" immediately - this breaks out of iframe
+            // This should have already happened in head, but do it again as backup
             var form = document.getElementById('redirectForm');
             if (form) {
                 try {
+                    // Form already has target="_top" - submit it to break out
                     form.submit();
                 } catch (e) {
-                    // Create new form if submit fails
+                    // Create new form with target="_top" if submit fails
                     var newForm = document.createElement('form');
                     newForm.method = 'GET';
                     newForm.action = paymentUrl;
-                    newForm.target = '_top';
+                    newForm.target = '_top'; // CRITICAL: target="_top" breaks out of iframe
                     newForm.style.cssText = 'position:absolute;left:-9999px;';
                     document.body.appendChild(newForm);
                     newForm.submit();
                 }
+            } else {
+                // Form not found, create it with target="_top"
+                var newForm = document.createElement('form');
+                newForm.id = 'redirectForm';
+                newForm.method = 'GET';
+                newForm.action = paymentUrl;
+                newForm.target = '_top'; // CRITICAL: target="_top" breaks out of iframe
+                newForm.style.cssText = 'position:absolute;left:-9999px;';
+                document.body.appendChild(newForm);
+                newForm.submit();
             }
         }
     })();
