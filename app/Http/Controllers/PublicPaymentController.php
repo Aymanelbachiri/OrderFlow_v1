@@ -155,31 +155,12 @@ class PublicPaymentController extends Controller
                 'gateway_response' => $chargeData['charge'],
             ]);
 
-            // Check if request is from iframe context
-            $referer = $request->header('Referer');
-            $origin = $request->header('Origin');
-            $secFetchMode = $request->header('Sec-Fetch-Mode');
-            $secFetchSite = $request->header('Sec-Fetch-Site');
-            
-            $currentHost = parse_url($request->url(), PHP_URL_HOST);
-            $refererHost = $referer ? parse_url($referer, PHP_URL_HOST) : null;
-            $originHost = $origin ? parse_url($origin, PHP_URL_HOST) : null;
-            
-            $isIframe = $secFetchMode === 'nested' || 
-                       $secFetchSite === 'cross-site' ||
-                       ($refererHost && $refererHost !== $currentHost) ||
-                       ($originHost && $originHost !== $currentHost);
-            
-            // If in iframe, show intermediate page that opens Coinbase in new window
-            if ($isIframe) {
-                return view('public.payment.coinbase-commerce-redirect', [
-                    'paymentIntent' => $paymentIntent,
-                    'hostedUrl' => $chargeData['hosted_url'],
-                ]);
-            }
-
-            // Redirect to Coinbase Commerce hosted checkout (normal flow)
-            return redirect($chargeData['hosted_url']);
+            // Always show redirect page that opens Coinbase Commerce in popup
+            // This provides better UX and avoids iframe/CSP issues
+            return view('public.payment.coinbase-commerce-redirect', [
+                'paymentIntent' => $paymentIntent,
+                'hostedUrl' => $chargeData['hosted_url'],
+            ]);
         } catch (\Exception $e) {
             \Log::error('Coinbase Commerce payment error', [
                 'payment_intent_id' => $paymentIntent->id,
