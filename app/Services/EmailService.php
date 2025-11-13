@@ -9,15 +9,77 @@ class EmailService
 {
     /**
      * Send email using simple HTML content
+     * Optionally uses admin-specific SMTP configuration
      */
-    public function sendEmail(string $to, string $subject, string $view, array $data = [], ?string $name = null): void
+    public function sendEmail(string $to, string $subject, string $view, array $data = [], ?string $name = null, ?int $adminId = null): void
     {
         try {
+            // If admin_id is provided, use admin-specific SMTP config
+            if ($adminId) {
+                $this->sendEmailWithAdminConfig($to, $subject, $view, $data, $name, $adminId);
+                return;
+            }
+
+            // Default email sending
             Mail::send($view, $data, function ($message) use ($to, $subject, $name) {
                 $message->to($to, $name)->subject($subject);
             });
         } catch (\Exception $e) {
             Log::error("Failed to send email to {$to}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Send email using admin-specific SMTP configuration
+     */
+    protected function sendEmailWithAdminConfig(string $to, string $subject, string $view, array $data = [], ?string $name = null, int $adminId): void
+    {
+        $admin = \App\Models\User::find($adminId);
+        if (!$admin || !$admin->isAdmin()) {
+            // Fallback to default if admin not found
+            $this->sendEmail($to, $subject, $view, $data, $name);
+            return;
+        }
+
+        $config = $admin->getConfig();
+        $smtpConfig = $config->smtp_config ?? null;
+
+        if (!$smtpConfig || empty($smtpConfig)) {
+            // Fallback to default if no admin SMTP config
+            $this->sendEmail($to, $subject, $view, $data, $name);
+            return;
+        }
+
+        try {
+            // Temporarily override mail config for this admin
+            $originalConfig = config('mail');
+            
+            \Illuminate\Support\Facades\Config::set('mail.mailers.smtp', [
+                'transport' => $smtpConfig['mailer'] ?? 'smtp',
+                'host' => $smtpConfig['host'] ?? config('mail.mailers.smtp.host'),
+                'port' => $smtpConfig['port'] ?? config('mail.mailers.smtp.port', 587),
+                'encryption' => $smtpConfig['encryption'] ?? config('mail.mailers.smtp.encryption', 'tls'),
+                'username' => $smtpConfig['username'] ?? config('mail.mailers.smtp.username'),
+                'password' => $smtpConfig['password'] ?? config('mail.mailers.smtp.password'),
+                'timeout' => config('mail.mailers.smtp.timeout', 60),
+            ]);
+
+            \Illuminate\Support\Facades\Config::set('mail.from', [
+                'address' => $smtpConfig['from_address'] ?? config('mail.from.address'),
+                'name' => $smtpConfig['from_name'] ?? config('mail.from.name'),
+            ]);
+
+            // Send email
+            Mail::send($view, $data, function ($message) use ($to, $subject, $name) {
+                $message->to($to, $name)->subject($subject);
+            });
+
+            // Restore original config
+            \Illuminate\Support\Facades\Config::set('mail', $originalConfig);
+        } catch (\Exception $e) {
+            Log::error("Failed to send email to {$to} using admin SMTP config: " . $e->getMessage());
+            // Fallback to default
+            $this->sendEmail($to, $subject, $view, $data, $name);
         }
     }
     public function sendEmailToMultiple(string $subject, string $view, array $data, array $recipients): array

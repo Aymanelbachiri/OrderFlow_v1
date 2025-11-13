@@ -5,15 +5,28 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ResellerCreditPack;
 use Illuminate\Http\Request;
+use App\Traits\AdminScopesData;
 
 class ResellerCreditPackController extends Controller
 {
+    use AdminScopesData;
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $creditPacks = ResellerCreditPack::latest()->paginate(20);
+        // Check permission
+        if (!auth()->user()->hasPermission('can_manage_reseller_credit_packs')) {
+            abort(403, 'You do not have permission to manage reseller credit packs.');
+        }
+
+        $query = ResellerCreditPack::query();
+        
+        // Scope to admin's data (unless super admin)
+        $this->scopeToAdmin($query);
+
+        $creditPacks = $query->latest()->paginate(20);
 
         return view('admin.reseller-credit-packs.index', compact('creditPacks'));
     }
@@ -31,6 +44,18 @@ class ResellerCreditPackController extends Controller
      */
     public function store(Request $request)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_manage_reseller_credit_packs')) {
+            abort(403, 'You do not have permission to manage reseller credit packs.');
+        }
+
+        // Check limit
+        $user = auth()->user();
+        if (!$user->canCreateResource('reseller_credit_packs')) {
+            return redirect()->route('admin.reseller-credit-packs.index')
+                ->with('error', 'You have reached your maximum number of reseller credit packs.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'credits_amount' => 'required|integer|min:1',
@@ -48,6 +73,8 @@ class ResellerCreditPackController extends Controller
                 return !empty(trim($feature));
             });
         }
+
+        $validated['admin_id'] = $this->getCurrentAdminId();
 
         ResellerCreditPack::create($validated);
 
@@ -68,6 +95,16 @@ class ResellerCreditPackController extends Controller
      */
     public function edit(ResellerCreditPack $resellerCreditPack)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_manage_reseller_credit_packs')) {
+            abort(403, 'You do not have permission to manage reseller credit packs.');
+        }
+
+        // Check ownership (unless super admin)
+        if (!$this->isSuperAdmin() && $resellerCreditPack->admin_id !== auth()->id()) {
+            abort(403, 'You do not have permission to edit this credit pack.');
+        }
+
         return view('admin.reseller-credit-packs.edit', compact('resellerCreditPack'));
     }
 
@@ -76,6 +113,16 @@ class ResellerCreditPackController extends Controller
      */
     public function update(Request $request, ResellerCreditPack $resellerCreditPack)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_manage_reseller_credit_packs')) {
+            abort(403, 'You do not have permission to manage reseller credit packs.');
+        }
+
+        // Check ownership (unless super admin)
+        if (!$this->isSuperAdmin() && $resellerCreditPack->admin_id !== auth()->id()) {
+            abort(403, 'You do not have permission to update this credit pack.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'credits_amount' => 'required|integer|min:1',
@@ -105,6 +152,16 @@ class ResellerCreditPackController extends Controller
      */
     public function destroy(ResellerCreditPack $resellerCreditPack)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_manage_reseller_credit_packs')) {
+            abort(403, 'You do not have permission to manage reseller credit packs.');
+        }
+
+        // Check ownership (unless super admin)
+        if (!$this->isSuperAdmin() && $resellerCreditPack->admin_id !== auth()->id()) {
+            abort(403, 'You do not have permission to delete this credit pack.');
+        }
+
         $resellerCreditPack->delete();
 
         return redirect()->route('admin.reseller-credit-packs.index')

@@ -14,6 +14,66 @@ use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
+    use AdminScopesData;
+
+    /**
+     * Send mail with admin-specific SMTP configuration
+     */
+    private function sendMailWithAdminConfig(string $to, $mailable, ?int $adminId = null): void
+    {
+        if (!$adminId) {
+            // No admin_id, use default
+            Mail::to($to)->send($mailable);
+            return;
+        }
+
+        $admin = User::find($adminId);
+        if (!$admin || !$admin->isAdmin()) {
+            // Fallback to default
+            Mail::to($to)->send($mailable);
+            return;
+        }
+
+        $config = $admin->getConfig();
+        $smtpConfig = $config->smtp_config ?? null;
+
+        if (!$smtpConfig || empty($smtpConfig)) {
+            // Fallback to default
+            Mail::to($to)->send($mailable);
+            return;
+        }
+
+        try {
+            // Temporarily override mail config for this admin
+            $originalConfig = config('mail');
+            
+            \Illuminate\Support\Facades\Config::set('mail.mailers.smtp', [
+                'transport' => $smtpConfig['mailer'] ?? 'smtp',
+                'host' => $smtpConfig['host'] ?? config('mail.mailers.smtp.host'),
+                'port' => $smtpConfig['port'] ?? config('mail.mailers.smtp.port', 587),
+                'encryption' => $smtpConfig['encryption'] ?? config('mail.mailers.smtp.encryption', 'tls'),
+                'username' => $smtpConfig['username'] ?? config('mail.mailers.smtp.username'),
+                'password' => $smtpConfig['password'] ?? config('mail.mailers.smtp.password'),
+                'timeout' => config('mail.mailers.smtp.timeout', 60),
+            ]);
+
+            \Illuminate\Support\Facades\Config::set('mail.from', [
+                'address' => $smtpConfig['from_address'] ?? config('mail.from.address'),
+                'name' => $smtpConfig['from_name'] ?? config('mail.from.name'),
+            ]);
+
+            // Send email
+            Mail::to($to)->send($mailable);
+
+            // Restore original config
+            \Illuminate\Support\Facades\Config::set('mail', $originalConfig);
+        } catch (\Exception $e) {
+            Log::error("Failed to send email to {$to} using admin SMTP config: " . $e->getMessage());
+            // Fallback to default
+            Mail::to($to)->send($mailable);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -320,7 +380,7 @@ class OrderController extends Controller
 
         // Send emails if requested
         if ($request->boolean('send_status_update')) {
-            Mail::to($order->user->email)->send(new \App\Mail\OrderStatusUpdateMail($order));
+            $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\OrderStatusUpdateMail($order), $order->admin_id);
         }
 
         // If credentials are provided and not sent yet, send them
@@ -347,9 +407,11 @@ class OrderController extends Controller
      */
     public function sendCredentials(Order $order)
     {
+        $adminId = $order->admin_id;
+
         if ($order->user->role === 'reseller' || $order->pricingPlan->plan_type === 'reseller') {
-            // Use the new ResellerCredentialsMail for reseller orders
-            Mail::to($order->user->email)->send(new ResellerCredentialsMail($order, $order->user));
+            // Use the new ResellerCredentialsMail for reseller orders (with admin SMTP if available)
+            $this->sendMailWithAdminConfig($order->user->email, new ResellerCredentialsMail($order, $order->user), $adminId);
 
             // Trigger the reseller order activated event
             ResellerOrderActivated::dispatch($order);
@@ -373,7 +435,7 @@ class OrderController extends Controller
                 ]);
             }
 
-            Mail::to($order->user->email)->send(new ClientCredentialsMail($order->user, $processedOrders));
+            $this->sendMailWithAdminConfig($order->user->email, new ClientCredentialsMail($order->user, $processedOrders), $adminId);
         }
 
         $order->update([
@@ -391,7 +453,7 @@ class OrderController extends Controller
     public function sendCreditPackCredentials(Order $order)
     {
         // Send credentials email for credit pack orders using Mailable
-        Mail::to($order->user->email)->send(new \App\Mail\CreditPackCredentialsMail($order, $order->user));
+        $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\CreditPackCredentialsMail($order, $order->user), $order->admin_id);
 
         $order->update([
             'credentials_sent' => true,
@@ -529,7 +591,7 @@ class OrderController extends Controller
             if ($request->boolean('send_credentials_email', true)) {
                 try {
                     // Use the reseller credentials mail
-                    Mail::to($order->user->email)->send(new ResellerCredentialsMail($order, $order->user));
+                    $this->sendMailWithAdminConfig($order->user->email, new ResellerCredentialsMail($order, $order->user), $order->admin_id);
 
                     // Trigger the reseller order activated event
                     ResellerOrderActivated::dispatch($order);
@@ -602,10 +664,10 @@ class OrderController extends Controller
                         }
                         
                         // Send renewal email
-                        Mail::to($order->user->email)->send(new \App\Mail\AccountRenewedMail($order, $originalOrder));
+                        $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\AccountRenewedMail($order, $originalOrder), $order->admin_id);
                     } else {
                         // Send regular credentials email for new orders
-                    Mail::to($order->user->email)->send(new \App\Mail\ClientCredentialsMail($order->user, collect([$order])));
+                        $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\ClientCredentialsMail($order->user, collect([$order])), $order->admin_id);
                     }
 
                     $order->update([

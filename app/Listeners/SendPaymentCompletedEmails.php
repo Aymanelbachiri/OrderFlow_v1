@@ -24,14 +24,15 @@ class SendPaymentCompletedEmails
     {
         $order = $event->order;
         $paymentIntent = $event->paymentIntent;
+        $adminId = $order->admin_id; // Get admin_id from order
 
         try {
             $emailService = new EmailService();
 
             // Check order type and send appropriate emails
             if ($order->order_type === 'credit_pack') {
-                // Send reseller-specific order confirmation
-                Mail::to($order->user->email)->send(new \App\Mail\ResellerOrderConfirmationMail($order));
+                // Send reseller-specific order confirmation (with admin SMTP if available)
+                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\ResellerOrderConfirmationMail($order), $adminId);
                 
                 // Send reseller-specific admin notification
                 $adminEmails = $emailService->getAdminEmails();
@@ -39,8 +40,8 @@ class SendPaymentCompletedEmails
                     Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
                 }
             } elseif ($order->order_type === 'custom_product') {
-                // Send custom product order confirmation
-                Mail::to($order->user->email)->send(new \App\Mail\CustomProductOrderMail($order));
+                // Send custom product order confirmation (with admin SMTP if available)
+                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\CustomProductOrderMail($order), $adminId);
                 
                 // Send custom product admin notification
                 $adminEmails = $emailService->getAdminEmails();
