@@ -13,7 +13,14 @@ class Source extends Model
         'name',
         'return_url',
         'is_active',
+        'admin_id',
     ];
+
+    // Relationships
+    public function admin()
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
 
     protected function casts(): array
     {

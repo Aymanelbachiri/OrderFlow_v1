@@ -30,6 +30,7 @@ class CustomProduct extends Model
         'is_active',
         'stock_quantity',
         'metadata',
+        'admin_id',
     ];
 
     protected function casts(): array
@@ -50,6 +51,11 @@ class CustomProduct extends Model
     }
 
     // Relationships
+    public function admin()
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);

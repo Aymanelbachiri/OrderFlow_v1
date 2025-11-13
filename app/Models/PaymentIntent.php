@@ -12,6 +12,7 @@ class PaymentIntent extends Model
 
     protected $fillable = [
         'user_id',
+        'admin_id',
         'pricing_plan_id',
         'reseller_credit_pack_id',
         'payment_intent_id',
@@ -37,6 +38,11 @@ class PaymentIntent extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function admin()
+    {
+        return $this->belongsTo(User::class, 'admin_id');
     }
 
     public function pricingPlan()

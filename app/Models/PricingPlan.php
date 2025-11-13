@@ -21,6 +21,7 @@ class PricingPlan extends Model
         'features',
         'payment_link',
         'is_active',
+        'admin_id',
     ];
 
     protected function casts(): array
@@ -40,6 +41,11 @@ class PricingPlan extends Model
     }
 
     // Relationships
+    public function admin()
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);

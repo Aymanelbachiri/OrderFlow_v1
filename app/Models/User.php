@@ -35,6 +35,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'reseller_panel_username',
         'reseller_panel_password',
         'available_credits',
+        'is_super_admin',
+        'admin_id',
+        'created_by_admin_id',
     ];
 
     /**
@@ -60,6 +63,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'suspended_at' => 'datetime',
             'is_active' => 'boolean',
+            'is_super_admin' => 'boolean',
         ];
     }
 
@@ -86,10 +90,72 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(BlogPost::class, 'author_id');
     }
 
+    // Admin relationships
+    public function adminPermissions()
+    {
+        return $this->hasOne(AdminPermission::class, 'admin_id');
+    }
+
+    public function adminConfig()
+    {
+        return $this->hasOne(AdminConfig::class, 'admin_id');
+    }
+
+    public function createdAdmins()
+    {
+        return $this->hasMany(User::class, 'created_by_admin_id');
+    }
+
+    public function adminUser()
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    // Admin data relationships (scoped to this admin)
+    public function adminOrders()
+    {
+        return $this->hasMany(Order::class, 'admin_id');
+    }
+
+    public function adminPaymentIntents()
+    {
+        return $this->hasMany(PaymentIntent::class, 'admin_id');
+    }
+
+    public function adminSources()
+    {
+        return $this->hasMany(Source::class, 'admin_id');
+    }
+
+    public function adminCustomProducts()
+    {
+        return $this->hasMany(CustomProduct::class, 'admin_id');
+    }
+
+    public function adminPricingPlans()
+    {
+        return $this->hasMany(PricingPlan::class, 'admin_id');
+    }
+
+    public function adminResellerCreditPacks()
+    {
+        return $this->hasMany(ResellerCreditPack::class, 'admin_id');
+    }
+
     // Helper methods
     public function isAdmin()
     {
         return $this->role === 'admin';
+    }
+
+    public function isSuperAdmin()
+    {
+        return $this->isAdmin() && $this->is_super_admin === true;
+    }
+
+    public function isRegularAdmin()
+    {
+        return $this->isAdmin() && !$this->isSuperAdmin();
     }
 
     public function isClient()
@@ -105,5 +171,82 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isSuspended()
     {
         return !$this->is_active || $this->suspended_at !== null;
+    }
+
+    /**
+     * Get admin permissions (with defaults if not set)
+     */
+    public function getPermissions()
+    {
+        if (!$this->isAdmin()) {
+            return null;
+        }
+
+        return $this->adminPermissions ?? AdminPermission::create([
+            'admin_id' => $this->id,
+        ]);
+    }
+
+    /**
+     * Get admin configuration (with defaults if not set)
+     */
+    public function getConfig()
+    {
+        if (!$this->isAdmin()) {
+            return null;
+        }
+
+        return $this->adminConfig ?? AdminConfig::create([
+            'admin_id' => $this->id,
+        ]);
+    }
+
+    /**
+     * Check if admin has a specific permission
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true; // Super admin has all permissions
+        }
+
+        $permissions = $this->getPermissions();
+        if (!$permissions) {
+            return false;
+        }
+
+        return $permissions->$permission ?? false;
+    }
+
+    /**
+     * Check if admin can create more resources of a type
+     */
+    public function canCreateResource(string $type): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true; // Super admin has unlimited resources
+        }
+
+        $permissions = $this->getPermissions();
+        if (!$permissions) {
+            return false;
+        }
+
+        $maxKey = 'max_' . $type;
+        $maxCount = $permissions->$maxKey;
+
+        if ($maxCount === null) {
+            return true; // No limit set
+        }
+
+        // Get current count
+        $currentCount = match($type) {
+            'sources' => $this->adminSources()->count(),
+            'custom_products' => $this->adminCustomProducts()->count(),
+            'reseller_credit_packs' => $this->adminResellerCreditPacks()->count(),
+            default => 0,
+        };
+
+        return $currentCount < $maxCount;
     }
 }

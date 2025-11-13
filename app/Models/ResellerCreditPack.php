@@ -18,6 +18,7 @@ class ResellerCreditPack extends Model
         'features',
         'payment_methods',
         'is_active',
+        'admin_id',
     ];
 
     protected function casts(): array
@@ -69,6 +70,11 @@ class ResellerCreditPack extends Model
 
 
     // Relationships
+    public function admin()
+    {
+        return $this->belongsTo(User::class, 'admin_id');
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class, 'pricing_plan_id');
