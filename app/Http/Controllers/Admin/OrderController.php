@@ -243,15 +243,15 @@ class OrderController extends Controller
         // Dispatch OrderCreated event to send admin notification emails
         \App\Events\OrderCreated::dispatch($order);
 
-        // Send emails if requested
+        // Send emails if requested (with admin SMTP if available)
         if ($request->boolean('send_order_confirmation')) {
             // Send order confirmation email
-            Mail::to($user->email)->send(new \App\Mail\OrderConfirmationMail($order));
+            $this->sendMailWithAdminConfig($user->email, new \App\Mail\OrderConfirmationMail($order), $adminId);
         }
 
         if ($request->boolean('send_payment_instructions') && $validated['status'] === 'pending') {
             // Send payment instructions email
-            Mail::to($user->email)->send(new \App\Mail\PaymentInstructionsMail($order));
+            $this->sendMailWithAdminConfig($user->email, new \App\Mail\PaymentInstructionsMail($order), $adminId);
         }
 
         return redirect()->route('admin.orders.index')
