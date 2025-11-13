@@ -55,6 +55,8 @@ class PricingController extends Controller
                            $validated['device_count'] . ' Device(s) - ' .
                            $validated['duration_months'] . ' Month(s)';
 
+        $validated['admin_id'] = $this->getCurrentAdminId();
+
         PricingPlan::create($validated);
 
         return redirect()->route('admin.pricing.index')

@@ -113,6 +113,7 @@ class PaymentIntent extends Model
         $orderData['payment_method'] = $this->payment_method;
         $orderData['amount'] = $this->amount;
         $orderData['payment_id'] = $this->payment_intent_id; // Store transaction ID
+        $orderData['admin_id'] = $this->admin_id; // Preserve admin_id from payment intent
 
         // Ensure correct type and expiry handling for credit pack orders
         $orderData['order_type'] = $orderData['order_type'] ?? $this->order_type;

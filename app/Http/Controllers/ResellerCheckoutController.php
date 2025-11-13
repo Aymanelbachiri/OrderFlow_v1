@@ -78,9 +78,19 @@ class ResellerCheckoutController extends Controller
             'source' => $user->source ?: $sourceFromRequest,
         ]);
 
+        // Determine admin_id from source or credit pack
+        $adminId = $creditPack->admin_id;
+        if (!$adminId && class_exists('App\\Models\\Source') && \Illuminate\Support\Facades\Schema::hasTable('sources')) {
+            $sourceModel = \App\Models\Source::where('name', $sourceFromRequest)->first();
+            if ($sourceModel && $sourceModel->admin_id) {
+                $adminId = $sourceModel->admin_id;
+            }
+        }
+
         // Create payment intent for reseller credit pack/order
         $paymentIntent = PaymentIntent::create([
             'user_id' => $user->id,
+            'admin_id' => $adminId,
             'reseller_credit_pack_id' => $creditPack->id,
             'payment_intent_id' => 'pi_temp_' . uniqid(),
             'payment_method' => $validated['payment_method'],

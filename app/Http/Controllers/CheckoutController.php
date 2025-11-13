@@ -134,9 +134,19 @@ class CheckoutController extends Controller
             $user->update($updateData);
         }
 
+        // Determine admin_id from source (if source exists and has admin_id)
+        $adminId = null;
+        if (class_exists('App\\Models\\Source') && \Illuminate\Support\Facades\Schema::hasTable('sources')) {
+            $sourceModel = \App\Models\Source::where('name', $sourceFromRequest)->first();
+            if ($sourceModel && $sourceModel->admin_id) {
+                $adminId = $sourceModel->admin_id;
+            }
+        }
+
         // Create a payment intent to proceed to selected gateway
         $paymentIntent = PaymentIntent::create([
             'user_id' => $user->id,
+            'admin_id' => $adminId,
             'pricing_plan_id' => $plan->id,
             'payment_intent_id' => 'pi_temp_' . uniqid(),
             'payment_method' => $validated['payment_method'],

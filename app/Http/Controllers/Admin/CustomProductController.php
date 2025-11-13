@@ -6,15 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Traits\AdminScopesData;
 
 class CustomProductController extends Controller
 {
+    use AdminScopesData;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_create_custom_products')) {
+            abort(403, 'You do not have permission to manage custom products.');
+        }
+
         $query = CustomProduct::query();
+        
+        // Scope to admin's data (unless super admin)
+        $this->scopeToAdmin($query);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -57,6 +68,18 @@ class CustomProductController extends Controller
      */
     public function store(Request $request)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_create_custom_products')) {
+            abort(403, 'You do not have permission to manage custom products.');
+        }
+
+        // Check limit
+        $user = auth()->user();
+        if (!$user->canCreateResource('custom_products')) {
+            return redirect()->route('admin.custom-products.index')
+                ->with('error', 'You have reached your maximum number of custom products.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:custom_products,slug',
@@ -74,6 +97,7 @@ class CustomProductController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['admin_id'] = $this->getCurrentAdminId();
 
         $product = CustomProduct::create($validated);
 
@@ -86,6 +110,16 @@ class CustomProductController extends Controller
      */
     public function edit(CustomProduct $customProduct)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_create_custom_products')) {
+            abort(403, 'You do not have permission to manage custom products.');
+        }
+
+        // Check ownership (unless super admin)
+        if (!$this->isSuperAdmin() && $customProduct->admin_id !== auth()->id()) {
+            abort(403, 'You do not have permission to edit this product.');
+        }
+
         return view('admin.custom-products.edit', compact('customProduct'));
     }
 
@@ -94,6 +128,16 @@ class CustomProductController extends Controller
      */
     public function update(Request $request, CustomProduct $customProduct)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('can_create_custom_products')) {
+            abort(403, 'You do not have permission to manage custom products.');
+        }
+
+        // Check ownership (unless super admin)
+        if (!$this->isSuperAdmin() && $customProduct->admin_id !== auth()->id()) {
+            abort(403, 'You do not have permission to update this product.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:custom_products,slug,' . $customProduct->id,
