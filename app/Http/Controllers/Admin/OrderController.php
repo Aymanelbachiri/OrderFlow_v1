@@ -89,21 +89,21 @@ class OrderController extends Controller
         $totalOrdersCount = $statsQuery->count();
         $activeOrdersCount = (clone $statsQuery)->where('status', 'active')->count();
         $pendingOrdersCount = (clone $statsQuery)->where('status', 'pending')->count();
-        $expiredOrdersCount = Order::whereNotNull('expires_at')
+        $expiredOrdersCount = (clone $statsQuery)->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->count();
-        $expiringSoonCount = Order::whereNotNull('expires_at')
+        $expiringSoonCount = (clone $statsQuery)->whereNotNull('expires_at')
             ->where('expires_at', '>=', now())
             ->where('expires_at', '<=', now()->addDays(7))
             ->count();
-        $resellerOrdersCount = Order::where(function($q) {
+        $resellerOrdersCount = (clone $statsQuery)->where(function($q) {
             $q->whereHas('pricingPlan', function($planQuery) {
                 $planQuery->where('plan_type', 'reseller');
             })->orWhereNotNull('reseller_credit_pack_id');
         })->count();
 
-        // Calculate total revenue
-        $totalRevenue = Order::where('status', '!=', 'cancelled')->sum('amount');
+        // Calculate total revenue (scoped to admin)
+        $totalRevenue = (clone $statsQuery)->where('status', '!=', 'cancelled')->sum('amount');
 
         return view('admin.orders.index', compact(
             'orders',
