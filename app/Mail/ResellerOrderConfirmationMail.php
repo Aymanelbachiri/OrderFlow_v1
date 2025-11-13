@@ -15,6 +15,7 @@ class ResellerOrderConfirmationMail extends Mailable
     use Queueable, SerializesModels;
 
     public $order;
+    public $source;
 
     /**
      * Create a new message instance.
@@ -22,6 +23,7 @@ class ResellerOrderConfirmationMail extends Mailable
     public function __construct(Order $order)
     {
         $this->order = $order;
+        $this->source = $order->sourceModel();
     }
 
     /**
@@ -29,8 +31,9 @@ class ResellerOrderConfirmationMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'Reseller Panel Account Setup - Order #' . $this->order->order_number . ' - ' . config('app.name'),
+            subject: 'Reseller Panel Account Setup - Order #' . $this->order->order_number . ' - ' . $companyName,
         );
     }
 
@@ -43,8 +46,9 @@ class ResellerOrderConfirmationMail extends Mailable
             view: 'emails.reseller-order-confirmation',
             with: [
                 'order' => $this->order,
-                'user' => $this->order->user,
+                'user' => $this->order->customer,
                 'creditPack' => $this->order->resellerCreditPack,
+                'source' => $this->source,
             ],
         );
     }

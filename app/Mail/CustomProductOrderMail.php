@@ -17,6 +17,7 @@ class CustomProductOrderMail extends Mailable
     public $order;
     public $customer;
     public $product;
+    public $source;
 
     /**
      * Create a new message instance.
@@ -24,8 +25,9 @@ class CustomProductOrderMail extends Mailable
     public function __construct(Order $order)
     {
         $this->order = $order;
-        $this->customer = $order->user;
+        $this->customer = $order->customer;
         $this->product = $order->customProduct;
+        $this->source = $order->sourceModel();
     }
 
     /**
@@ -33,8 +35,9 @@ class CustomProductOrderMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'Order Confirmation - ' . $this->product->name . ' - ' . config('app.name'),
+            subject: 'Order Confirmation - ' . $this->product->name . ' - ' . $companyName,
         );
     }
 
@@ -49,6 +52,7 @@ class CustomProductOrderMail extends Mailable
                 'order' => $this->order,
                 'customer' => $this->customer,
                 'product' => $this->product,
+                'source' => $this->source,
             ],
         );
     }

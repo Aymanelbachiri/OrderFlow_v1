@@ -43,7 +43,7 @@ class NewResellerOrderAdminMail extends Mailable
             view: 'emails.new-reseller-order-admin',
             with: [
                 'order' => $this->order,
-                'customer' => $this->order->user,
+                'customer' => $this->order->customer,
                 'creditPack' => $this->order->resellerCreditPack,
             ],
         );

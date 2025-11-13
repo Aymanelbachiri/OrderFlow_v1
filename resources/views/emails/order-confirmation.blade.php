@@ -65,7 +65,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
+        <h1>{{ $source ? $source->getCompanyName() : config('app.name') }}</h1>
         <h2>Order Confirmation</h2>
     </div>
 
@@ -177,17 +177,24 @@
 
         <p>If you have any questions about your order or need assistance, please don't hesitate to contact our support team.</p>
 
-        <p>Thank you for choosing {{ config('app.name') }}!</p>
+        <p>Thank you for choosing {{ $source ? $source->getCompanyName() : config('app.name') }}!</p>
 
         <p>Best regards,<br>
-        The {{ config('app.name') }} Team</p>
+        {{ $source ? $source->getTeamName() : (config('app.name') . ' Team') }}</p>
     </div>
 
     <div class="footer">
         <p>Order #{{ $order->order_number }} | {{ $order->created_at->format('M d, Y') }}</p>
-        <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+        <p>&copy; {{ date('Y') }} {{ $source ? $source->getCompanyName() : config('app.name') }}. All rights reserved.</p>
         
-        
+        @php
+            $websiteUrl = $source ? $source->getWebsiteUrl() : config('app.url');
+        @endphp
+        @if($websiteUrl)
+        <p>
+            <a href="{{ $websiteUrl }}" style="color: #007bff;">Visit our website</a>
+        </p>
+        @endif
     </div>
 </body>
 </html>

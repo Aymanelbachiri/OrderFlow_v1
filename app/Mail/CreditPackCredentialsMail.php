@@ -3,7 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
-use App\Models\User;
+use App\Models\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -16,14 +16,16 @@ class CreditPackCredentialsMail extends Mailable
 
     public $order;
     public $user;
+    public $source;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Order $order, User $user)
+    public function __construct(Order $order, Client $user)
     {
         $this->order = $order;
         $this->user = $user;
+        $this->source = $order->sourceModel();
     }
 
     /**
@@ -31,8 +33,9 @@ class CreditPackCredentialsMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'IPTV Panel Access - Credit Pack Order #' . $this->order->order_number . ' - ' . config('app.name'),
+            subject: 'IPTV Panel Access - Credit Pack Order #' . $this->order->order_number . ' - ' . $companyName,
         );
     }
 
@@ -50,6 +53,7 @@ class CreditPackCredentialsMail extends Mailable
                 'panelUsername' => $this->order->reseller_username,
                 'panelPassword' => $this->order->reseller_password,
                 'creditPack' => $this->order->resellerCreditPack,
+                'source' => $this->source,
             ]
         );
     }

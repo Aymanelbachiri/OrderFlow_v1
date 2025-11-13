@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
+use App\Models\Client;
 use App\Models\Order;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +16,7 @@ class ClientController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::whereIn('role', ['client', 'reseller'])->with(['orders']);
+        $query = Client::with(['orders']);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -34,11 +34,6 @@ class ClientController extends Controller
             } elseif ($request->status === 'suspended') {
                 $query->where('is_active', false)->orWhereNotNull('suspended_at');
             }
-        }
-
-        // Filter by role
-        if ($request->filled('role')) {
-            $query->where('role', $request->role);
         }
 
         $clients = $query->latest()->paginate(20);
@@ -61,23 +56,20 @@ class ClientController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:clients',
             'phone' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
 
-        $client = User::create([
+        $client = Client::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'password' => isset($validated['password']) && $validated['password']
                 ? Hash::make($validated['password'])
                 : null,
-            'role' => 'client',
             'email_verified_at' => now(),
         ]);
-
-        $client->assignRole('client');
 
         return redirect()->route('admin.clients.index')
             ->with('success', 'Client created successfully.');
@@ -86,7 +78,7 @@ class ClientController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(User $client)
+    public function show(Client $client)
     {
         $client->load(['orders.pricingPlan', 'payments']);
 
@@ -96,7 +88,7 @@ class ClientController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(User $client)
+    public function edit(Client $client)
     {
         return view('admin.clients.edit', compact('client'));
     }
@@ -104,13 +96,12 @@ class ClientController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $client)
+    public function update(Request $request, Client $client)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $client->id,
+            'email' => 'required|string|email|max:255|unique:clients,email,' . $client->id,
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:client,reseller',
             'password' => 'nullable|string|min:8|confirmed',
             'is_active' => 'boolean',
             'suspension_reason' => 'nullable|string',
@@ -120,26 +111,11 @@ class ClientController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'role' => $validated['role'],
             'is_active' => $request->boolean('is_active'),
         ];
 
-        // Handle role change
-        if ($validated['role'] != $client->role) {
-            // Log the role change
-            Log::info('Client role changed', [
-                'client_id' => $client->id,
-                'client_email' => $client->email,
-                'old_role' => $client->role,
-                'new_role' => $validated['role'],
-                'changed_by' => auth()->user()->email,
-            ]);
-        }
-
         if ($validated['password']) {
-            $updateData['password'] = isset($validated['password']) && $validated['password']
-                ? Hash::make($validated['password'])
-                : null;
+            $updateData['password'] = Hash::make($validated['password']);
         }
 
         if (!$request->boolean('is_active')) {
@@ -159,7 +135,7 @@ class ClientController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(User $client)
+    public function destroy(Client $client)
     {
         $client->delete();
 
@@ -170,17 +146,13 @@ class ClientController extends Controller
     /**
      * Suspend a client account
      */
-    public function suspend(Request $request, User $client)
+    public function suspend(Request $request, Client $client)
     {
         $validated = $request->validate([
             'suspension_reason' => 'required|string|max:500',
         ]);
 
-        $client->update([
-            'is_active' => false,
-            'suspended_at' => now(),
-            'suspension_reason' => $validated['suspension_reason'],
-        ]);
+        $client->suspend($validated['suspension_reason']);
 
         return redirect()->back()
             ->with('success', 'Client account suspended successfully.');
@@ -189,13 +161,9 @@ class ClientController extends Controller
     /**
      * Reactivate a client account
      */
-    public function reactivate(User $client)
+    public function reactivate(Client $client)
     {
-        $client->update([
-            'is_active' => true,
-            'suspended_at' => null,
-            'suspension_reason' => null,
-        ]);
+        $client->unsuspend();
 
         return redirect()->back()
             ->with('success', 'Client account reactivated successfully.');
@@ -204,7 +172,7 @@ class ClientController extends Controller
     /**
      * Toggle client account status
      */
-    public function toggleStatus(User $client)
+    public function toggleStatus(Client $client)
     {
         $client->update([
             'is_active' => !$client->is_active,
@@ -219,7 +187,7 @@ class ClientController extends Controller
     /**
      * Verify client email
      */
-    public function verifyEmail(User $client)
+    public function verifyEmail(Client $client)
     {
         $client->update([
             'email_verified_at' => now(),
@@ -232,7 +200,7 @@ class ClientController extends Controller
     /**
      * Send password reset email to client
      */
-    public function sendPasswordReset(User $client)
+    public function sendPasswordReset(Client $client)
     {
         // Generate password reset token
         $token = \Illuminate\Support\Str::random(64);

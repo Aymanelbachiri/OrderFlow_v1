@@ -14,6 +14,7 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'client_id',
         'admin_id',
         'pricing_plan_id',
         'custom_product_id',
@@ -65,6 +66,14 @@ class Order extends Model
     }
 
     // Relationships
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * @deprecated Use client() instead. Kept for backward compatibility.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -98,6 +107,27 @@ class Order extends Model
     public function customProduct()
     {
         return $this->belongsTo(CustomProduct::class);
+    }
+
+    /**
+     * Get the source model from the source name
+     */
+    public function sourceModel()
+    {
+        if (!$this->source) {
+            return null;
+        }
+        
+        return Source::where('name', $this->source)->first();
+    }
+
+    /**
+     * Get the customer (client or user) for this order
+     * This method provides backward compatibility during migration
+     */
+    public function getCustomerAttribute()
+    {
+        return $this->client ?? $this->user;
     }
 
     // Helper methods

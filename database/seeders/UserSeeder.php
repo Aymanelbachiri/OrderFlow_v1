@@ -14,13 +14,30 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-         User::create([
-            'name' => 'Smarters Pro',
-            'email' => 'contact@smarters-proiptv.com',
-            'password' => Hash::make('Dofus2@0@!'),
-            'role' => 'admin',
-            'email_verified_at' => now(),
-        ]);
+        // Create super admin
+        $superAdmin = User::firstOrCreate(
+            ['email' => 'contact@smarters-proiptv.com'],
+            [
+                'name' => 'Smarters Pro',
+                'password' => Hash::make('Dofus2@0@!'),
+                'role' => 'admin',
+                'is_super_admin' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        // Update password if user already exists
+        if ($superAdmin->wasRecentlyCreated === false) {
+            $superAdmin->update([
+                'password' => Hash::make('Dofus2@0@!'),
+                'is_super_admin' => true,
+                'role' => 'admin',
+            ]);
+        }
+
+        // Assign admin role
+        if (!$superAdmin->hasRole('admin')) {
+            $superAdmin->assignRole('admin');
+        }
     }
 }

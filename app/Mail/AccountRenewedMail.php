@@ -16,6 +16,7 @@ class AccountRenewedMail extends Mailable
 
     public $order;
     public $originalOrder;
+    public $source;
 
     /**
      * Create a new message instance.
@@ -24,6 +25,7 @@ class AccountRenewedMail extends Mailable
     {
         $this->order = $order;
         $this->originalOrder = $originalOrder;
+        $this->source = $order->sourceModel();
     }
 
     /**
@@ -31,8 +33,9 @@ class AccountRenewedMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'Account Renewed - ' . $this->order->order_number . ' - ' . config('app.name'),
+            subject: 'Account Renewed - ' . $this->order->order_number . ' - ' . $companyName,
         );
     }
 
@@ -45,9 +48,10 @@ class AccountRenewedMail extends Mailable
             view: 'emails.account-renewed',
             with: [
                 'order' => $this->order,
-                'customer' => $this->order->user,
+                'customer' => $this->order->customer,
                 'plan' => $this->order->pricingPlan,
                 'originalOrder' => $this->originalOrder,
+                'source' => $this->source,
             ],
         );
     }

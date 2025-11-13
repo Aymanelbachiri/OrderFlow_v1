@@ -24,11 +24,11 @@ class SendResellerCredentials
     public function handle(ResellerOrderActivated $event): void
     {
         $order = $event->order;
-        $user = $order->user;
+        $customer = $order->customer;
 
         // Only send credentials if this is a reseller plan
         if ($order->pricingPlan->plan_type === 'reseller') {
-            Mail::to($user->email)->send(new ResellerCredentialsMail($order, $user));
+            Mail::to($customer->email)->send(new ResellerCredentialsMail($order, $customer));
         }
     }
 }

@@ -43,7 +43,7 @@ class NewOrderAdminMail extends Mailable
             view: 'emails.new-order-admin',
             with: [
                 'order' => $this->order,
-                'customer' => $this->order->user,
+                'customer' => $this->order->customer,
                 'plan' => $this->order->pricingPlan,
             ],
         );

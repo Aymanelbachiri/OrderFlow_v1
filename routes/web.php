@@ -133,10 +133,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::middleware(['super.admin'])->prefix('super')->name('super.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\SuperAdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/orders', [\App\Http\Controllers\Admin\SuperAdminController::class, 'allOrders'])->name('orders');
-        Route::get('/admins/{admin}', [\App\Http\Controllers\Admin\SuperAdminController::class, 'viewAdmin'])->name('view-admin');
         
-        // Admin management
+        // Admin management (must be before view-admin route to avoid conflicts)
         Route::resource('admins', \App\Http\Controllers\Admin\AdminManagementController::class);
+        
+        // View admin details (separate from resource routes)
+        Route::get('/admins/{admin}/view', [\App\Http\Controllers\Admin\SuperAdminController::class, 'viewAdmin'])->name('view-admin');
     });
 });
 

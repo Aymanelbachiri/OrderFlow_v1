@@ -149,7 +149,7 @@
                                 Need help? Contact our support team
                             </p>
                             <p style="margin: 0; color: #667eea; font-size: 14px; font-weight: bold;">
-                                {{ config('mail.from.address') }}
+                                {{ $source ? $source->getSupportEmail() : config('mail.from.address') }}
                             </p>
                         </td>
                     </tr>
@@ -158,7 +158,7 @@
                     <tr>
                         <td style="padding: 20px 30px; text-align: center; color: #999999; font-size: 12px; line-height: 1.5;">
                             <p style="margin: 0 0 5px 0;">
-                                © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+                                © {{ date('Y') }} {{ $source ? $source->getCompanyName() : config('app.name') }}. All rights reserved.
                             </p>
                             <p style="margin: 0;">
                                 This is an automated email. Please do not reply to this message.

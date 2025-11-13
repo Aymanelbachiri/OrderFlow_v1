@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PricingPlan;
 use App\Models\ResellerCreditPack;
-use App\Models\User;
+use App\Models\Client;
 use App\Models\PaymentIntent;
 
 class ResellerCheckoutController extends Controller
@@ -54,28 +54,25 @@ class ResellerCheckoutController extends Controller
                 ->withErrors(['reseller_credit_pack_id' => 'Selected reseller pack is not available. Please choose a valid reseller pack.']);
         }
 
-        // Find or create reseller user by email
-        $user = User::firstOrCreate(
+        // Find or create reseller client by email
+        $client = Client::firstOrCreate(
             ['email' => $validated['email']],
             [
                 'name' => $validated['full_name'],
                 'password' => bcrypt(str()->random(16)),
-                'role' => 'reseller',
+                'type' => 'reseller',
                 'phone' => $validated['phone'],
                 'reseller_panel_username' => $validated['panel_username'],
                 'reseller_panel_password' => null,
-                'source' => $sourceFromRequest,
             ]
         );
-        // Ensure role/fields are updated if user exists
-        $user->update([
-            'role' => 'reseller',
+        // Ensure type/fields are updated if client exists
+        $client->update([
+            'type' => 'reseller',
             'name' => $validated['full_name'],
             'phone' => $validated['phone'],
             'reseller_panel_username' => $validated['panel_username'],
             'reseller_panel_password' => null,
-            // Preserve original source if already set, else set now
-            'source' => $user->source ?: $sourceFromRequest,
         ]);
 
         // Determine admin_id from source or credit pack
@@ -89,7 +86,7 @@ class ResellerCheckoutController extends Controller
 
         // Create payment intent for reseller credit pack/order
         $paymentIntent = PaymentIntent::create([
-            'user_id' => $user->id,
+            'client_id' => $client->id,
             'admin_id' => $adminId,
             'reseller_credit_pack_id' => $creditPack->id,
             'payment_intent_id' => 'pi_temp_' . uniqid(),
@@ -99,7 +96,7 @@ class ResellerCheckoutController extends Controller
             'status' => 'pending',
             'order_type' => 'credit_pack',
             'order_data' => [
-                'user_id' => $user->id,
+                'client_id' => $client->id,
                 // IMPORTANT: orders table requires pricing_plan_id (used for both plans and credit packs)
                 'pricing_plan_id' => $creditPack->id,
                 'order_type' => 'credit_pack',

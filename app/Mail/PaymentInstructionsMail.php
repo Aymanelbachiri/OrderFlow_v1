@@ -17,6 +17,7 @@ class PaymentInstructionsMail extends Mailable
     public $order;
     public $paymentUrl;
     public $loginUrl;
+    public $source;
 
     /**
      * Create a new message instance.
@@ -25,6 +26,7 @@ class PaymentInstructionsMail extends Mailable
     {
         $this->order = $order;
         $this->loginUrl = route('login');
+        $this->source = $order->sourceModel();
         
         // Generate payment URL based on payment method
         $this->paymentUrl = $this->generatePaymentUrl($order);
@@ -62,8 +64,9 @@ class PaymentInstructionsMail extends Mailable
         }
 
         // Create new PaymentIntent
+        $customer = $order->customer;
         $paymentIntent = \App\Models\PaymentIntent::create([
-            'user_id' => $order->user_id,
+            'client_id' => $order->client_id ?? $order->user_id,
             'pricing_plan_id' => $order->pricing_plan_id,
             'reseller_credit_pack_id' => $order->reseller_credit_pack_id,
             'payment_intent_id' => 'pi_manual_' . uniqid(),
@@ -75,15 +78,15 @@ class PaymentInstructionsMail extends Mailable
             'order_data' => [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-                'user_id' => $order->user_id,
+                'client_id' => $order->client_id ?? $order->user_id,
                 'pricing_plan_id' => $order->pricing_plan_id,
                 'reseller_credit_pack_id' => $order->reseller_credit_pack_id,
                 'custom_product_id' => $order->custom_product_id,
                 'source' => 'admin_manual',
                 'order_type' => $order->order_type,
                 'customer' => [
-                    'name' => $order->user->name,
-                    'email' => $order->user->email,
+                    'name' => $customer->name,
+                    'email' => $customer->email,
                 ],
             ],
             'expires_at' => now()->addDays(7), // Give 7 days to complete payment
@@ -97,8 +100,9 @@ class PaymentInstructionsMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'Payment Instructions - ' . $this->order->order_number . ' - ' . config('app.name'),
+            subject: 'Payment Instructions - ' . $this->order->order_number . ' - ' . $companyName,
         );
     }
 
@@ -113,6 +117,7 @@ class PaymentInstructionsMail extends Mailable
                 'order' => $this->order,
                 'paymentUrl' => $this->paymentUrl,
                 'loginUrl' => $this->loginUrl,
+                'source' => $this->source,
             ],
         );
     }

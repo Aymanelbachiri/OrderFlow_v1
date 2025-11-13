@@ -16,6 +16,7 @@ class OrderStatusUpdateMail extends Mailable
 
     public $order;
     public $loginUrl;
+    public $source;
 
     /**
      * Create a new message instance.
@@ -24,6 +25,7 @@ class OrderStatusUpdateMail extends Mailable
     {
         $this->order = $order;
         $this->loginUrl = route('login');
+        $this->source = $order->sourceModel();
     }
 
     /**
@@ -31,8 +33,9 @@ class OrderStatusUpdateMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'Order Status Update - ' . $this->order->order_number . ' - ' . config('app.name'),
+            subject: 'Order Status Update - ' . $this->order->order_number . ' - ' . $companyName,
         );
     }
 
@@ -46,6 +49,7 @@ class OrderStatusUpdateMail extends Mailable
             with: [
                 'order' => $this->order,
                 'loginUrl' => $this->loginUrl,
+                'source' => $this->source,
             ],
         );
     }

@@ -77,7 +77,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
+        <h1>{{ $source ? $source->getCompanyName() : config('app.name') }}</h1>
         <h2>Payment Instructions</h2>
     </div>
 
@@ -173,19 +173,22 @@
             <li>Check our FAQ section for common questions</li>
         </ul>
 
-        <p>Thank you for choosing {{ config('app.name') }}. We look forward to providing you with excellent IPTV service!</p>
+        <p>Thank you for choosing {{ $source ? $source->getCompanyName() : config('app.name') }}. We look forward to providing you with excellent IPTV service!</p>
 
         <p>Best regards,<br>
-        The {{ config('app.name') }} Team</p>
+        {{ $source ? $source->getTeamName() : (config('app.name') . ' Team') }}</p>
     </div>
 
     <div class="footer">
         <p>Order #{{ $order->order_number }} | Amount: ${{ number_format($order->amount, 2) }}</p>
-        <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+        <p>&copy; {{ date('Y') }} {{ $source ? $source->getCompanyName() : config('app.name') }}. All rights reserved.</p>
         
-        @if(config('app.url'))
+        @php
+            $websiteUrl = $source ? $source->getWebsiteUrl() : config('app.url');
+        @endphp
+        @if($websiteUrl)
         <p>
-            <a href="{{ config('app.url') }}" style="color: #007bff;">Visit our website</a>
+            <a href="{{ $websiteUrl }}" style="color: #007bff;">Visit our website</a>
         </p>
         @endif
         

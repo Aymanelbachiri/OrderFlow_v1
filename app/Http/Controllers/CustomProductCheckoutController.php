@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CustomProduct;
-use App\Models\User;
+use App\Models\Client;
 use App\Models\PaymentIntent;
 use Illuminate\Support\Facades\Schema;
 
@@ -52,32 +52,27 @@ class CustomProductCheckoutController extends Controller
 
         $sourceFromRequest = $request->query('source') ?? ($validated['source'] ?? 'custom_product');
 
-        // Find or create client user by email
-        $user = User::firstOrCreate(
+        // Find or create client by email
+        $client = Client::firstOrCreate(
             ['email' => $validated['email']],
             [
                 'name' => $validated['full_name'],
                 'phone' => $validated['phone'],
                 'password' => bcrypt(str()->random(16)),
-                'role' => 'client',
-                'source' => $sourceFromRequest,
             ]
         );
 
-        // Update user information if needed (name, phone)
+        // Update client information if needed (name, phone)
         $updateData = [];
-        if ($user->name !== $validated['full_name']) {
+        if ($client->name !== $validated['full_name']) {
             $updateData['name'] = $validated['full_name'];
         }
-        if ($user->phone !== $validated['phone']) {
+        if ($client->phone !== $validated['phone']) {
             $updateData['phone'] = $validated['phone'];
-        }
-        if (empty($user->source)) {
-            $updateData['source'] = $sourceFromRequest;
         }
         
         if (!empty($updateData)) {
-            $user->update($updateData);
+            $client->update($updateData);
         }
 
         // Determine admin_id from source or product
@@ -91,7 +86,7 @@ class CustomProductCheckoutController extends Controller
 
         // Create a payment intent for the custom product
         $paymentIntent = PaymentIntent::create([
-            'user_id' => $user->id,
+            'client_id' => $client->id,
             'admin_id' => $adminId,
             'pricing_plan_id' => null, // No pricing plan for custom products
             'payment_intent_id' => 'pi_temp_' . uniqid(),
@@ -101,7 +96,7 @@ class CustomProductCheckoutController extends Controller
             'status' => 'pending',
             'order_type' => 'subscription', // Use 'subscription' as it's allowed in the ENUM constraint
             'order_data' => [
-                'user_id' => $user->id,
+                'client_id' => $client->id,
                 'custom_product_id' => $product->id,
                 'source' => $sourceFromRequest,
                 'order_type' => 'custom_product',

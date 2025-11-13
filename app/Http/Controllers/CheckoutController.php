@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PricingPlan;
 use App\Models\Order;
-use App\Models\User;
+use App\Models\Client;
 use App\Models\PaymentIntent;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NewOrderClientMail;
@@ -106,32 +106,27 @@ class CheckoutController extends Controller
         // Determine source from request query or payload (default to 'main')
         $sourceFromRequest = $request->query('source') ?? ($validated['source'] ?? 'main');
 
-        // Find or create client user by email
-        $user = User::firstOrCreate(
+        // Find or create client by email
+        $client = Client::firstOrCreate(
             ['email' => $validated['email']],
             [
                 'name' => $validated['full_name'],
                 'phone' => $validated['phone'],
                 'password' => bcrypt(str()->random(16)),
-                'role' => 'client',
-                'source' => $sourceFromRequest,
             ]
         );
 
-        // Update user information if needed (name, phone, source)
+        // Update client information if needed (name, phone)
         $updateData = [];
-        if ($user->name !== $validated['full_name']) {
+        if ($client->name !== $validated['full_name']) {
             $updateData['name'] = $validated['full_name'];
         }
-        if ($user->phone !== $validated['phone']) {
+        if ($client->phone !== $validated['phone']) {
             $updateData['phone'] = $validated['phone'];
-        }
-        if (empty($user->source)) {
-            $updateData['source'] = $sourceFromRequest;
         }
         
         if (!empty($updateData)) {
-            $user->update($updateData);
+            $client->update($updateData);
         }
 
         // Determine admin_id from source (if source exists and has admin_id)
@@ -145,7 +140,7 @@ class CheckoutController extends Controller
 
         // Create a payment intent to proceed to selected gateway
         $paymentIntent = PaymentIntent::create([
-            'user_id' => $user->id,
+            'client_id' => $client->id,
             'admin_id' => $adminId,
             'pricing_plan_id' => $plan->id,
             'payment_intent_id' => 'pi_temp_' . uniqid(),
@@ -155,7 +150,7 @@ class CheckoutController extends Controller
             'status' => 'pending',
             'order_type' => 'subscription',
             'order_data' => [
-                'user_id' => $user->id,
+                'client_id' => $client->id,
                 'pricing_plan_id' => $plan->id,
                 'source' => $sourceFromRequest,
                 'order_type' => 'subscription',

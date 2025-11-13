@@ -30,10 +30,12 @@ class SendPaymentCompletedEmails
         try {
             $emailService = new EmailService();
 
+            $customer = $order->customer;
+            
             // Check order type and send appropriate emails
             if ($order->order_type === 'credit_pack') {
-                // Send reseller-specific order confirmation (with admin SMTP if available)
-                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\ResellerOrderConfirmationMail($order), $adminId);
+                // Send reseller-specific order confirmation (with source/admin SMTP if available)
+                $this->sendMailWithAdminConfig($customer->email, new \App\Mail\ResellerOrderConfirmationMail($order), $adminId, $order);
                 
                 // Send reseller-specific admin notification
                 $adminEmails = $emailService->getAdminEmails();
@@ -41,8 +43,8 @@ class SendPaymentCompletedEmails
                     Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
                 }
             } elseif ($order->order_type === 'custom_product') {
-                // Send custom product order confirmation (with admin SMTP if available)
-                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\CustomProductOrderMail($order), $adminId);
+                // Send custom product order confirmation (with source/admin SMTP if available)
+                $this->sendMailWithAdminConfig($customer->email, new \App\Mail\CustomProductOrderMail($order), $adminId, $order);
                 
                 // Send custom product admin notification
                 $adminEmails = $emailService->getAdminEmails();
@@ -50,8 +52,8 @@ class SendPaymentCompletedEmails
                     Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
                 }
             } else {
-                // Send standard order confirmation email to client (with admin SMTP if available)
-                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\NewOrderClientMail($order), $adminId);
+                // Send standard order confirmation email to client (with source/admin SMTP if available)
+                $this->sendMailWithAdminConfig($customer->email, new \App\Mail\NewOrderClientMail($order), $adminId, $order);
 
                 // Send standard new order notification email to admin(s)
                 $adminEmails = $emailService->getAdminEmails();
@@ -64,7 +66,7 @@ class SendPaymentCompletedEmails
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'payment_intent_id' => $paymentIntent->payment_intent_id ?? null,
-                'customer_email' => $order->user->email,
+                'customer_email' => $customer->email,
                 'payment_method' => $paymentIntent->payment_method ?? 'unknown',
                 'amount' => $order->amount,
             ]);
@@ -84,34 +86,45 @@ class SendPaymentCompletedEmails
     }
 
     /**
-     * Send mail with admin-specific SMTP configuration
+     * Send mail with source-specific SMTP configuration (or admin fallback)
      */
-    private function sendMailWithAdminConfig(string $to, $mailable, ?int $adminId = null): void
+    private function sendMailWithAdminConfig(string $to, $mailable, ?int $adminId = null, ?\App\Models\Order $order = null): void
     {
-        if (!$adminId) {
-            // No admin_id, use default
-            Mail::to($to)->send($mailable);
-            return;
+        $smtpConfig = null;
+        $fromAddress = null;
+        $fromName = null;
+
+        // Priority 1: Try to get SMTP config from source
+        if ($order && $order->source) {
+            $source = $order->sourceModel();
+            if ($source && $source->smtp_config && !empty($source->smtp_config)) {
+                $smtpConfig = $source->smtp_config;
+                $fromAddress = $source->getSmtpConfig('from_address');
+                $fromName = $source->getSmtpConfig('from_name');
+            }
         }
 
-        $admin = User::find($adminId);
-        if (!$admin || !$admin->isAdmin()) {
-            // Fallback to default
-            Mail::to($to)->send($mailable);
-            return;
+        // Priority 2: Fallback to admin SMTP config
+        if (!$smtpConfig && $adminId) {
+            $admin = User::find($adminId);
+            if ($admin && $admin->isAdmin()) {
+                $config = $admin->getConfig();
+                $smtpConfig = $config->smtp_config ?? null;
+                if ($smtpConfig && !empty($smtpConfig)) {
+                    $fromAddress = $smtpConfig['from_address'] ?? null;
+                    $fromName = $smtpConfig['from_name'] ?? null;
+                }
+            }
         }
 
-        $config = $admin->getConfig();
-        $smtpConfig = $config->smtp_config ?? null;
-
+        // If no SMTP config found, use default
         if (!$smtpConfig || empty($smtpConfig)) {
-            // Fallback to default
             Mail::to($to)->send($mailable);
             return;
         }
 
         try {
-            // Temporarily override mail config for this admin
+            // Temporarily override mail config
             $originalConfig = config('mail');
             
             \Illuminate\Support\Facades\Config::set('mail.mailers.smtp', [
@@ -125,8 +138,8 @@ class SendPaymentCompletedEmails
             ]);
 
             \Illuminate\Support\Facades\Config::set('mail.from', [
-                'address' => $smtpConfig['from_address'] ?? config('mail.from.address'),
-                'name' => $smtpConfig['from_name'] ?? config('mail.from.name'),
+                'address' => $fromAddress ?? config('mail.from.address'),
+                'name' => $fromName ?? config('mail.from.name'),
             ]);
 
             // Send email
@@ -135,7 +148,7 @@ class SendPaymentCompletedEmails
             // Restore original config
             \Illuminate\Support\Facades\Config::set('mail', $originalConfig);
         } catch (\Exception $e) {
-            Log::error("Failed to send email to {$to} using admin SMTP config: " . $e->getMessage());
+            Log::error("Failed to send email to {$to} using source/admin SMTP config: " . $e->getMessage());
             // Fallback to default
             Mail::to($to)->send($mailable);
         }
@@ -150,10 +163,12 @@ class SendPaymentCompletedEmails
             $emailService = new EmailService();
             $adminId = $order->admin_id;
 
+            $customer = $order->customer;
+            
             // Check order type and send appropriate emails
             if ($order->order_type === 'credit_pack') {
                 // Send reseller-specific order confirmation
-                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\ResellerOrderConfirmationMail($order), $adminId);
+                $this->sendMailWithAdminConfig($customer->email, new \App\Mail\ResellerOrderConfirmationMail($order), $adminId, $order);
                 
                 // Send reseller-specific admin notification
                 $adminEmails = $emailService->getAdminEmails();
@@ -162,7 +177,7 @@ class SendPaymentCompletedEmails
                 }
             } elseif ($order->order_type === 'custom_product') {
                 // Send custom product order confirmation
-                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\CustomProductOrderMail($order), $adminId);
+                $this->sendMailWithAdminConfig($customer->email, new \App\Mail\CustomProductOrderMail($order), $adminId, $order);
                 
                 // Send custom product admin notification
                 $adminEmails = $emailService->getAdminEmails();
@@ -171,7 +186,7 @@ class SendPaymentCompletedEmails
                 }
             } else {
                 // Fallback email to customer using Mailable
-                $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\NewOrderClientMail($order), $adminId);
+                $this->sendMailWithAdminConfig($customer->email, new \App\Mail\NewOrderClientMail($order), $adminId, $order);
 
                 // Fallback email to admin using Mailable
                 $adminEmails = $emailService->getAdminEmails();

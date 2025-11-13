@@ -15,6 +15,7 @@ class NewOrderClientMail extends Mailable
     use Queueable, SerializesModels;
 
     public $order;
+    public $source;
 
     /**
      * Create a new message instance.
@@ -22,6 +23,7 @@ class NewOrderClientMail extends Mailable
     public function __construct(Order $order)
     {
         $this->order = $order;
+        $this->source = $order->sourceModel();
     }
 
     /**
@@ -29,8 +31,9 @@ class NewOrderClientMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $companyName = $this->source ? $this->source->getCompanyName() : config('app.name');
         return new Envelope(
-            subject: 'Order Confirmation - ' . $this->order->order_number . ' - ' . config('app.name'),
+            subject: 'Order Confirmation - ' . $this->order->order_number . ' - ' . $companyName,
         );
     }
 
@@ -43,8 +46,9 @@ class NewOrderClientMail extends Mailable
             view: 'emails.new-order-client',
             with: [
                 'order' => $this->order,
-                'customer' => $this->order->user,
+                'customer' => $this->order->customer,
                 'plan' => $this->order->pricingPlan,
+                'source' => $this->source,
             ],
         );
     }

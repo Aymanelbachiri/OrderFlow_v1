@@ -13,6 +13,7 @@ class Payment extends Model
 
     protected $fillable = [
         'user_id',
+        'client_id',
         'order_id',
         'payment_id',
         'payment_method',
@@ -41,6 +42,14 @@ class Payment extends Model
     }
 
     // Relationships
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * @deprecated Use client() instead. Kept for backward compatibility.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);

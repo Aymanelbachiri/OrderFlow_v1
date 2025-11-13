@@ -19,34 +19,45 @@ class OrderController extends Controller
     use AdminScopesData;
 
     /**
-     * Send mail with admin-specific SMTP configuration
+     * Send mail with source-specific SMTP configuration (or admin fallback)
      */
-    private function sendMailWithAdminConfig(string $to, $mailable, ?int $adminId = null): void
+    private function sendMailWithAdminConfig(string $to, $mailable, ?int $adminId = null, ?Order $order = null): void
     {
-        if (!$adminId) {
-            // No admin_id, use default
-            Mail::to($to)->send($mailable);
-            return;
+        $smtpConfig = null;
+        $fromAddress = null;
+        $fromName = null;
+
+        // Priority 1: Try to get SMTP config from source
+        if ($order && $order->source) {
+            $source = $order->sourceModel();
+            if ($source && $source->smtp_config && !empty($source->smtp_config)) {
+                $smtpConfig = $source->smtp_config;
+                $fromAddress = $source->getSmtpConfig('from_address');
+                $fromName = $source->getSmtpConfig('from_name');
+            }
         }
 
-        $admin = User::find($adminId);
-        if (!$admin || !$admin->isAdmin()) {
-            // Fallback to default
-            Mail::to($to)->send($mailable);
-            return;
+        // Priority 2: Fallback to admin SMTP config
+        if (!$smtpConfig && $adminId) {
+            $admin = User::find($adminId);
+            if ($admin && $admin->isAdmin()) {
+                $config = $admin->getConfig();
+                $smtpConfig = $config->smtp_config ?? null;
+                if ($smtpConfig && !empty($smtpConfig)) {
+                    $fromAddress = $smtpConfig['from_address'] ?? null;
+                    $fromName = $smtpConfig['from_name'] ?? null;
+                }
+            }
         }
 
-        $config = $admin->getConfig();
-        $smtpConfig = $config->smtp_config ?? null;
-
+        // If no SMTP config found, use default
         if (!$smtpConfig || empty($smtpConfig)) {
-            // Fallback to default
             Mail::to($to)->send($mailable);
             return;
         }
 
         try {
-            // Temporarily override mail config for this admin
+            // Temporarily override mail config
             $originalConfig = config('mail');
             
             \Illuminate\Support\Facades\Config::set('mail.mailers.smtp', [
@@ -60,8 +71,8 @@ class OrderController extends Controller
             ]);
 
             \Illuminate\Support\Facades\Config::set('mail.from', [
-                'address' => $smtpConfig['from_address'] ?? config('mail.from.address'),
-                'name' => $smtpConfig['from_name'] ?? config('mail.from.name'),
+                'address' => $fromAddress ?? config('mail.from.address'),
+                'name' => $fromName ?? config('mail.from.name'),
             ]);
 
             // Send email
@@ -70,7 +81,7 @@ class OrderController extends Controller
             // Restore original config
             \Illuminate\Support\Facades\Config::set('mail', $originalConfig);
         } catch (\Exception $e) {
-            Log::error("Failed to send email to {$to} using admin SMTP config: " . $e->getMessage());
+            Log::error("Failed to send email to {$to} using source/admin SMTP config: " . $e->getMessage());
             // Fallback to default
             Mail::to($to)->send($mailable);
         }
@@ -81,7 +92,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'pricingPlan', 'resellerCreditPack', 'payments']);
+        $query = Order::with(['client', 'user', 'pricingPlan', 'resellerCreditPack', 'payments']);
 
         // Filter by status
         if ($request->filled('status')) {
@@ -245,15 +256,15 @@ class OrderController extends Controller
         // Dispatch OrderCreated event to send admin notification emails
         \App\Events\OrderCreated::dispatch($order);
 
-        // Send emails if requested (with admin SMTP if available)
+        // Send emails if requested (with source/admin SMTP if available)
         if ($request->boolean('send_order_confirmation')) {
             // Send order confirmation email
-            $this->sendMailWithAdminConfig($user->email, new \App\Mail\OrderConfirmationMail($order), $adminId);
+            $this->sendMailWithAdminConfig($user->email, new \App\Mail\OrderConfirmationMail($order), $adminId, $order);
         }
 
         if ($request->boolean('send_payment_instructions') && $validated['status'] === 'pending') {
             // Send payment instructions email
-            $this->sendMailWithAdminConfig($user->email, new \App\Mail\PaymentInstructionsMail($order), $adminId);
+            $this->sendMailWithAdminConfig($user->email, new \App\Mail\PaymentInstructionsMail($order), $adminId, $order);
         }
 
         return redirect()->route('admin.orders.index')
@@ -380,23 +391,25 @@ class OrderController extends Controller
 
         $order->update($validated);
 
+        $customer = $order->customer;
+        
         // Send emails if requested
         if ($request->boolean('send_status_update')) {
-            $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\OrderStatusUpdateMail($order), $order->admin_id);
+            $this->sendMailWithAdminConfig($customer->email, new \App\Mail\OrderStatusUpdateMail($order), $order->admin_id, $order);
         }
 
         // If credentials are provided and not sent yet, send them
         if ($request->boolean('send_credentials') &&
-            ($order->subscription_username || $order->reseller_username || $order->user->reseller_panel_url) &&
+            ($order->subscription_username || $order->reseller_username || ($customer instanceof \App\Models\Client && $customer->reseller_panel_url)) &&
             $order->status === 'active') {
             $this->sendCredentials($order);
         }
 
         // Auto-send credentials for reseller orders when activated
         if ($order->status === 'active' &&
-            ($order->pricingPlan->plan_type === 'reseller' || $order->user->role === 'reseller') &&
+            ($order->pricingPlan->plan_type === 'reseller' || ($customer instanceof \App\Models\Client && $customer->isReseller())) &&
             !$order->credentials_sent &&
-            $order->user->reseller_panel_url) {
+            ($customer instanceof \App\Models\Client && $customer->reseller_panel_url)) {
             $this->sendCredentials($order);
         }
 
@@ -410,10 +423,11 @@ class OrderController extends Controller
     public function sendCredentials(Order $order)
     {
         $adminId = $order->admin_id;
+        $customer = $order->customer;
 
-        if ($order->user->role === 'reseller' || $order->pricingPlan->plan_type === 'reseller') {
-            // Use the new ResellerCredentialsMail for reseller orders (with admin SMTP if available)
-            $this->sendMailWithAdminConfig($order->user->email, new ResellerCredentialsMail($order, $order->user), $adminId);
+        if (($customer instanceof \App\Models\Client && $customer->isReseller()) || $order->pricingPlan->plan_type === 'reseller') {
+            // Use the new ResellerCredentialsMail for reseller orders (with source/admin SMTP if available)
+            $this->sendMailWithAdminConfig($customer->email, new ResellerCredentialsMail($order, $customer), $adminId, $order);
 
             // Trigger the reseller order activated event
             ResellerOrderActivated::dispatch($order);
@@ -437,7 +451,7 @@ class OrderController extends Controller
                 ]);
             }
 
-            $this->sendMailWithAdminConfig($order->user->email, new ClientCredentialsMail($order->user, $processedOrders), $adminId);
+            $this->sendMailWithAdminConfig($customer->email, new ClientCredentialsMail($customer, $processedOrders), $adminId, $order);
         }
 
         $order->update([
@@ -455,7 +469,8 @@ class OrderController extends Controller
     public function sendCreditPackCredentials(Order $order)
     {
         // Send credentials email for credit pack orders using Mailable
-        $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\CreditPackCredentialsMail($order, $order->user), $order->admin_id);
+        $customer = $order->customer;
+        $this->sendMailWithAdminConfig($customer->email, new \App\Mail\CreditPackCredentialsMail($order, $customer), $order->admin_id, $order);
 
         $order->update([
             'credentials_sent' => true,
@@ -496,10 +511,11 @@ class OrderController extends Controller
             fputcsv($file, ['Order Number', 'Customer', 'Email', 'Plan', 'Amount', 'Status', 'Created', 'Expires']);
 
             foreach ($orders as $order) {
+                $customer = $order->customer;
                 fputcsv($file, [
                     $order->order_number,
-                    $order->user->name,
-                    $order->user->email,
+                    $customer->name,
+                    $customer->email,
                     $order->pricingPlan->display_name,
                     $order->amount,
                     $order->status,
@@ -592,8 +608,9 @@ class OrderController extends Controller
             // Send credentials email if requested
             if ($request->boolean('send_credentials_email', true)) {
                 try {
+                    $customer = $order->customer;
                     // Use the reseller credentials mail
-                    $this->sendMailWithAdminConfig($order->user->email, new ResellerCredentialsMail($order, $order->user), $order->admin_id);
+                    $this->sendMailWithAdminConfig($customer->email, new ResellerCredentialsMail($order, $customer), $order->admin_id, $order);
 
                     // Trigger the reseller order activated event
                     ResellerOrderActivated::dispatch($order);
@@ -666,10 +683,12 @@ class OrderController extends Controller
                         }
                         
                         // Send renewal email
-                        $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\AccountRenewedMail($order, $originalOrder), $order->admin_id);
+                        $customer = $order->customer;
+                        $this->sendMailWithAdminConfig($customer->email, new \App\Mail\AccountRenewedMail($order, $originalOrder), $order->admin_id, $order);
                     } else {
                         // Send regular credentials email for new orders
-                        $this->sendMailWithAdminConfig($order->user->email, new \App\Mail\ClientCredentialsMail($order->user, collect([$order])), $order->admin_id);
+                        $customer = $order->customer;
+                        $this->sendMailWithAdminConfig($customer->email, new \App\Mail\ClientCredentialsMail($customer, collect([$order])), $order->admin_id, $order);
                     }
 
                     $order->update([
@@ -704,10 +723,11 @@ class OrderController extends Controller
     public function destroy(Order $order)
     {
         // Log the deletion for audit purposes
+        $customer = $order->customer;
         Log::info('Order deleted by admin', [
             'order_id' => $order->id,
             'order_number' => $order->order_number,
-            'customer_email' => $order->user->email,
+            'customer_email' => $customer->email,
             'amount' => $order->amount,
             'deleted_by' => auth()->user()->email,
         ]);

@@ -24,7 +24,7 @@ class CustomProductOrderAdminMail extends Mailable
     public function __construct(Order $order)
     {
         $this->order = $order;
-        $this->customer = $order->user;
+        $this->customer = $order->customer;
         $this->product = $order->customProduct;
     }
 

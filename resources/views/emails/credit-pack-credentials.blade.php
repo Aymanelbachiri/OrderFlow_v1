@@ -14,7 +14,7 @@
                     <!-- Header -->
                     <tr>
                         <td style="background-color: #10b981; padding: 40px 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ config('app.name') }}</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ $source ? $source->getCompanyName() : config('app.name') }}</h1>
                             <p style="margin: 10px 0 0 0; color: #d1fae5; font-size: 16px;">Your IPTV Panel is Ready!</p>
                         </td>
                     </tr>
@@ -172,7 +172,7 @@
                                         <p style="margin: 0 0 12px 0; font-size: 18px; color: #334155; font-weight: bold;">Need Help?</p>
                                         <p style="margin: 0 0 10px 0; font-size: 14px; color: #475569;">Our support team is here to assist you:</p>
                                         <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.8;">
-                                            <li>Email us at: contact@smarters-proiptv.com</li>
+                                            <li>Email us at: {{ $source ? $source->getSupportEmail() : 'contact@smarters-proiptv.com' }}</li>
                                             <li>Reference your order number: <strong>{{ $order->order_number }}</strong></li>
                                             <li>Access our knowledge base and tutorials</li>
                                             <li>Contact our technical support team 24/7</li>
@@ -181,11 +181,11 @@
                                 </tr>
                             </table>
                             
-                            <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 15px; color: #4a5568; line-height: 1.6;">Thank you for choosing {{ config('app.name') }}!</p>
+                            <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 15px; color: #4a5568; line-height: 1.6;">Thank you for choosing {{ $source ? $source->getCompanyName() : config('app.name') }}!</p>
                             
                             <p style="margin: 20px 0 0 0; font-size: 14px; color: #718096; line-height: 1.6;">
                                 Best regards,<br>
-                                <strong style="color: #10b981;">The {{ config('app.name') }} Team</strong>
+                                <strong style="color: #10b981;">{{ $source ? $source->getTeamName() : (config('app.name') . ' Team') }}</strong>
                             </p>
                             
                         </td>
@@ -195,7 +195,7 @@
                     <tr>
                         <td style="background-color: #1e293b; padding: 30px; text-align: center;">
                             <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1; font-weight: 600;">IPTV Panel Access - Order #{{ $order->order_number }}</p>
-                            <p style="margin: 0 0 15px 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+                            <p style="margin: 0 0 15px 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ $source ? $source->getCompanyName() : config('app.name') }}. All rights reserved.</p>
                             
                             
                         </td>

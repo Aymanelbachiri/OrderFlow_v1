@@ -12,6 +12,7 @@ class PaymentIntent extends Model
 
     protected $fillable = [
         'user_id',
+        'client_id',
         'admin_id',
         'pricing_plan_id',
         'reseller_credit_pack_id',
@@ -35,6 +36,14 @@ class PaymentIntent extends Model
     ];
 
     // Relationships
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * @deprecated Use client() instead. Kept for backward compatibility.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -114,6 +123,8 @@ class PaymentIntent extends Model
         $orderData['amount'] = $this->amount;
         $orderData['payment_id'] = $this->payment_intent_id; // Store transaction ID
         $orderData['admin_id'] = $this->admin_id; // Preserve admin_id from payment intent
+        // Set client_id from payment intent or order_data, fallback to user_id for backward compatibility
+        $orderData['client_id'] = $this->client_id ?? ($orderData['client_id'] ?? $this->user_id);
 
         // Ensure correct type and expiry handling for credit pack orders
         $orderData['order_type'] = $orderData['order_type'] ?? $this->order_type;
@@ -159,7 +170,7 @@ class PaymentIntent extends Model
 
         // Create payment record
         Payment::create([
-            'user_id' => $this->user_id,
+            'client_id' => $this->client_id ?? $this->user_id,
             'order_id' => $order->id,
             'payment_id' => $this->payment_intent_id,
             'payment_method' => $this->payment_method,
