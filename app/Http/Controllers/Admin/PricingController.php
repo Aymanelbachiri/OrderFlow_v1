@@ -6,15 +6,28 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PricingPlan;
 use App\Models\SystemSetting;
+use App\Traits\AdminScopesData;
 
 class PricingController extends Controller
 {
+    use AdminScopesData;
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $pricingPlans = PricingPlan::orderBy('plan_type')
+        // Check permission
+        if (!auth()->user()->hasPermission('can_manage_pricing_plans')) {
+            abort(403, 'You do not have permission to manage pricing plans.');
+        }
+
+        $query = PricingPlan::query();
+        
+        // Scope to admin's data (unless super admin)
+        $this->scopeToAdmin($query);
+
+        $pricingPlans = $query->orderBy('plan_type')
             ->orderBy('server_type')
             ->orderBy('device_count')
             ->orderBy('duration_months')
