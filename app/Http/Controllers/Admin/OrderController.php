@@ -8,9 +8,11 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\PricingPlan;
 use App\Mail\ResellerCredentialsMail;
+use App\Mail\ClientCredentialsMail;
 use App\Events\ResellerOrderActivated;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Traits\AdminScopesData;
 
 class OrderController extends Controller
 {
