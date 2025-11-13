@@ -15,6 +15,7 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'pricing_plan_id',
+        'reseller_credit_pack_id',
         'custom_product_id',
         'source',
         'order_number',

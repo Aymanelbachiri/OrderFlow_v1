@@ -380,103 +380,118 @@
                 </div>
 
                 @if($order->user->role === 'client')
-                    @if($order->devices && count($order->devices) > 0)
-                        <!-- Multi-Device Credentials -->
-                        <div class="space-y-6">
-                            @foreach($order->devices as $index => $device)
-                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                                <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device {{ $device['device_number'] }} Credentials</h4>
+                    <!-- Device Credentials Container -->
+                    <div id="deviceCredentialsContainer">
+                        @php
+                            $hasExistingDevices = $order->devices && is_array($order->devices) && count($order->devices) > 0;
+                            $deviceCount = $order->pricingPlan ? $order->pricingPlan->device_count : 1;
+                        @endphp
+                        @if($hasExistingDevices)
+                            <!-- Multi-Device Credentials (Existing) -->
+                            <div class="space-y-6" id="existingDevicesContainer">
+                                @foreach($order->devices as $index => $device)
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                                    <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device {{ ($device['device_number'] ?? $index) + 1 }} Credentials</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="device_{{ $device['device_number'] ?? $index }}_username" class="block text-sm font-medium text-[#201E1F]/60">Username</label>
+                                            <input type="text"
+                                                   id="device_{{ $device['device_number'] ?? $index }}_username"
+                                                   name="devices[{{ $device['device_number'] ?? $index }}][username]"
+                                                   value="{{ old('devices.' . ($device['device_number'] ?? $index) . '.username', $device['username'] ?? '') }}"
+                                                   class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                                   placeholder="Username for device {{ ($device['device_number'] ?? $index) + 1 }}">
+                                            @error('devices.' . ($device['device_number'] ?? $index) . '.username')
+                                                <p class="text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <label for="device_{{ $device['device_number'] ?? $index }}_password" class="block text-sm font-medium text-[#201E1F]/60">Password</label>
+                                            <input type="text"
+                                                   id="device_{{ $device['device_number'] ?? $index }}_password"
+                                                   name="devices[{{ $device['device_number'] ?? $index }}][password]"
+                                                   value="{{ old('devices.' . ($device['device_number'] ?? $index) . '.password', $device['password'] ?? '') }}"
+                                                   class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                                   placeholder="Password for device {{ ($device['device_number'] ?? $index) + 1 }}">
+                                            @error('devices.' . ($device['device_number'] ?? $index) . '.password')
+                                                <p class="text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div class="md:col-span-2 space-y-2">
+                                            <label for="device_{{ $device['device_number'] ?? $index }}_url" class="block text-sm font-medium text-[#201E1F]/60">Server URL</label>
+                                            <input type="url"
+                                                   id="device_{{ $device['device_number'] ?? $index }}_url"
+                                                   name="devices[{{ $device['device_number'] ?? $index }}][url]"
+                                                   value="{{ old('devices.' . ($device['device_number'] ?? $index) . '.url', $device['url'] ?? '') }}"
+                                                   class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                                   placeholder="http://server{{ ($device['device_number'] ?? $index) + 1 }}.example.com:8080">
+                                            @error('devices.' . ($device['device_number'] ?? $index) . '.url')
+                                                <p class="text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <!-- Single Device (Backward Compatibility) or Dynamic Multi-Device -->
+                            <div id="singleDeviceContainer" class="bg-white rounded-lg border border-gray-200 p-6">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- Subscription Username -->
                                     <div class="space-y-2">
-                                        <label for="device_{{ $device['device_number'] }}_username" class="block text-sm font-medium text-[#201E1F]/60">Username</label>
+                                        <label for="subscription_username" class="block text-sm font-medium text-[#201E1F]/60">IPTV Username</label>
                                         <input type="text"
-                                               id="device_{{ $device['device_number'] }}_username"
-                                               name="devices[{{ $device['device_number'] }}][username]"
-                                               value="{{ old('devices.' . $device['device_number'] . '.username', $device['username']) }}"
+                                               id="subscription_username"
+                                               name="subscription_username"
+                                               value="{{ old('subscription_username', $order->subscription_username) }}"
                                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                               placeholder="Username for device {{ $device['device_number'] }}">
-                                        @error('devices.' . $device['device_number'] . '.username')
+                                               placeholder="IPTV service username">
+                                        @error('subscription_username')
                                             <p class="text-sm text-red-600">{{ $message }}</p>
                                         @enderror
                                     </div>
 
+                                    <!-- Subscription Password -->
                                     <div class="space-y-2">
-                                        <label for="device_{{ $device['device_number'] }}_password" class="block text-sm font-medium text-[#201E1F]/60">Password</label>
+                                        <label for="subscription_password" class="block text-sm font-medium text-[#201E1F]/60">IPTV Password</label>
                                         <input type="text"
-                                               id="device_{{ $device['device_number'] }}_password"
-                                               name="devices[{{ $device['device_number'] }}][password]"
-                                               value="{{ old('devices.' . $device['device_number'] . '.password', $device['password']) }}"
+                                               id="subscription_password"
+                                               name="subscription_password"
+                                               value="{{ old('subscription_password', $order->subscription_password) }}"
                                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                               placeholder="Password for device {{ $device['device_number'] }}">
-                                        @error('devices.' . $device['device_number'] . '.password')
+                                               placeholder="IPTV service password">
+                                        @error('subscription_password')
                                             <p class="text-sm text-red-600">{{ $message }}</p>
                                         @enderror
                                     </div>
 
+                                    <!-- Subscription URL -->
                                     <div class="md:col-span-2 space-y-2">
-                                        <label for="device_{{ $device['device_number'] }}_url" class="block text-sm font-medium text-[#201E1F]/60">Server URL</label>
+                                        <label for="subscription_url" class="block text-sm font-medium text-[#201E1F]/60">IPTV Server URL</label>
                                         <input type="url"
-                                               id="device_{{ $device['device_number'] }}_url"
-                                               name="devices[{{ $device['device_number'] }}][url]"
-                                               value="{{ old('devices.' . $device['device_number'] . '.url', $device['url']) }}"
+                                               id="subscription_url"
+                                               name="subscription_url"
+                                               value="{{ old('subscription_url', $order->subscription_url) }}"
                                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                               placeholder="http://server{{ $device['device_number'] }}.example.com:8080">
-                                        @error('devices.' . $device['device_number'] . '.url')
+                                               placeholder="http://your-server.com:8080">
+                                        @error('subscription_url')
                                             <p class="text-sm text-red-600">{{ $message }}</p>
                                         @enderror
                                     </div>
                                 </div>
                             </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <!-- Single Device (Backward Compatibility) -->
-                        <div class="bg-white rounded-lg border border-gray-200 p-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Subscription Username -->
-                                <div class="space-y-2">
-                                    <label for="subscription_username" class="block text-sm font-medium text-[#201E1F]/60">IPTV Username</label>
-                                    <input type="text"
-                                           id="subscription_username"
-                                           name="subscription_username"
-                                           value="{{ old('subscription_username', $order->subscription_username) }}"
-                                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                           placeholder="IPTV service username">
-                                    @error('subscription_username')
-                                        <p class="text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <!-- Subscription Password -->
-                                <div class="space-y-2">
-                                    <label for="subscription_password" class="block text-sm font-medium text-[#201E1F]/60">IPTV Password</label>
-                                    <input type="text"
-                                           id="subscription_password"
-                                           name="subscription_password"
-                                           value="{{ old('subscription_password', $order->subscription_password) }}"
-                                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                           placeholder="IPTV service password">
-                                    @error('subscription_password')
-                                        <p class="text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <!-- Subscription URL -->
-                                <div class="md:col-span-2 space-y-2">
-                                    <label for="subscription_url" class="block text-sm font-medium text-[#201E1F]/60">IPTV Server URL</label>
-                                    <input type="url"
-                                           id="subscription_url"
-                                           name="subscription_url"
-                                           value="{{ old('subscription_url', $order->subscription_url) }}"
-                                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                           placeholder="http://your-server.com:8080">
-                                    @error('subscription_url')
-                                        <p class="text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                    @endif
+                            
+                            <!-- Dynamic Multi-Device Container (hidden by default) -->
+                            <div id="dynamicDevicesContainer" class="space-y-6 hidden"></div>
+                        @endif
+                        
+                        <!-- Always include dynamic container for plan changes (even if existing devices are shown) -->
+                        @if($hasExistingDevices)
+                            <div id="dynamicDevicesContainer" class="space-y-6 hidden"></div>
+                        @endif
+                    </div>
                 @endif
 
                 @if($order->order_type === 'credit_pack' || ($order->pricingPlan && $order->pricingPlan->plan_type === 'reseller'))
@@ -602,5 +617,282 @@
         </form>
     </div>
 </div>
+
+<script>
+// Get pricing plan device counts for dynamic field generation
+const pricingPlans = @json(\App\Models\PricingPlan::where('is_active', true)->get()->mapWithKeys(function($plan) {
+    return [$plan->id => $plan->device_count];
+}));
+
+// Get current order's pricing plan device count (if exists)
+const currentOrderDeviceCount = @json($order->pricingPlan ? $order->pricingPlan->device_count : 1);
+
+// Get existing devices data from order (if any)
+const existingDevices = @json($order->devices && is_array($order->devices) && count($order->devices) > 0 ? $order->devices : []);
+
+// Function to generate device fields based on device count
+function generateDeviceFields(deviceCount) {
+    const container = document.getElementById('dynamicDevicesContainer');
+    if (!container) {
+        console.error('dynamicDevicesContainer not found');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    if (deviceCount <= 1) {
+        container.classList.add('hidden');
+        const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+        if (singleDeviceContainer) {
+            singleDeviceContainer.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    // Hide single device container
+    const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+    if (singleDeviceContainer) {
+        singleDeviceContainer.classList.add('hidden');
+    }
+    
+    // Ensure dynamic devices container is visible
+    container.classList.remove('hidden');
+    
+    // Create a map of existing devices by device_number for easy lookup
+    const devicesMap = {};
+    if (existingDevices && Array.isArray(existingDevices)) {
+        existingDevices.forEach(device => {
+            const deviceNum = parseInt(device.device_number) || 0;
+            devicesMap[deviceNum] = device;
+        });
+    }
+    
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Generate fields for each device (0-based indexing)
+    for (let i = 0; i < deviceCount; i++) {
+        const deviceNumber = i + 1; // Display number (1-based for user display)
+        const deviceIndex = i; // Array index (0-based for form submission)
+        
+        // Get existing device data if available
+        const existingDevice = devicesMap[deviceIndex] || null;
+        const existingUsername = existingDevice ? (existingDevice.username || '') : '';
+        const existingPassword = existingDevice ? (existingDevice.password || '') : '';
+        const existingUrl = existingDevice ? (existingDevice.url || '') : '';
+        
+        const deviceDiv = document.createElement('div');
+        deviceDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-6';
+        
+        deviceDiv.innerHTML = `
+            <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device ${deviceNumber} Credentials</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label for="device_${deviceIndex}_username" class="block text-sm font-medium text-[#201E1F]/60">Username</label>
+                    <input type="text"
+                           id="device_${deviceIndex}_username"
+                           name="devices[${deviceIndex}][username]"
+                           value="${escapeHtml(existingUsername)}"
+                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                           placeholder="Username for device ${deviceNumber}">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="device_${deviceIndex}_password" class="block text-sm font-medium text-[#201E1F]/60">Password</label>
+                    <input type="text"
+                           id="device_${deviceIndex}_password"
+                           name="devices[${deviceIndex}][password]"
+                           value="${escapeHtml(existingPassword)}"
+                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                           placeholder="Password for device ${deviceNumber}">
+                </div>
+
+                <div class="md:col-span-2 space-y-2">
+                    <label for="device_${deviceIndex}_url" class="block text-sm font-medium text-[#201E1F]/60">Server URL</label>
+                    <input type="url"
+                           id="device_${deviceIndex}_url"
+                           name="devices[${deviceIndex}][url]"
+                           value="${escapeHtml(existingUrl)}"
+                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                           placeholder="http://server${deviceNumber}.example.com:8080">
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(deviceDiv);
+    }
+}
+
+// Function to update device fields based on pricing plan (regardless of status)
+function updateDeviceFields() {
+    const pricingPlanSelect = document.getElementById('pricing_plan_id');
+    const existingDevicesContainer = document.getElementById('existingDevicesContainer');
+    const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+    const dynamicDevicesContainer = document.getElementById('dynamicDevicesContainer');
+    
+    // Determine device count from pricing plan (regardless of status)
+    let deviceCount = 1;
+    
+    if (pricingPlanSelect && pricingPlanSelect.value) {
+        const planId = parseInt(pricingPlanSelect.value);
+        deviceCount = pricingPlans[planId] || 1;
+    } else if (currentOrderDeviceCount) {
+        // Use current order's device count if pricing plan select doesn't exist
+        deviceCount = currentOrderDeviceCount;
+    }
+    
+    // Always update device fields when plan changes, even if existing devices are shown
+    // Hide existing devices container if we're switching to a different device count
+    if (existingDevicesContainer && existingDevicesContainer.children.length > 0) {
+        const currentDeviceCount = existingDevices.length > 0 ? existingDevices.length : currentOrderDeviceCount;
+        
+        // If device count changed, hide existing devices and show dynamic fields
+        if (deviceCount !== currentDeviceCount) {
+            // Hide existing devices container
+            existingDevicesContainer.classList.add('hidden');
+            // Clear existing devices container so we can regenerate
+            existingDevicesContainer.innerHTML = '';
+            // Continue to generate new fields below
+        } else {
+            // Device count matches, keep existing devices visible
+            if (deviceCount > 1) {
+                if (singleDeviceContainer) {
+                    singleDeviceContainer.classList.add('hidden');
+                }
+                if (dynamicDevicesContainer) {
+                    dynamicDevicesContainer.classList.add('hidden');
+                }
+            } else {
+                // Single device - show single container, hide others
+                if (singleDeviceContainer) {
+                    singleDeviceContainer.classList.remove('hidden');
+                }
+                if (dynamicDevicesContainer) {
+                    dynamicDevicesContainer.classList.add('hidden');
+                }
+            }
+            return; // Don't override existing devices display if count matches
+        }
+    }
+    
+    if (deviceCount > 1) {
+        // Hide single device container and show multi-device fields
+        if (singleDeviceContainer) {
+            singleDeviceContainer.classList.add('hidden');
+            // Remove single device fields from form submission by making them disabled
+            const singleDeviceFields = singleDeviceContainer.querySelectorAll('input');
+            singleDeviceFields.forEach(field => {
+                field.disabled = true;
+                // Also remove the name attribute so they're not submitted
+                field.removeAttribute('name');
+            });
+        }
+        if (dynamicDevicesContainer) {
+            // Ensure dynamic devices container is visible
+            dynamicDevicesContainer.classList.remove('hidden');
+            // Generate fields with existing device data preserved
+            generateDeviceFields(deviceCount);
+            // Double-check it's visible after generation
+            if (dynamicDevicesContainer.classList.contains('hidden')) {
+                dynamicDevicesContainer.classList.remove('hidden');
+            }
+        }
+    } else {
+        // Show single device container for 1 device plans
+        if (singleDeviceContainer) {
+            singleDeviceContainer.classList.remove('hidden');
+            // Re-enable single device fields
+            const singleDeviceFields = singleDeviceContainer.querySelectorAll('input');
+            singleDeviceFields.forEach(field => {
+                field.disabled = false;
+                // Restore original name attribute
+                const fieldId = field.id;
+                if (fieldId.includes('subscription_username')) {
+                    field.setAttribute('name', 'subscription_username');
+                    // Pre-fill with first device's data if available
+                    if (existingDevices && existingDevices.length > 0 && existingDevices[0].username) {
+                        field.value = existingDevices[0].username;
+                    }
+                } else if (fieldId.includes('subscription_password')) {
+                    field.setAttribute('name', 'subscription_password');
+                    // Pre-fill with first device's data if available
+                    if (existingDevices && existingDevices.length > 0 && existingDevices[0].password) {
+                        field.value = existingDevices[0].password;
+                    }
+                } else if (fieldId.includes('subscription_url')) {
+                    field.setAttribute('name', 'subscription_url');
+                    // Pre-fill with first device's data if available
+                    if (existingDevices && existingDevices.length > 0 && existingDevices[0].url) {
+                        field.value = existingDevices[0].url;
+                    }
+                }
+            });
+        }
+        if (dynamicDevicesContainer) {
+            dynamicDevicesContainer.classList.add('hidden');
+            // Clear dynamic devices container
+            dynamicDevicesContainer.innerHTML = '';
+        }
+    }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const pricingPlanSelect = document.getElementById('pricing_plan_id');
+    const existingDevicesContainer = document.getElementById('existingDevicesContainer');
+    const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+    const dynamicDevicesContainer = document.getElementById('dynamicDevicesContainer');
+    
+    // Update device fields when pricing plan changes (regardless of status)
+    if (pricingPlanSelect) {
+        pricingPlanSelect.addEventListener('change', updateDeviceFields);
+    }
+    
+    // Initial check - show correct number of device fields based on current plan
+    // If no existing devices and plan has multiple devices, show dynamic fields
+    if (!existingDevicesContainer || existingDevicesContainer.children.length === 0) {
+        updateDeviceFields();
+    } else {
+        // Existing devices are shown, just ensure containers are properly configured
+        const deviceCount = currentOrderDeviceCount;
+        if (deviceCount > 1) {
+            if (singleDeviceContainer) {
+                singleDeviceContainer.classList.add('hidden');
+            }
+            if (dynamicDevicesContainer) {
+                dynamicDevicesContainer.classList.add('hidden');
+            }
+        }
+    }
+    
+    // Debug: Log form data before submission
+    const form = document.querySelector('form[action*="orders"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const formData = new FormData(form);
+            const devicesData = {};
+            for (let [key, value] of formData.entries()) {
+                if (key.startsWith('devices[')) {
+                    const match = key.match(/devices\[(\d+)\]\[(\w+)\]/);
+                    if (match) {
+                        const deviceNum = match[1];
+                        const field = match[2];
+                        if (!devicesData[deviceNum]) {
+                            devicesData[deviceNum] = {};
+                        }
+                        devicesData[deviceNum][field] = value;
+                    }
+                }
+            }
+            console.log('Form submission - Devices data:', devicesData);
+            console.log('Form submission - All form data:', Object.fromEntries(formData));
+        });
+    }
+});
+</script>
 @endsection
 

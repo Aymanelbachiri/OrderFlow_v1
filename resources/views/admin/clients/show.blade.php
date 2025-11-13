@@ -84,6 +84,7 @@
                         </div>
                     </div>
                     
+                    @if(!$client->isClient())
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-[#201E1F]/60">Email Verified</label>
                         <div class="flex items-center">
@@ -104,6 +105,7 @@
                             @endif
                         </div>
                     </div>
+                    @endif
                     
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-[#201E1F]/60">Member Since</label>
@@ -328,7 +330,7 @@
                         <span>Create Order</span>
                     </a>
                     
-                    @if(!$client->email_verified_at)
+                    @if(!$client->isClient() && !$client->email_verified_at)
                     <form action="{{ route('admin.clients.verify-email', $client) }}" method="POST" class="w-full">
                         @csrf
                         <button type="submit" 
@@ -349,6 +351,7 @@
                         </button>
                     </form>
                     
+                    @if(!$client->isClient())
                     <form action="{{ route('admin.clients.send-password-reset', $client) }}" method="POST" class="w-full">
                         @csrf
                         <button type="submit" 
@@ -356,6 +359,7 @@
                             Send Password Reset
                         </button>
                     </form>
+                    @endif
                 </div>
             </div>
         </div>

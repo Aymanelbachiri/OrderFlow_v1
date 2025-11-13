@@ -166,22 +166,10 @@
                 </div>
                 
                 <div class="space-y-4">
-                    <!-- Email Verification -->
-                    <div class="flex items-start space-x-3">
-                        <div class="flex items-center h-5">
-                            <input type="checkbox" 
-                                   id="email_verified" 
-                                   name="email_verified" 
-                                   value="1"
-                                   {{ old('email_verified', '1') ? '' : 'checked' }}
-                                   class="h-4 w-4 text-[#D63613] focus:ring-[#D63613] border-gray-300 rounded">
-                        </div>
-                        <div>
-                            <label for="email_verified" class="text-sm font-medium text-[#201E1F]">
-                                Mark email as verified
-                            </label>
-                            <p class="text-sm text-[#201E1F]/60">If unchecked, the client will need to verify their email address</p>
-                        </div>
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <strong>Note:</strong> Clients do not require email verification or passwords. The account will be automatically verified upon creation.
+                        </p>
                     </div>
 
                     <!-- Send Welcome Email -->
@@ -196,7 +184,7 @@
                         </div>
                         <div>
                             <label for="send_welcome_email" class="text-sm font-medium text-[#201E1F]">
-                                Send welcome email with login credentials
+                                Send welcome email
                             </label>
                             <p class="text-sm text-[#201E1F]/60">Client will receive an email with their account details</p>
                         </div>
@@ -257,65 +245,4 @@
 .password-strength-strong { border-color: #10b981 !important; }
 </style>
 
-<script>
-// Enhanced password strength validation
-document.getElementById('password').addEventListener('input', function() {
-    const password = this.value;
-    const confirmField = document.getElementById('password_confirmation');
-    
-    // Remove all strength classes
-    this.classList.remove('password-strength-weak', 'password-strength-medium', 'password-strength-strong');
-    
-    if (password.length > 0) {
-        confirmField.required = true;
-        
-        // Calculate password strength
-        let strength = 0;
-        if (password.length >= 8) strength++;
-        if (/[a-z]/.test(password)) strength++;
-        if (/[A-Z]/.test(password)) strength++;
-        if (/[0-9]/.test(password)) strength++;
-        if (/[^a-zA-Z0-9]/.test(password)) strength++;
-        
-        // Apply visual feedback
-        if (strength < 3) {
-            this.classList.add('password-strength-weak');
-        } else if (strength < 5) {
-            this.classList.add('password-strength-medium');
-        } else {
-            this.classList.add('password-strength-strong');
-        }
-    } else {
-        confirmField.required = false;
-    }
-});
-
-// Password confirmation validation
-document.getElementById('password_confirmation').addEventListener('input', function() {
-    const password = document.getElementById('password').value;
-    const confirmPassword = this.value;
-    
-    this.classList.remove('border-red-500', 'border-green-500');
-    
-    if (confirmPassword.length > 0) {
-        if (password === confirmPassword) {
-            this.classList.add('border-green-500');
-        } else {
-            this.classList.add('border-red-500');
-        }
-    }
-});
-
-// Form submission validation
-document.querySelector('form').addEventListener('submit', function(e) {
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('password_confirmation').value;
-    
-    if (password !== confirmPassword) {
-        e.preventDefault();
-        alert('Passwords do not match. Please check and try again.');
-        document.getElementById('password_confirmation').focus();
-    }
-});
-</script>
 @endsection

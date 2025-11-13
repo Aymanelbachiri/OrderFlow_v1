@@ -46,13 +46,26 @@ class RolePermissionSeeder extends Seeder
 
         // ✅ Use firstOrCreate for roles too
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        
+        $clientRole = Role::firstOrCreate(['name' => 'client', 'guard_name' => 'web']);
+        $resellerRole = Role::firstOrCreate(['name' => 'reseller', 'guard_name' => 'web']);
 
         // Assign permissions
         $adminRole->syncPermissions(Permission::all()); // replaces givePermissionTo()
-
         
-
+        // Assign client permissions
+        $clientPermissions = Permission::whereIn('name', [
+            'view-own-orders',
+            'manage-own-profile',
+            'renew-subscription',
+        ])->get();
+        $clientRole->syncPermissions($clientPermissions);
         
+        // Assign reseller permissions
+        $resellerPermissions = Permission::whereIn('name', [
+            'view-reseller-dashboard',
+            'manage-reseller-orders',
+            'view-reseller-revenue',
+        ])->get();
+        $resellerRole->syncPermissions($resellerPermissions);
     }
 }

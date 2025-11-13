@@ -114,7 +114,7 @@
                         </p>
                     </div>
                     
-                    @if(($order->order_type ?? 'regular') !== 'credit_pack' && (!$order->reseller_username && !$order->reseller_password))
+                    @if(($order->order_type ?? 'subscription') !== 'credit_pack' && (!$order->reseller_username && !$order->reseller_password))
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-[#201E1F]/60">Expiry Date</label>
                         <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200">
@@ -123,7 +123,7 @@
                     </div>
                     @endif
                     
-                    @if(($order->order_type ?? 'regular') !== 'credit_pack' && (!$order->reseller_username && !$order->reseller_password))
+                    @if(($order->order_type ?? 'subscription') !== 'credit_pack' && (!$order->reseller_username && !$order->reseller_password))
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-[#201E1F]/60">Time Remaining</label>
                         <div class="bg-white rounded-lg px-4 py-3 border border-gray-200">
@@ -416,9 +416,9 @@
                     
                     @if($order->status === 'pending')
                     <button type="button"
-                            onclick="openActivateModal({{ $order->id }}, '{{ $order->order_number }}', '{{ $order->user->name }}', '{{ $order->pricingPlan->display_name ?? ($order->resellerCreditPack->name ?? 'IPTV Service') }}', {{ $order->pricingPlan->device_count ?? 1 }}, '{{ $order->pricingPlan->plan_type ?? 'regular' }}', '{{ $order->order_type ?? 'regular' }}')"
+                            onclick="openActivateModal({{ $order->id }}, '{{ $order->order_number }}', '{{ $order->user->name }}', '{{ $order->pricingPlan->display_name ?? ($order->resellerCreditPack->name ?? 'IPTV Service') }}', {{ $order->pricingPlan->device_count ?? 1 }}, '{{ $order->pricingPlan->plan_type ?? 'regular' }}', '{{ $order->order_type ?? 'subscription' }}')"
                             class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 shadow-md hover:shadow-lg"
-                            data-order-type="{{ $order->order_type ?? 'regular' }}">
+                            data-order-type="{{ $order->order_type ?? 'subscription' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
@@ -653,7 +653,7 @@
 </div>
 
 <script>
-function openActivateModal(orderId, orderNumber, customerName, serviceName, deviceCount, planType = 'regular', orderType = 'regular') {
+function openActivateModal(orderId, orderNumber, customerName, serviceName, deviceCount, planType = 'regular', orderType = 'subscription') {
     // Set form action
     document.getElementById('activateForm').action = `/admin/orders/${orderId}/activate`;
 
@@ -708,47 +708,49 @@ function generateDeviceFields(deviceCount) {
     const container = document.getElementById('devicesContainer');
     container.innerHTML = '';
 
-    for (let i = 1; i <= deviceCount; i++) {
+    for (let i = 0; i < deviceCount; i++) {
+        const deviceNumber = i + 1; // Display number (1-based for user display)
+        const deviceIndex = i; // Array index (0-based for form submission)
         const deviceDiv = document.createElement('div');
         deviceDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-4';
 
         deviceDiv.innerHTML = `
-            <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device ${i} Credentials</h4>
+            <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device ${deviceNumber} Credentials</h4>
             <div class="space-y-4">
                 <div>
-                    <label for="device_${i}_username" class="block text-sm font-medium text-[#201E1F] mb-2">
+                    <label for="device_${deviceIndex}_username" class="block text-sm font-medium text-[#201E1F] mb-2">
                         Username <span class="text-red-500">*</span>
                     </label>
                     <input type="text"
-                           id="device_${i}_username"
-                           name="devices[${i}][username]"
+                           id="device_${deviceIndex}_username"
+                           name="devices[${deviceIndex}][username]"
                            required
                            class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                           placeholder="Enter username for device ${i}">
+                           placeholder="Enter username for device ${deviceNumber}">
                 </div>
 
                 <div>
-                    <label for="device_${i}_password" class="block text-sm font-medium text-[#201E1F] mb-2">
+                    <label for="device_${deviceIndex}_password" class="block text-sm font-medium text-[#201E1F] mb-2">
                         Password <span class="text-red-500">*</span>
                     </label>
                     <input type="text"
-                           id="device_${i}_password"
-                           name="devices[${i}][password]"
+                           id="device_${deviceIndex}_password"
+                           name="devices[${deviceIndex}][password]"
                            required
                            class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                           placeholder="Enter password for device ${i}">
+                           placeholder="Enter password for device ${deviceNumber}">
                 </div>
 
                 <div>
-                    <label for="device_${i}_url" class="block text-sm font-medium text-[#201E1F] mb-2">
+                    <label for="device_${deviceIndex}_url" class="block text-sm font-medium text-[#201E1F] mb-2">
                         Server URL <span class="text-red-500">*</span>
                     </label>
                     <input type="url"
-                           id="device_${i}_url"
-                           name="devices[${i}][url]"
+                           id="device_${deviceIndex}_url"
+                           name="devices[${deviceIndex}][url]"
                            required
                            class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                           placeholder="http://server${i}.example.com:8080">
+                           placeholder="http://server${deviceNumber}.example.com:8080">
                 </div>
             </div>
         `;
@@ -788,7 +790,7 @@ document.addEventListener('keydown', function(e) {
             @json($order->pricingPlan->display_name ?? ($order->resellerCreditPack->name ?? 'IPTV Service')),
             {{ $order->pricingPlan->device_count ?? 1 }},
             @json($order->pricingPlan->plan_type ?? 'regular'),
-            @json($order->order_type ?? 'regular')
+            @json($order->order_type ?? 'subscription')
         );
     });
 }</script>

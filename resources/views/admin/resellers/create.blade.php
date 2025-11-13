@@ -88,54 +88,8 @@
             </div>
         </div>
 
-        <!-- Password Configuration -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.2s;">
-            <div class="px-6 py-5 border-b border-[#D63613]/10">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-semibold text-[#201E1F]">Password Configuration</h3>
-                        <p class="text-sm text-[#201E1F]/60">Set secure login credentials for the reseller</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Password -->
-                    <div>
-                        <label for="password" class="block text-sm font-semibold text-[#201E1F] mb-2">Password</label>
-                        <input type="password" 
-                               id="password" 
-                               name="password"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] placeholder-[#201E1F]/40 transition-all duration-200 @error('password') border-red-500 @enderror"
-                               placeholder="Enter secure password"
-                               >
-                        @error('password')
-                            <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Confirm Password -->
-                    <div>
-                        <label for="password_confirmation" class="block text-sm font-semibold text-[#201E1F] mb-2">Confirm Password</label>
-                        <input type="password" 
-                               id="password_confirmation" 
-                               name="password_confirmation"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] placeholder-[#201E1F]/40 transition-all duration-200"
-                               placeholder="Confirm password"
-                               >
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Account Settings -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.3s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.2s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
@@ -156,7 +110,7 @@
                                id="email_verified" 
                                name="email_verified" 
                                value="1"
-                               {{ old('email_verified', '1') ? '' : 'checked' }}
+                               {{ old('email_verified', '1') == '1' ? 'checked' : '' }}
                                class="h-4 w-4 text-[#D63613] focus:ring-[#D63613] border-gray-300 rounded bg-white">
                         <label for="email_verified" class="ml-3 block text-sm font-medium text-[#201E1F]">
                             Mark email as verified
@@ -251,7 +205,7 @@
         </div> --}}
 
         <!-- Admin Notes -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.5s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.4s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center">
@@ -280,7 +234,7 @@
         </div>
 
         <!-- Reseller Preview -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.6s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.5s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
@@ -320,7 +274,7 @@
         </div>
 
         <!-- Submit Buttons -->
-        <div class="flex justify-end space-x-4 animate-fade-in-up" style="animation-delay: 0.7s;">
+        <div class="flex justify-end space-x-4 animate-fade-in-up" style="animation-delay: 0.6s;">
             <a href="{{ route('admin.resellers.index') }}" 
                class="px-6 py-3 bg-white border border-gray-200 text-[#201E1F] font-semibold rounded-lg hover:bg-gray-50 transition-all duration-300">
                 Cancel

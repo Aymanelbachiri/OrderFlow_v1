@@ -59,23 +59,44 @@
                     @enderror
                 </div>
 
-                <!-- Pricing Plan -->
-                <div class="md:col-span-2">
+                <!-- Pricing Plan (for clients) -->
+                <div class="md:col-span-2" id="pricing_plan_container">
                     <label for="pricing_plan_id" class="block text-sm font-semibold text-[#201E1F] mb-2">Pricing Plan</label>
                     <select id="pricing_plan_id" 
                             name="pricing_plan_id" 
-                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] transition-all duration-200 @error('pricing_plan_id') border-red-500 @enderror"
-                            required>
+                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] transition-all duration-200 @error('pricing_plan_id') border-red-500 @enderror">
                         <option value="">Select Pricing Plan</option>
                         @foreach($pricingPlans as $plan)
                         <option value="{{ $plan->id }}" 
                                 data-price="{{ $plan->price }}"
+                                data-role="client"
                                 {{ old('pricing_plan_id') == $plan->id ? 'selected' : '' }}>
                             {{ $plan->display_name }} - ${{ number_format($plan->price, 2) }}
                         </option>
                         @endforeach
                     </select>
                     @error('pricing_plan_id')
+                        <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Reseller Credit Pack (for resellers) -->
+                <div class="md:col-span-2 hidden" id="reseller_credit_pack_container">
+                    <label for="reseller_credit_pack_id" class="block text-sm font-semibold text-[#201E1F] mb-2">Reseller Credit Pack</label>
+                    <select id="reseller_credit_pack_id" 
+                            name="reseller_credit_pack_id" 
+                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] transition-all duration-200 @error('reseller_credit_pack_id') border-red-500 @enderror">
+                        <option value="">Select Credit Pack</option>
+                        @foreach($resellerCreditPacks as $pack)
+                        <option value="{{ $pack->id }}" 
+                                data-price="{{ $pack->price }}"
+                                data-role="reseller"
+                                {{ old('reseller_credit_pack_id') == $pack->id ? 'selected' : '' }}>
+                            {{ $pack->name }} - ${{ number_format($pack->price, 2) }} ({{ number_format($pack->credits_amount) }} Credits)
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('reseller_credit_pack_id')
                         <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
                     @enderror
                 </div>
@@ -277,10 +298,52 @@
 </style>
 
 <script>
+// Get user role from option text
+function getUserRole(userSelect) {
+    if (!userSelect.value) return null;
+    const selectedOption = userSelect.options[userSelect.selectedIndex];
+    const roleText = selectedOption.textContent;
+    if (roleText.includes('Reseller')) {
+        return 'reseller';
+    } else if (roleText.includes('Client')) {
+        return 'client';
+    }
+    return null;
+}
+
+// Toggle between pricing plans and reseller credit packs based on user role
+function togglePlanSelection() {
+    const userSelect = document.getElementById('user_id');
+    const userRole = getUserRole(userSelect);
+    const pricingPlanContainer = document.getElementById('pricing_plan_container');
+    const resellerCreditPackContainer = document.getElementById('reseller_credit_pack_container');
+    const pricingPlanSelect = document.getElementById('pricing_plan_id');
+    const resellerCreditPackSelect = document.getElementById('reseller_credit_pack_id');
+    
+    if (userRole === 'reseller') {
+        // Show reseller credit packs, hide pricing plans
+        pricingPlanContainer.classList.add('hidden');
+        resellerCreditPackContainer.classList.remove('hidden');
+        pricingPlanSelect.removeAttribute('required');
+        resellerCreditPackSelect.setAttribute('required', 'required');
+        pricingPlanSelect.value = '';
+    } else {
+        // Show pricing plans, hide reseller credit packs
+        pricingPlanContainer.classList.remove('hidden');
+        resellerCreditPackContainer.classList.add('hidden');
+        pricingPlanSelect.setAttribute('required', 'required');
+        resellerCreditPackSelect.removeAttribute('required');
+        resellerCreditPackSelect.value = '';
+    }
+    
+    updatePreview();
+}
+
 // Update preview when selections change
 function updatePreview() {
     const userSelect = document.getElementById('user_id');
     const planSelect = document.getElementById('pricing_plan_id');
+    const creditPackSelect = document.getElementById('reseller_credit_pack_id');
     const amountInput = document.getElementById('amount');
     
     // Update customer preview
@@ -288,31 +351,45 @@ function updatePreview() {
     const customerText = selectedUser.value ? selectedUser.textContent.split(' (')[0] : 'Select a customer';
     document.getElementById('preview-customer').textContent = customerText;
     
-    // Update plan preview
-    const selectedPlan = planSelect.options[planSelect.selectedIndex];
-    if (selectedPlan.value) {
-        const planPrice = selectedPlan.getAttribute('data-price');
-        const planText = selectedPlan.textContent.split(' - $')[0];
-        document.getElementById('preview-plan').textContent = planText;
+    // Update plan/credit pack preview based on user role
+    const userRole = getUserRole(userSelect);
+    let selectedItem = null;
+    let itemText = 'Select a plan';
+    
+    if (userRole === 'reseller') {
+        selectedItem = creditPackSelect.options[creditPackSelect.selectedIndex];
+        itemText = 'Select a credit pack';
+    } else {
+        selectedItem = planSelect.options[planSelect.selectedIndex];
+        itemText = 'Select a pricing plan';
+    }
+    
+    if (selectedItem && selectedItem.value) {
+        const itemPrice = selectedItem.getAttribute('data-price');
+        const itemDisplayText = selectedItem.textContent.split(' - $')[0];
+        document.getElementById('preview-plan').textContent = itemDisplayText;
         
         // Auto-fill amount if not manually set
         if (!amountInput.value) {
-            amountInput.value = planPrice;
+            amountInput.value = itemPrice;
         }
         
-        document.getElementById('preview-amount').textContent = '$' + (amountInput.value || planPrice);
+        document.getElementById('preview-amount').textContent = '$' + (amountInput.value || itemPrice);
     } else {
-        document.getElementById('preview-plan').textContent = 'Select a pricing plan';
+        document.getElementById('preview-plan').textContent = itemText;
         document.getElementById('preview-amount').textContent = '$0.00';
     }
 }
 
 // Add event listeners
-document.getElementById('user_id').addEventListener('change', updatePreview);
+document.getElementById('user_id').addEventListener('change', function() {
+    togglePlanSelection();
+});
 document.getElementById('pricing_plan_id').addEventListener('change', updatePreview);
+document.getElementById('reseller_credit_pack_id').addEventListener('change', updatePreview);
 document.getElementById('amount').addEventListener('input', updatePreview);
 
-// Initial preview update
-updatePreview();
+// Initial setup
+togglePlanSelection();
 </script>
 @endsection

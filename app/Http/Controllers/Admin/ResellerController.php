@@ -64,24 +64,22 @@ class ResellerController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'nullable|string|max:20',
-            'password' => 'nullable|string|min:8|confirmed',
             'reseller_panel_url' => 'nullable|url|max:255',
             'reseller_panel_username' => 'nullable|string|max:255',
             'reseller_panel_password' => 'nullable|string|max:255',
+            'email_verified' => 'nullable',
         ]);
 
         $reseller = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'password' => isset($validated['password']) && $validated['password']
-                ? Hash::make($validated['password'])
-                : null,
+            'password' => null, // Resellers don't need passwords as they won't login
             'role' => 'reseller',
-            'email_verified_at' => now(),
-            'reseller_panel_url' => isset($validated['reseller_panel_url']),
-            'reseller_panel_username' => isset($validated['reseller_panel_username']),
-            'reseller_panel_password' => isset($validated['reseller_panel_password']),
+            'email_verified_at' => $request->has('email_verified') && $request->input('email_verified') == '1' ? now() : null,
+            'reseller_panel_url' => $validated['reseller_panel_url'] ?? null,
+            'reseller_panel_username' => $validated['reseller_panel_username'] ?? null,
+            'reseller_panel_password' => $validated['reseller_panel_password'] ?? null,
         ]);
 
         $reseller->assignRole('reseller');
@@ -129,13 +127,13 @@ class ResellerController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $reseller->id,
             'phone' => 'nullable|string|max:20',
-            'password' => 'nullable|string|min:8|confirmed',
             'is_active' => 'boolean',
             'suspension_reason' => 'nullable|string',
             'reseller_panel_url' => 'nullable|url|max:255',
             'reseller_panel_username' => 'nullable|string|max:255',
             'reseller_panel_password' => 'nullable|string|max:255',
             'available_credits' => 'nullable|integer|min:0',
+            'email_verified' => 'nullable|boolean',
         ]);
 
         $updateData = [
@@ -147,11 +145,9 @@ class ResellerController extends Controller
             'reseller_panel_username' => $validated['reseller_panel_username'],
             'reseller_panel_password' => $validated['reseller_panel_password'],
             'available_credits' => $validated['available_credits'] ?? 0,
+            'email_verified_at' => $request->has('email_verified') && $request->input('email_verified') == '1' ? now() : null,
+            'password' => null, // Resellers don't need passwords as they won't login
         ];
-
-        if ($validated['password']) {
-            $updateData['password'] = Hash::make($validated['password']);
-        }
 
         if (!$request->boolean('is_active')) {
             $updateData['suspended_at'] = now();

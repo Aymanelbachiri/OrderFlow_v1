@@ -113,8 +113,9 @@ class OrderController extends Controller
     {
         $users = User::whereIn('role', ['client', 'reseller'])->orderBy('name')->get();
         $pricingPlans = PricingPlan::where('is_active', true)->orderBy('display_name')->get();
+        $resellerCreditPacks = \App\Models\ResellerCreditPack::where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.orders.create', compact('users', 'pricingPlans'));
+        return view('admin.orders.create', compact('users', 'pricingPlans', 'resellerCreditPacks'));
     }
 
     /**
@@ -124,7 +125,8 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'pricing_plan_id' => 'required|exists:pricing_plans,id',
+            'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
+            'reseller_credit_pack_id' => 'nullable|exists:reseller_credit_packs,id',
             'payment_method' => 'required|in:email_link,stripe,paypal,crypto,manual',
             'status' => 'required|in:pending,active,expired,cancelled',
             'amount' => 'nullable|numeric|min:0',
@@ -136,34 +138,76 @@ class OrderController extends Controller
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        $pricingPlan = PricingPlan::findOrFail($validated['pricing_plan_id']);
-
-        // Use custom amount or plan price
-        $amount = $validated['amount'] ?? $pricingPlan->price;
-
-        // Calculate expiry date if not provided
-        $expiresAt = $validated['expires_at'] ?? null;
-        if (!$expiresAt && $validated['starts_at']) {
-            $startsAt = \Carbon\Carbon::parse($validated['starts_at']);
-            $expiresAt = $startsAt->copy()->addMonths($pricingPlan->duration_months);
-        } elseif (!$expiresAt) {
-            $expiresAt = now()->addMonths($pricingPlan->duration_months);
+        
+        // Determine if this is a reseller credit pack order or regular pricing plan order
+        $isResellerOrder = !empty($validated['reseller_credit_pack_id']);
+        
+        if ($isResellerOrder) {
+            // Validate that pricing_plan_id is not set when reseller_credit_pack_id is set
+            if (!empty($validated['pricing_plan_id'])) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['pricing_plan_id' => 'Cannot select both pricing plan and reseller credit pack.']);
+            }
+            
+            $creditPack = \App\Models\ResellerCreditPack::findOrFail($validated['reseller_credit_pack_id']);
+            $amount = $validated['amount'] ?? $creditPack->price;
+            $expiresAt = null; // Credit pack orders don't expire
+            $orderType = 'credit_pack';
+        } else {
+            // Validate that reseller_credit_pack_id is not set when pricing_plan_id is set
+            if (!empty($validated['reseller_credit_pack_id'])) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['reseller_credit_pack_id' => 'Cannot select both pricing plan and reseller credit pack.']);
+            }
+            
+            if (empty($validated['pricing_plan_id'])) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['pricing_plan_id' => 'Please select either a pricing plan or reseller credit pack.']);
+            }
+            
+            $pricingPlan = PricingPlan::findOrFail($validated['pricing_plan_id']);
+            $amount = $validated['amount'] ?? $pricingPlan->price;
+            
+            // Calculate expiry date if not provided
+            $expiresAt = $validated['expires_at'] ?? null;
+            if (!$expiresAt && $validated['starts_at']) {
+                $startsAt = \Carbon\Carbon::parse($validated['starts_at']);
+                $expiresAt = $startsAt->copy()->addMonths($pricingPlan->duration_months);
+            } elseif (!$expiresAt) {
+                $expiresAt = now()->addMonths($pricingPlan->duration_months);
+            }
+            
+            $orderType = 'subscription';
         }
 
         // Generate unique order number
-        $orderNumber = 'ORD-' . strtoupper(uniqid());
+        $orderNumber = $isResellerOrder ? 'CP-' . strtoupper(uniqid()) : 'ORD-' . strtoupper(uniqid());
 
-        $order = Order::create([
+        $orderData = [
             'order_number' => $orderNumber,
             'user_id' => $validated['user_id'],
-            'pricing_plan_id' => $validated['pricing_plan_id'],
             'payment_method' => $validated['payment_method'],
             'status' => $validated['status'],
             'amount' => $amount,
             'starts_at' => $validated['starts_at'] ?? now(),
             'expires_at' => $expiresAt,
             'admin_notes' => $validated['admin_notes'],
-        ]);
+            'order_type' => $orderType,
+        ];
+        
+        // Set pricing_plan_id or reseller_credit_pack_id based on order type
+        if ($isResellerOrder) {
+            $orderData['reseller_credit_pack_id'] = $validated['reseller_credit_pack_id'];
+            // Store credit pack ID in pricing_plan_id for backward compatibility
+            $orderData['pricing_plan_id'] = $validated['reseller_credit_pack_id'];
+        } else {
+            $orderData['pricing_plan_id'] = $validated['pricing_plan_id'];
+        }
+
+        $order = Order::create($orderData);
 
         // Dispatch OrderCreated event to send admin notification emails
         \App\Events\OrderCreated::dispatch($order);
@@ -206,7 +250,15 @@ class OrderController extends Controller
      */
     public function update(Request $request, Order $order)
     {
-        $validated = $request->validate([
+        // Log all request data for debugging
+        Log::info('Order update request', [
+            'order_id' => $order->id,
+            'all_input' => $request->all(),
+            'has_devices' => $request->has('devices'),
+            'devices_input' => $request->input('devices'),
+        ]);
+        
+        $validationRules = [
             'status' => 'required|in:pending,active,expired,cancelled',
             'amount' => 'required|numeric|min:0',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
@@ -222,10 +274,17 @@ class OrderController extends Controller
             'devices' => 'nullable|array',
             'devices.*.username' => 'nullable|string|max:255',
             'devices.*.password' => 'nullable|string|max:255',
-            'devices.*.url' => 'nullable|url|max:255',
+            'devices.*.url' => 'nullable|string|max:255',
             'reseller_username' => 'nullable|string|max:255',
             'reseller_password' => 'nullable|string|max:255',
             'reseller_login_url' => 'nullable|url|max:255',
+        ];
+        
+        $validated = $request->validate($validationRules);
+        
+        Log::info('Order update validated', [
+            'validated_data' => $validated,
+            'has_devices_in_validated' => isset($validated['devices']),
         ]);
 
         // Map admin_notes to notes field
@@ -277,31 +336,84 @@ class OrderController extends Controller
             ]);
         }
 
-        // Process multi-device data if present
-        if (isset($validated['devices']) && is_array($validated['devices'])) {
+        // Process multi-device data if present (same logic as activate method)
+        if ($request->has('devices') && is_array($request->input('devices'))) {
+            $deviceCount = $order->pricingPlan ? $order->pricingPlan->device_count : 1;
+            $inputDevices = $request->input('devices');
+            
+            // Prepare devices data (same as activate method)
             $devices = [];
-            foreach ($validated['devices'] as $deviceNumber => $deviceData) {
-                if (!empty($deviceData['username']) || !empty($deviceData['password']) || !empty($deviceData['url'])) {
+            foreach ($inputDevices as $deviceIndex => $deviceData) {
+                if (is_array($deviceData)) {
                     $devices[] = [
-                        'device_number' => $deviceNumber,
+                        'device_number' => $deviceIndex,
                         'username' => $deviceData['username'] ?? '',
                         'password' => $deviceData['password'] ?? '',
                         'url' => $deviceData['url'] ?? '',
                     ];
                 }
             }
-            $validated['devices'] = $devices;
-
-            // Update main subscription fields with first device for backward compatibility
-            if (!empty($devices)) {
-                $firstDevice = $devices[0];
-                $validated['subscription_username'] = $firstDevice['username'];
-                $validated['subscription_password'] = $firstDevice['password'];
-                $validated['subscription_url'] = $firstDevice['url'];
+            
+            // For backward compatibility, set the first device as main subscription
+            $firstDevice = $devices[0] ?? null;
+            
+            if ($firstDevice) {
+                $validated['subscription_username'] = $firstDevice['username'] ?? null;
+                $validated['subscription_password'] = $firstDevice['password'] ?? null;
+                $validated['subscription_url'] = $firstDevice['url'] ?? null;
             }
+            
+            // Set devices array
+            $validated['devices'] = $devices;
+            
+            Log::info('Devices processed for update', [
+                'devices' => $devices,
+                'device_count' => count($devices),
+            ]);
         }
 
-        $order->update($validated);
+        Log::info('Before order update', [
+            'order_id' => $order->id,
+            'data_to_update' => $validated,
+            'current_devices' => $order->devices,
+            'validated_keys' => array_keys($validated),
+        ]);
+        
+        // Filter out non-fillable fields and ensure all validated data is included
+        $updateData = [];
+        $fillable = $order->getFillable();
+        
+        foreach ($validated as $key => $value) {
+            if (in_array($key, $fillable)) {
+                $updateData[$key] = $value;
+            }
+        }
+        
+        Log::info('Filtered update data', [
+            'update_data' => $updateData,
+            'update_data_keys' => array_keys($updateData),
+            'fillable_fields' => $fillable,
+        ]);
+        
+        // Update the order - Laravel will only update changed fields
+        $order->fill($updateData);
+        $order->save();
+        
+        Log::info('Update result', [
+            'order_was_changed' => $order->wasChanged(),
+            'order_changes' => $order->getChanges(),
+        ]);
+        
+        // Refresh order to get updated data
+        $order->refresh();
+        
+        Log::info('After order update', [
+            'order_id' => $order->id,
+            'updated_devices' => $order->devices,
+            'updated_subscription_username' => $order->subscription_username,
+            'updated_status' => $order->status,
+            'updated_amount' => $order->amount,
+        ]);
 
         // Send emails if requested
         if ($request->boolean('send_status_update')) {

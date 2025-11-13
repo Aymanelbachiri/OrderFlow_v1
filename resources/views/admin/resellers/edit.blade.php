@@ -108,51 +108,9 @@
             </div>
         </div>
 
-        <!-- Password Change Section -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.2s;">
-            <div class="px-6 py-5 border-b border-[#D63613]/10">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2 2 2 0 00-2-2m-2-2H9m10 0a2 2 0 00-2-2M7 7a2 2 0 012-2M7 7a2 2 0 00-2 2m0 0a2 2 0 002 2m0 0a2 2 0 002-2M7 7v3a2 2 0 002 2"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-semibold text-[#201E1F]">Change Password</h3>
-                        <p class="text-sm text-[#201E1F]/60">Leave blank to keep current password</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- New Password -->
-                    <div>
-                        <label for="password" class="block text-sm font-semibold text-[#201E1F] mb-2">New Password</label>
-                        <input type="password" 
-                               id="password" 
-                               name="password"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] placeholder-[#201E1F]/40 transition-all duration-200 @error('password') border-red-500 @enderror">
-                        @error('password')
-                            <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Confirm Password -->
-                    <div>
-                        <label for="password_confirmation" class="block text-sm font-semibold text-[#201E1F] mb-2">Confirm New Password</label>
-                        <input type="password" 
-                               id="password_confirmation" 
-                               name="password_confirmation"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] placeholder-[#201E1F]/40 transition-all duration-200">
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Suspension Section -->
         @if(!$reseller->is_active || $reseller->suspended_at)
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.3s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.2s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-lg flex items-center justify-center">
@@ -189,7 +147,7 @@
         @endif
 
         <!-- Panel Credentials -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.4s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.3s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
@@ -286,7 +244,7 @@
         </div>
 
         <!-- Credit Management -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.5s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.4s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
@@ -351,7 +309,7 @@
         </div>
 
         <!-- Reseller Permissions -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.6s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.5s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -419,7 +377,7 @@
         </div>
 
         <!-- Admin Notes -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.7s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.6s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center">
@@ -445,7 +403,7 @@
         </div>
 
         <!-- Account Information -->
-        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.8s;">
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md animate-fade-in-up" style="animation-delay: 0.7s;">
             <div class="px-6 py-5 border-b border-[#D63613]/10">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center">
@@ -478,7 +436,7 @@
         </div>
 
         <!-- Submit Buttons -->
-        <div class="flex justify-end space-x-4 animate-fade-in-up" style="animation-delay: 0.9s;">
+        <div class="flex justify-end space-x-4 animate-fade-in-up" style="animation-delay: 0.8s;">
             <a href="{{ route('admin.resellers.show', $reseller) }}" 
                class="px-6 py-3 bg-white border border-gray-200 text-[#201E1F] font-semibold rounded-lg hover:bg-gray-50 transition-all duration-300">
                 Cancel
@@ -491,7 +449,7 @@
     </form>
 
     <!-- Danger Zone -->
-    <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl shadow-md p-6 animate-fade-in-up" style="animation-delay: 1s;">
+    <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl shadow-md p-6 animate-fade-in-up" style="animation-delay: 0.9s;">
         <div class="flex items-center space-x-3 mb-4">
             <div class="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

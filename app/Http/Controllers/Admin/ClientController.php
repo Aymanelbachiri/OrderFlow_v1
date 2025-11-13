@@ -63,18 +63,15 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'nullable|string|max:20',
-            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         $client = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
-            'password' => isset($validated['password']) && $validated['password']
-                ? Hash::make($validated['password'])
-                : null,
+            'password' => null, // Clients don't need passwords
             'role' => 'client',
-            'email_verified_at' => now(),
+            'email_verified_at' => now(), // Clients don't need email verification, auto-verify
         ]);
 
         $client->assignRole('client');
@@ -111,7 +108,6 @@ class ClientController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $client->id,
             'phone' => 'nullable|string|max:20',
             'role' => 'required|in:client,reseller',
-            'password' => 'nullable|string|min:8|confirmed',
             'is_active' => 'boolean',
             'suspension_reason' => 'nullable|string',
         ]);
@@ -124,6 +120,11 @@ class ClientController extends Controller
             'is_active' => $request->boolean('is_active'),
         ];
 
+        // Clients don't need email verification - auto-verify
+        if ($validated['role'] === 'client') {
+            $updateData['email_verified_at'] = now();
+        }
+
         // Handle role change
         if ($validated['role'] != $client->role) {
             // Log the role change
@@ -134,13 +135,13 @@ class ClientController extends Controller
                 'new_role' => $validated['role'],
                 'changed_by' => auth()->user()->email,
             ]);
+            
+            // Update Spatie roles
+            $client->removeRole($client->role);
+            $client->assignRole($validated['role']);
         }
 
-        if ($validated['password']) {
-            $updateData['password'] = isset($validated['password']) && $validated['password']
-                ? Hash::make($validated['password'])
-                : null;
-        }
+        // Clients don't need passwords - don't update password field
 
         if (!$request->boolean('is_active')) {
             $updateData['suspended_at'] = now();
@@ -217,42 +218,28 @@ class ClientController extends Controller
     }
 
     /**
-     * Verify client email
+     * Verify client email (deprecated - clients don't need email verification)
      */
     public function verifyEmail(User $client)
     {
-        $client->update([
-            'email_verified_at' => now(),
-        ]);
+        // Clients don't need email verification, but keep method for backward compatibility
+        if ($client->isClient()) {
+            $client->update([
+                'email_verified_at' => now(),
+            ]);
+        }
 
         return redirect()->back()
             ->with('success', 'Client email verified successfully.');
     }
 
     /**
-     * Send password reset email to client
+     * Send password reset email to client (deprecated - clients don't need passwords)
      */
     public function sendPasswordReset(User $client)
     {
-        // Generate password reset token
-        $token = \Illuminate\Support\Str::random(64);
-
-        // Store the token
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $client->email],
-            [
-                'email' => $client->email,
-                'token' => \Illuminate\Support\Facades\Hash::make($token),
-                'created_at' => now(),
-            ]
-        );
-
-        // Send password reset email
-        \Illuminate\Support\Facades\Mail::to($client->email)->send(
-            new \App\Mail\PasswordResetMail($client, $token)
-        );
-
+        // Clients don't need passwords, but keep method for backward compatibility
         return redirect()->back()
-            ->with('success', 'Password reset email sent successfully.');
+            ->with('info', 'Clients do not require passwords.');
     }
 }

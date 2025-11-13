@@ -110,6 +110,13 @@
                 </div>
             </div>
 
+            @if($client->isClient())
+            <div class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <strong>Note:</strong> Clients do not require email verification or passwords. Email verification is automatically handled for client accounts.
+                </p>
+            </div>
+            @else
             <div class="mt-8 p-4 bg-white rounded-lg border border-gray-200">
                 <label class="block text-sm font-semibold text-[#201E1F] mb-3">Email Verification Status</label>
                 <div class="flex items-center space-x-6">
@@ -139,56 +146,7 @@
                     </span>
                 </p>
             </div>
-
-            <div class="mt-8 border-t border-gray-200 pt-8">
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-semibold text-[#201E1F]">Password Management</h3>
-                        <p class="text-sm text-[#201E1F]/60">Leave blank to keep current password</p>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="password" class="block text-sm font-semibold text-[#201E1F] mb-2">New Password</label>
-                        <input type="password" 
-                               id="password" 
-                               name="password"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] placeholder-[#201E1F]/40 transition-all duration-200 @error('password') border-red-500 @enderror">
-                        @error('password')
-                            <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-sm text-[#201E1F]/50">Minimum 8 characters with uppercase, lowercase, number, and special character</p>
-                    </div>
-
-                    <div>
-                        <label for="password_confirmation" class="block text-sm font-semibold text-[#201E1F] mb-2">Confirm New Password</label>
-                        <input type="password" 
-                               id="password_confirmation" 
-                               name="password_confirmation"
-                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] placeholder-[#201E1F]/40 transition-all duration-200">
-                    </div>
-                </div>
-
-                <div class="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-                    <div class="flex items-center">
-                        <input type="checkbox" 
-                               id="send_password_reset" 
-                               name="send_password_reset" 
-                               value="1"
-                               class="h-4 w-4 text-[#D63613] focus:ring-[#D63613] border-gray-300 rounded bg-white">
-                        <label for="send_password_reset" class="ml-3 block text-sm font-medium text-[#201E1F]">
-                            Send password reset email to client
-                        </label>
-                    </div>
-                    <p class="mt-2 text-sm text-[#201E1F]/50 ml-7">If checked, client will receive an email to set their own password</p>
-                </div>
-            </div>
+            @endif
 
             <div class="mt-8">
                 <label for="notes" class="block text-sm font-semibold text-[#201E1F] mb-2">Admin Notes</label>
@@ -336,43 +294,6 @@
 </style>
 
 <script>
-// Password strength validation with enhanced styling
-document.getElementById('password').addEventListener('input', function() {
-    const password = this.value;
-    const confirmPassword = document.getElementById('password_confirmation');
-    
-    if (password.length > 0) {
-        confirmPassword.required = true;
-        if (password.length >= 8) {
-            this.classList.remove('border-red-500', 'focus:ring-red-500');
-            this.classList.add('border-green-500', 'focus:ring-green-500');
-        } else {
-            this.classList.remove('border-green-500', 'focus:ring-green-500');
-            this.classList.add('border-red-500', 'focus:ring-red-500');
-        }
-    } else {
-        confirmPassword.required = false;
-        this.classList.remove('border-red-500', 'border-green-500', 'focus:ring-red-500', 'focus:ring-green-500');
-    }
-});
-
-// Confirm password validation with enhanced styling
-document.getElementById('password_confirmation').addEventListener('input', function() {
-    const password = document.getElementById('password').value;
-    const confirmPassword = this.value;
-    
-    if (confirmPassword.length > 0) {
-        if (password === confirmPassword) {
-            this.classList.remove('border-red-500', 'focus:ring-red-500');
-            this.classList.add('border-green-500', 'focus:ring-green-500');
-        } else {
-            this.classList.remove('border-green-500', 'focus:ring-green-500');
-            this.classList.add('border-red-500', 'focus:ring-red-500');
-        }
-    } else {
-        this.classList.remove('border-red-500', 'border-green-500', 'focus:ring-red-500', 'focus:ring-green-500');
-    }
-});
 
 // ===== NEW SCRIPT FOR MODAL =====
 document.addEventListener('DOMContentLoaded', function () {
