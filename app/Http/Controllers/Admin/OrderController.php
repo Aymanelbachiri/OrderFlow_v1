@@ -72,12 +72,23 @@ class OrderController extends Controller
             });
         }
 
+        // Scope to admin's data (unless super admin)
+        $user = auth()->user();
+        if ($user && $user->isAdmin() && !$user->isSuperAdmin()) {
+            $query->where('admin_id', $user->id);
+        }
+
         $orders = $query->latest()->paginate(20);
 
-        // Get statistics for dashboard
-        $totalOrdersCount = Order::count();
-        $activeOrdersCount = Order::where('status', 'active')->count();
-        $pendingOrdersCount = Order::where('status', 'pending')->count();
+        // Get statistics for dashboard (scoped to admin)
+        $statsQuery = Order::query();
+        if ($user && $user->isAdmin() && !$user->isSuperAdmin()) {
+            $statsQuery->where('admin_id', $user->id);
+        }
+        
+        $totalOrdersCount = $statsQuery->count();
+        $activeOrdersCount = (clone $statsQuery)->where('status', 'active')->count();
+        $pendingOrdersCount = (clone $statsQuery)->where('status', 'pending')->count();
         $expiredOrdersCount = Order::whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->count();
@@ -153,9 +164,13 @@ class OrderController extends Controller
         // Generate unique order number
         $orderNumber = 'ORD-' . strtoupper(uniqid());
 
+        $user = auth()->user();
+        $adminId = ($user && $user->isAdmin() && !$user->isSuperAdmin()) ? $user->id : null;
+
         $order = Order::create([
             'order_number' => $orderNumber,
             'user_id' => $validated['user_id'],
+            'admin_id' => $adminId,
             'pricing_plan_id' => $validated['pricing_plan_id'],
             'payment_method' => $validated['payment_method'],
             'status' => $validated['status'],

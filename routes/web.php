@@ -128,6 +128,16 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     // SMTP Settings
     Route::get('/smtp-settings', [\App\Http\Controllers\Admin\SmtpSettingController::class, 'edit'])->name('smtp.edit');
     Route::put('/smtp-settings', [\App\Http\Controllers\Admin\SmtpSettingController::class, 'update'])->name('smtp.update');
+
+    // Super Admin routes (only accessible by super admins)
+    Route::middleware(['super.admin'])->prefix('super')->name('super.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\SuperAdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/orders', [\App\Http\Controllers\Admin\SuperAdminController::class, 'allOrders'])->name('orders');
+        Route::get('/admins/{admin}', [\App\Http\Controllers\Admin\SuperAdminController::class, 'viewAdmin'])->name('view-admin');
+        
+        // Admin management
+        Route::resource('admins', \App\Http\Controllers\Admin\AdminManagementController::class);
+    });
 });
 
 // Profile routes (admin only)
