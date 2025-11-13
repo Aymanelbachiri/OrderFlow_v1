@@ -553,6 +553,21 @@
                                     class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Settings</span>
                             </a>
                         </li>
+
+                        @if(auth()->user()->isSuperAdmin())
+                        <!-- Super Admin Section -->
+                        <li class="mt-4 pt-4 border-t border-[#DC4822]/20">
+                            <p class="px-4 text-xs font-semibold text-[#DC4822]/60 uppercase tracking-wider mb-2 sidebar-text">Super Admin</p>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.super.dashboard') }}"
+                                class="nav-link flex items-center px-4 py-3 text-white hover:bg-[#DC4822]/10 hover:text-[#DC4822] rounded-lg transition-all duration-200 font-medium group {{ request()->routeIs('admin.super.*') ? 'bg-[#DC4822]/10 text-[#DC4822] border-r-4 border-[#DC4822]' : '' }}"
+                                title="Super Admin Dashboard">
+                                <i class="fas fa-shield-alt mr-3 group-hover:scale-110 transition-transform duration-200"></i>
+                                <span class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Super Admin</span>
+                            </a>
+                        </li>
+                        @endif
                     </div>
 
                     <!-- Common Links -->
