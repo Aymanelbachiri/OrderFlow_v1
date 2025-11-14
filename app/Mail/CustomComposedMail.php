@@ -3,32 +3,31 @@
 namespace App\Mail;
 
 use App\Models\Order;
-use App\Services\SourceMailService;
+use App\Models\Source;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ResellerOrderConfirmationMail extends Mailable
+class CustomComposedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $order;
-    protected SourceMailService $sourceMailService;
+    public $subject;
+    public $htmlContent;
     protected $source;
-    public $mailerName;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Order $order)
+    public function __construct(Order $order, string $subject, string $htmlContent, ?Source $source = null)
     {
         $this->order = $order;
-        $this->sourceMailService = new SourceMailService();
-        $this->source = $this->sourceMailService->getSource(null, $order);
-        $this->mailerName = $this->sourceMailService->configureMailForSource($this->source);
+        $this->subject = $subject;
+        $this->htmlContent = $htmlContent;
+        $this->source = $source;
     }
 
     /**
@@ -36,11 +35,8 @@ class ResellerOrderConfirmationMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
-        $companyName = $sourceVars['company_name'] ?? config('app.name');
-        
         $envelope = new Envelope(
-            subject: 'Reseller Panel Account Setup - Order #' . $this->order->order_number . ' - ' . $companyName,
+            subject: $this->subject,
         );
 
         if ($this->source && $this->source->smtp_from_address) {
@@ -58,15 +54,8 @@ class ResellerOrderConfirmationMail extends Mailable
      */
     public function content(): Content
     {
-        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
-        
         return new Content(
-            view: 'emails.reseller-order-confirmation',
-            with: [
-                'order' => $this->order,
-                'user' => $this->order->user,
-                'creditPack' => $this->order->resellerCreditPack,
-            ] + $sourceVars,
+            htmlString: $this->htmlContent,
         );
     }
 

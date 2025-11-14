@@ -14,7 +14,7 @@
                     <!-- Header -->
                     <tr>
                         <td style="background-color: #4c51bf; padding: 40px 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ config('app.name') }}</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ $company_name ?? config('app.name') }}</h1>
                             <p style="margin: 10px 0 0 0; color: #e0e7ff; font-size: 16px;">Your IPTV Service Credentials</p>
                         </td>
                     </tr>
@@ -61,7 +61,7 @@
                                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 15px 0; background-color: #eef2ff; border-radius: 6px; border: 1px solid #c7d2fe;">
                                                 <tr>
                                                     <td style="padding: 20px;">
-                                                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #4c51bf; font-weight: bold; text-transform: uppercase;">Device {{ $device['device_number'] }} Connection Details</p>
+                                                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #4c51bf; font-weight: bold; text-transform: uppercase;">Device {{ ($device['device_number'] ?? 0) + 1 }} Connection Details</p>
                                                         
                                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                                             <tr>
@@ -197,11 +197,11 @@
                                 </tr>
                             </table>
                             
-                            <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 15px; color: #4a5568; line-height: 1.6;">Thank you for choosing {{ config('app.name') }}. We hope you enjoy your premium IPTV experience!</p>
+                            <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 15px; color: #4a5568; line-height: 1.6;">Thank you for choosing {{ $company_name ?? config('app.name') }}. We hope you enjoy your premium IPTV experience!</p>
                             
                             <p style="margin: 20px 0 0 0; font-size: 14px; color: #718096; line-height: 1.6;">
                                 Best regards,<br>
-                                <strong style="color: #4c51bf;">The {{ config('app.name') }} Technical Team</strong>
+                                <strong style="color: #4c51bf;">The {{ $team_name ?? ($company_name ?? config('app.name')) . ' Team' }}</strong>
                             </p>
                             
                         </td>
@@ -211,8 +211,16 @@
                     <tr>
                         <td style="background-color: #1e293b; padding: 30px; text-align: center;">
                             <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1; font-weight: 600;">This email contains sensitive account information. Please keep it secure.</p>
-                            <p style="margin: 0 0 15px 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
-                            
+                            <p style="margin: 0 0 15px 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
+                            @if(isset($website) && $website)
+                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1;"><a href="{{ $website }}" style="color: #cbd5e1;">{{ $website }}</a></p>
+                            @endif
+                            @if(isset($contact_email) && $contact_email)
+                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1;">Contact: <a href="mailto:{{ $contact_email }}" style="color: #cbd5e1;">{{ $contact_email }}</a></p>
+                            @endif
+                            @if(isset($phone_number) && $phone_number)
+                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1;">Phone: {{ $phone_number }}</p>
+                            @endif
                         </td>
                     </tr>
                     

@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
+use App\Services\SourceMailService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -17,6 +18,9 @@ class CustomProductOrderMail extends Mailable
     public $order;
     public $customer;
     public $product;
+    protected SourceMailService $sourceMailService;
+    protected $source;
+    public $mailerName;
 
     /**
      * Create a new message instance.
@@ -26,6 +30,9 @@ class CustomProductOrderMail extends Mailable
         $this->order = $order;
         $this->customer = $order->user;
         $this->product = $order->customProduct;
+        $this->sourceMailService = new SourceMailService();
+        $this->source = $this->sourceMailService->getSource(null, $order);
+        $this->mailerName = $this->sourceMailService->configureMailForSource($this->source);
     }
 
     /**
@@ -33,9 +40,21 @@ class CustomProductOrderMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Order Confirmation - ' . $this->product->name . ' - ' . config('app.name'),
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        $companyName = $sourceVars['company_name'] ?? config('app.name');
+        
+        $envelope = new Envelope(
+            subject: 'Order Confirmation - ' . $this->product->name . ' - ' . $companyName,
         );
+
+        if ($this->source && $this->source->smtp_from_address) {
+            $envelope->from(
+                $this->source->smtp_from_address,
+                $this->source->smtp_from_name ?? $this->source->company_name ?? config('app.name')
+            );
+        }
+
+        return $envelope;
     }
 
     /**
@@ -43,13 +62,15 @@ class CustomProductOrderMail extends Mailable
      */
     public function content(): Content
     {
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        
         return new Content(
             view: 'emails.custom-product-order',
             with: [
                 'order' => $this->order,
                 'customer' => $this->customer,
                 'product' => $this->product,
-            ],
+            ] + $sourceVars,
         );
     }
 

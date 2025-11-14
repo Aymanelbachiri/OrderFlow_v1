@@ -14,7 +14,7 @@
                     <!-- Header -->
                     <tr>
                         <td style="background-color: #4c51bf; padding: 40px 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ config('app.name') }}</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ $company_name ?? config('app.name') }}</h1>
                             <p style="margin: 10px 0 0 0; color: #e0e7ff; font-size: 16px;">Order Confirmation</p>
                         </td>
                     </tr>
@@ -173,15 +173,6 @@
                             </table>
                             @endif
                             
-                            <!-- CTA Button -->
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 35px 0;">
-                                <tr>
-                                    <td align="center">
-                                        <a href="{{ route('public.thank-you', $order) }}" style="display: inline-block; padding: 16px 40px; background-color: #4c51bf; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Your Order</a>
-                                    </td>
-                                </tr>
-                            </table>
-                            
                             <!-- Need Help -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 25px 0; background-color: #f8fafc; border-radius: 6px;">
                                 <tr>
@@ -189,7 +180,15 @@
                                         <p style="margin: 0 0 12px 0; font-size: 18px; color: #334155; font-weight: bold;">Need Help?</p>
                                         <p style="margin: 0 0 10px 0; font-size: 14px; color: #475569;">If you have any questions about your order, please don't hesitate to contact us:</p>
                                         <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.8;">
-                                            <li>Email: contact@smarters-proiptv.com</li>
+                                            @if(isset($contact_email) && $contact_email)
+                                            <li>Email: <a href="mailto:{{ $contact_email }}" style="color: #4c51bf;">{{ $contact_email }}</a></li>
+                                            @endif
+                                            @if(isset($phone_number) && $phone_number)
+                                            <li>Phone: {{ $phone_number }}</li>
+                                            @endif
+                                            @if(isset($website) && $website)
+                                            <li>Website: <a href="{{ $website }}" style="color: #4c51bf;">{{ $website }}</a></li>
+                                            @endif
                                         </ul>
                                     </td>
                                 </tr>
@@ -210,9 +209,12 @@
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #cbd5e1; font-weight: 600;">Thank you for choosing {{ config('app.name') }}!</p>
+                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #cbd5e1; font-weight: 600;">Thank you for choosing {{ $company_name ?? config('app.name') }}!</p>
                             <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1;">This is an automated message. Please do not reply to this email.</p>
-                            <p style="margin: 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+                            <p style="margin: 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
+                            @if(isset($website) && $website)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;"><a href="{{ $website }}" style="color: #cbd5e1;">{{ $website }}</a></p>
+                            @endif
                         </td>
                     </tr>
                     

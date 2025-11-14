@@ -92,6 +92,8 @@ class ResellerCheckoutController extends Controller
                 'user_id' => $user->id,
                 // IMPORTANT: orders table requires pricing_plan_id (used for both plans and credit packs)
                 'pricing_plan_id' => $creditPack->id,
+                // Also set reseller_credit_pack_id for proper relationship
+                'reseller_credit_pack_id' => $creditPack->id,
                 'order_type' => 'credit_pack',
                 'starts_at' => now(),
                 // Credit pack orders do not expire

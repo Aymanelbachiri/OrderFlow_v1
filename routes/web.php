@@ -125,9 +125,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/settings/backup-database', [\App\Http\Controllers\Admin\SettingsController::class, 'backupDatabase'])->name('settings.backup-database');
     Route::post('/settings/test-renewals', [\App\Http\Controllers\Admin\SettingsController::class, 'testRenewalReminders'])->name('settings.test-renewals');
 
-    // SMTP Settings
-    Route::get('/smtp-settings', [\App\Http\Controllers\Admin\SmtpSettingController::class, 'edit'])->name('smtp.edit');
-    Route::put('/smtp-settings', [\App\Http\Controllers\Admin\SmtpSettingController::class, 'update'])->name('smtp.update');
 });
 
 // Profile routes (admin only)

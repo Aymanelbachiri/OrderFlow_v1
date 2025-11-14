@@ -148,9 +148,23 @@
                             <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px;">
                                 Need help? Contact our support team
                             </p>
+                            @if(isset($contact_email) && $contact_email)
+                            <p style="margin: 0; color: #667eea; font-size: 14px; font-weight: bold;">
+                                <a href="mailto:{{ $contact_email }}" style="color: #667eea; text-decoration: none;">{{ $contact_email }}</a>
+                            </p>
+                            @elseif(isset($phone_number) && $phone_number)
+                            <p style="margin: 0; color: #667eea; font-size: 14px; font-weight: bold;">
+                                {{ $phone_number }}
+                            </p>
+                            @elseif(isset($website) && $website)
+                            <p style="margin: 0; color: #667eea; font-size: 14px; font-weight: bold;">
+                                <a href="{{ $website }}" style="color: #667eea; text-decoration: none;">{{ $website }}</a>
+                            </p>
+                            @else
                             <p style="margin: 0; color: #667eea; font-size: 14px; font-weight: bold;">
                                 {{ config('mail.from.address') }}
                             </p>
+                            @endif
                         </td>
                     </tr>
 
@@ -158,9 +172,24 @@
                     <tr>
                         <td style="padding: 20px 30px; text-align: center; color: #999999; font-size: 12px; line-height: 1.5;">
                             <p style="margin: 0 0 5px 0;">
-                                © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+                                © {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.
                             </p>
-                            <p style="margin: 0;">
+                            @if(isset($website) && $website)
+                            <p style="margin: 5px 0;">
+                                <a href="{{ $website }}" style="color: #999999; text-decoration: none;">{{ $website }}</a>
+                            </p>
+                            @endif
+                            @if(isset($contact_email) && $contact_email)
+                            <p style="margin: 5px 0;">
+                                Contact: <a href="mailto:{{ $contact_email }}" style="color: #999999; text-decoration: none;">{{ $contact_email }}</a>
+                            </p>
+                            @endif
+                            @if(isset($phone_number) && $phone_number)
+                            <p style="margin: 5px 0;">
+                                Phone: {{ $phone_number }}
+                            </p>
+                            @endif
+                            <p style="margin: 5px 0 0 0;">
                                 This is an automated email. Please do not reply to this message.
                             </p>
                         </td>

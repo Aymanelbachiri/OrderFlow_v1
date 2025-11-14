@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Services\SourceMailService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -16,6 +17,9 @@ class CreditPackCredentialsMail extends Mailable
 
     public $order;
     public $user;
+    protected SourceMailService $sourceMailService;
+    protected $source;
+    public $mailerName;
 
     /**
      * Create a new message instance.
@@ -24,6 +28,9 @@ class CreditPackCredentialsMail extends Mailable
     {
         $this->order = $order;
         $this->user = $user;
+        $this->sourceMailService = new SourceMailService();
+        $this->source = $this->sourceMailService->getSource(null, $order);
+        $this->mailerName = $this->sourceMailService->configureMailForSource($this->source);
     }
 
     /**
@@ -31,9 +38,21 @@ class CreditPackCredentialsMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'IPTV Panel Access - Credit Pack Order #' . $this->order->order_number . ' - ' . config('app.name'),
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        $companyName = $sourceVars['company_name'] ?? config('app.name');
+        
+        $envelope = new Envelope(
+            subject: 'IPTV Panel Access - Credit Pack Order #' . $this->order->order_number . ' - ' . $companyName,
         );
+
+        if ($this->source && $this->source->smtp_from_address) {
+            $envelope->from(
+                $this->source->smtp_from_address,
+                $this->source->smtp_from_name ?? $this->source->company_name ?? config('app.name')
+            );
+        }
+
+        return $envelope;
     }
 
     /**
@@ -41,6 +60,8 @@ class CreditPackCredentialsMail extends Mailable
      */
     public function content(): Content
     {
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        
         return new Content(
             view: 'emails.credit-pack-credentials',
             with: [
@@ -50,7 +71,7 @@ class CreditPackCredentialsMail extends Mailable
                 'panelUsername' => $this->order->reseller_username,
                 'panelPassword' => $this->order->reseller_password,
                 'creditPack' => $this->order->resellerCreditPack,
-            ]
+            ] + $sourceVars
         );
     }
 

@@ -2,16 +2,30 @@
 
 namespace App\Services;
 
+use App\Models\Order;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class EmailService
 {
+    protected SourceMailService $sourceMailService;
+
+    public function __construct()
+    {
+        $this->sourceMailService = new SourceMailService();
+    }
+
     /**
      * Send email using simple HTML content
+     * If order is provided, uses source-specific configuration
      */
-    public function sendEmail(string $to, string $subject, string $view, array $data = [], ?string $name = null): void
+    public function sendEmail(string $to, string $subject, string $view, array $data = [], ?string $name = null, ?Order $order = null): void
     {
+        if ($order) {
+            $this->sourceMailService->sendEmailWithOrder($order, $to, $subject, $view, $data, $name);
+            return;
+        }
+
         try {
             Mail::send($view, $data, function ($message) use ($to, $subject, $name) {
                 $message->to($to, $name)->subject($subject);
@@ -49,7 +63,7 @@ class EmailService
     /**
      * Send client credentials email
      */
-    public function sendClientCredentials(string $clientEmail, string $clientName, string $username, string $password): void
+    public function sendClientCredentials(string $clientEmail, string $clientName, string $username, string $password, ?Order $order = null): void
     {
         $subject = 'Your Account Credentials';
         $data = [
@@ -57,7 +71,7 @@ class EmailService
             'username' => $username,
             'password' => $password,
         ];
-        $this->sendEmail($clientEmail, $subject, 'emails.client-credentials', $data, $clientName);
+        $this->sendEmail($clientEmail, $subject, 'emails.client-credentials', $data, $clientName, $order);
     }
 
     /**
@@ -80,7 +94,7 @@ class EmailService
     /**
      * Send new order notification to client
      */
-    public function sendNewOrderClient(string $clientEmail, string $clientName, string $orderNumber, string $amount, string $paymentMethod, string $planName, string $orderType, string $status): void
+    public function sendNewOrderClient(string $clientEmail, string $clientName, string $orderNumber, string $amount, string $paymentMethod, string $planName, string $orderType, string $status, ?Order $order = null): void
     {
         $subject = 'New Order Received - #' . $orderNumber;
         
@@ -105,14 +119,14 @@ class EmailService
             'loginUrl' => route('login'),
         ];
         
-        $this->sendEmail($clientEmail, $subject, 'emails.order-confirmation', $data, $clientName);
+        $this->sendEmail($clientEmail, $subject, 'emails.order-confirmation', $data, $clientName, $order);
     }
 
 
     /**
      * Send order status update email
      */
-    public function sendOrderStatusUpdate(string $clientEmail, string $clientName, string $orderNumber, string $oldStatus, string $newStatus, string $planName, string $expiryDate): void
+    public function sendOrderStatusUpdate(string $clientEmail, string $clientName, string $orderNumber, string $oldStatus, string $newStatus, string $planName, string $expiryDate, ?Order $order = null): void
     {
         $subject = 'Order Status Update - #' . $orderNumber;
         $data = [
@@ -123,13 +137,13 @@ class EmailService
             'planName' => $planName,
             'expiryDate' => $expiryDate,
         ];
-        $this->sendEmail($clientEmail, $subject, 'emails.order-status-update', $data, $clientName);
+        $this->sendEmail($clientEmail, $subject, 'emails.order-status-update', $data, $clientName, $order);
     }
 
     /**
      * Send renewal reminder email
      */
-    public function sendRenewalReminder(string $clientEmail, string $clientName, string $orderNumber, string $planName, string $expiryDate, string $renewalUrl): void
+    public function sendRenewalReminder(string $clientEmail, string $clientName, string $orderNumber, string $planName, string $expiryDate, string $renewalUrl, ?Order $order = null): void
     {
         $subject = 'Renewal Reminder - Your IPTV Service Expires Soon';
         $data = [
@@ -139,13 +153,13 @@ class EmailService
             'expiryDate' => $expiryDate,
             'renewalUrl' => $renewalUrl,
         ];
-        $this->sendEmail($clientEmail, $subject, 'emails.renewal-reminder', $data, $clientName);
+        $this->sendEmail($clientEmail, $subject, 'emails.renewal-reminder', $data, $clientName, $order);
     }
 
     /**
      * Send payment confirmation email
      */
-    public function sendPaymentConfirmation(string $clientEmail, string $clientName, string $orderNumber, string $amount, string $paymentMethod, string $planName): void
+    public function sendPaymentConfirmation(string $clientEmail, string $clientName, string $orderNumber, string $amount, string $paymentMethod, string $planName, ?Order $order = null): void
     {
         $subject = 'Payment Confirmed - Order #' . $orderNumber;
         $data = [
@@ -155,13 +169,13 @@ class EmailService
             'paymentMethod' => $paymentMethod,
             'planName' => $planName,
         ];
-        $this->sendEmail($clientEmail, $subject, 'emails.payment-confirmation', $data, $clientName);
+        $this->sendEmail($clientEmail, $subject, 'emails.payment-confirmation', $data, $clientName, $order);
     }
 
     /**
      * Send payment instructions email
      */
-    public function sendPaymentInstructions(string $clientEmail, string $clientName, string $orderNumber, string $amount, string $paymentMethod, string $paymentDetails, string $expiryDate): void
+    public function sendPaymentInstructions(string $clientEmail, string $clientName, string $orderNumber, string $amount, string $paymentMethod, string $paymentDetails, string $expiryDate, ?Order $order = null): void
     {
         $subject = 'Payment Instructions - Order #' . $orderNumber;
         $data = [
@@ -172,7 +186,7 @@ class EmailService
             'paymentDetails' => $paymentDetails,
             'expiryDate' => $expiryDate,
         ];
-        $this->sendEmail($clientEmail, $subject, 'emails.payment-instructions', $data, $clientName);
+        $this->sendEmail($clientEmail, $subject, 'emails.payment-instructions', $data, $clientName, $order);
     }
 
     /**

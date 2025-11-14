@@ -428,8 +428,10 @@ class OrderController extends Controller
         }
 
         // Auto-send credentials for reseller orders when activated
-        if ($order->status === 'active' &&
-            ($order->pricingPlan->plan_type === 'reseller' || $order->user->role === 'reseller') &&
+        // Skip for custom product orders as they don't have credentials
+        if ($order->order_type !== 'custom_product' &&
+            $order->status === 'active' &&
+            (($order->pricingPlan && $order->pricingPlan->plan_type === 'reseller') || $order->user->role === 'reseller') &&
             !$order->credentials_sent &&
             $order->user->reseller_panel_url) {
             $this->sendCredentials($order);
@@ -444,42 +446,70 @@ class OrderController extends Controller
      */
     public function sendCredentials(Order $order)
     {
-        if ($order->user->role === 'reseller' || $order->pricingPlan->plan_type === 'reseller') {
-            // Use the new ResellerCredentialsMail for reseller orders
-            Mail::to($order->user->email)->send(new ResellerCredentialsMail($order, $order->user));
+        try {
+            // Skip for custom product orders
+            if ($order->order_type === 'custom_product') {
+                return redirect()->back()
+                    ->with('error', 'Custom product orders do not have credentials to send.');
+            }
+            
+            if ($order->user->role === 'reseller' || ($order->pricingPlan && $order->pricingPlan->plan_type === 'reseller')) {
+                // Use the new ResellerCredentialsMail for reseller orders
+                $resellerMail = new ResellerCredentialsMail($order, $order->user);
+                if ($resellerMail->mailerName) {
+                    Mail::mailer($resellerMail->mailerName)->to($order->user->email)->send($resellerMail);
+                } else {
+                    Mail::to($order->user->email)->send($resellerMail);
+                }
 
-            // Trigger the reseller order activated event
-            ResellerOrderActivated::dispatch($order);
-        } else {
-            // Send credentials email for regular orders
-            $processedOrders = collect();
+                // Trigger the reseller order activated event
+                ResellerOrderActivated::dispatch($order);
+            } else {
+                // Send credentials email for regular orders
+                $processedOrders = collect();
 
-            if ($order->devices && is_array($order->devices) && count($order->devices) > 0) {
-                foreach ($order->devices as $device) {
+                if ($order->devices && is_array($order->devices) && count($order->devices) > 0) {
+                    foreach ($order->devices as $device) {
+                        $processedOrders->push((object)[
+                            'subscription_username' => $device['username'] ?? null,
+                            'subscription_password' => $device['password'] ?? null,
+                            'subscription_url' => $device['url'] ?? null,
+                        ]);
+                    }
+                } else {
                     $processedOrders->push((object)[
-                        'subscription_username' => $device['username'] ?? null,
-                        'subscription_password' => $device['password'] ?? null,
-                        'subscription_url' => $device['url'] ?? null,
+                        'subscription_username' => $order->subscription_username,
+                        'subscription_password' => $order->subscription_password,
+                        'subscription_url' => $order->subscription_url,
                     ]);
                 }
-            } else {
-                $processedOrders->push((object)[
-                    'subscription_username' => $order->subscription_username,
-                    'subscription_password' => $order->subscription_password,
-                    'subscription_url' => $order->subscription_url,
-                ]);
+
+                $clientMail = new ClientCredentialsMail($order->user, $processedOrders);
+                if ($clientMail->mailerName) {
+                    Mail::mailer($clientMail->mailerName)->to($order->user->email)->send($clientMail);
+                } else {
+                    Mail::to($order->user->email)->send($clientMail);
+                }
             }
 
-            Mail::to($order->user->email)->send(new ClientCredentialsMail($order->user, $processedOrders));
+            $order->update([
+                'credentials_sent' => true,
+                'credentials_sent_at' => now(),
+            ]);
+
+            return redirect()->back()
+                ->with('success', 'Credentials sent successfully.');
+        } catch (\Exception $e) {
+            Log::error('Failed to send credentials email', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Failed to send credentials email: ' . $e->getMessage());
         }
-
-        $order->update([
-            'credentials_sent' => true,
-            'credentials_sent_at' => now(),
-        ]);
-
-        return redirect()->back()
-            ->with('success', 'Credentials sent successfully.');
     }
 
     /**
@@ -488,7 +518,12 @@ class OrderController extends Controller
     public function sendCreditPackCredentials(Order $order)
     {
         // Send credentials email for credit pack orders using Mailable
-        Mail::to($order->user->email)->send(new \App\Mail\CreditPackCredentialsMail($order, $order->user));
+        $creditPackMail = new \App\Mail\CreditPackCredentialsMail($order, $order->user);
+        if ($creditPackMail->mailerName) {
+            Mail::mailer($creditPackMail->mailerName)->to($order->user->email)->send($creditPackMail);
+        } else {
+            Mail::to($order->user->email)->send($creditPackMail);
+        }
 
         $order->update([
             'credentials_sent' => true,
@@ -557,6 +592,55 @@ class OrderController extends Controller
                 ->with('error', 'Only pending orders can be activated.');
         }
 
+        // Check if this is a custom product order
+        if ($order->order_type === 'custom_product') {
+            // Validate custom product activation
+            $validated = $request->validate([
+                'email_subject' => 'required|string|max:255',
+                'email_content' => 'required|string',
+                'send_email' => 'boolean',
+            ]);
+
+            // Activate the order
+            $order->update([
+                'status' => 'active',
+                'completed_at' => now(),
+            ]);
+
+            // Send custom composed email if requested
+            if ($request->boolean('send_email', true)) {
+                try {
+                    $sourceMailService = new \App\Services\SourceMailService();
+                    $success = $sourceMailService->sendCustomComposedEmail(
+                        $order,
+                        $validated['email_subject'],
+                        $validated['email_content'],
+                        true // Include footer
+                    );
+
+                    if ($success) {
+                        return redirect()->back()
+                            ->with('success', 'Custom product order activated successfully! Update email has been sent to the customer.');
+                    } else {
+                        return redirect()->back()
+                            ->with('warning', 'Custom product order activated successfully, but there was an issue sending the email. Please send it manually.');
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to send custom product update email', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    return redirect()->back()
+                        ->with('warning', 'Custom product order activated successfully, but there was an issue sending the email. Please send it manually.');
+                }
+            }
+
+            return redirect()->back()
+                ->with('success', 'Custom product order activated successfully. You can send the update email manually if needed.');
+        }
+
         // Check if this is a credit pack order
         if ($order->order_type === 'credit_pack') {
             // Validate IPTV panel credentials for credit pack
@@ -583,14 +667,15 @@ class OrderController extends Controller
                     // Send email with IPTV panel credentials for credit pack
                     $this->sendCreditPackCredentials($order);
 
-                    $order->update([
-                        'credentials_sent' => true,
-                        'credentials_sent_at' => now()
-                    ]);
-
                     return redirect()->back()
                         ->with('success', 'Credit pack order activated successfully! IPTV panel credentials have been sent to the reseller via email.');
                 } catch (\Exception $e) {
+                    Log::error('Failed to send credit pack credentials email', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                     return redirect()->back()
                         ->with('warning', 'Credit pack order activated successfully, but there was an issue sending the credentials email. Please send them manually.');
                 }
@@ -626,7 +711,12 @@ class OrderController extends Controller
             if ($request->boolean('send_credentials_email', true)) {
                 try {
                     // Use the reseller credentials mail
-                    Mail::to($order->user->email)->send(new ResellerCredentialsMail($order, $order->user));
+                    $resellerMail = new ResellerCredentialsMail($order, $order->user);
+                    if ($resellerMail->mailerName) {
+                        Mail::mailer($resellerMail->mailerName)->to($order->user->email)->send($resellerMail);
+                    } else {
+                        Mail::to($order->user->email)->send($resellerMail);
+                    }
 
                     // Trigger the reseller order activated event
                     ResellerOrderActivated::dispatch($order);
@@ -639,6 +729,12 @@ class OrderController extends Controller
                     return redirect()->back()
                         ->with('success', 'Reseller order activated successfully! Reseller panel credentials have been sent to the customer via email.');
                 } catch (\Exception $e) {
+                    Log::error('Failed to send reseller credentials email', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                     return redirect()->back()
                         ->with('warning', 'Reseller order activated successfully, but there was an issue sending the credentials email. Please send them manually.');
                 }
@@ -699,10 +795,20 @@ class OrderController extends Controller
                         }
                         
                         // Send renewal email
-                        Mail::to($order->user->email)->send(new \App\Mail\AccountRenewedMail($order, $originalOrder));
+                        $renewalMail = new \App\Mail\AccountRenewedMail($order, $originalOrder);
+                        if ($renewalMail->mailerName) {
+                            Mail::mailer($renewalMail->mailerName)->to($order->user->email)->send($renewalMail);
+                        } else {
+                            Mail::to($order->user->email)->send($renewalMail);
+                        }
                     } else {
                         // Send regular credentials email for new orders
-                    Mail::to($order->user->email)->send(new \App\Mail\ClientCredentialsMail($order->user, collect([$order])));
+                        $clientMail = new \App\Mail\ClientCredentialsMail($order->user, collect([$order]));
+                        if ($clientMail->mailerName) {
+                            Mail::mailer($clientMail->mailerName)->to($order->user->email)->send($clientMail);
+                        } else {
+                            Mail::to($order->user->email)->send($clientMail);
+                        }
                     }
 
                     $order->update([
@@ -719,7 +825,9 @@ class OrderController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Failed to send credentials email', [
                         'order_id' => $order->id,
+                        'order_number' => $order->order_number,
                         'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
                     return redirect()->back()
                         ->with('warning', 'Order activated successfully, but there was an issue sending the credentials email. Please send them manually.');

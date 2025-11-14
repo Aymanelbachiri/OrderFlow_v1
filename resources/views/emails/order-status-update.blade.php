@@ -14,7 +14,7 @@
                     <!-- Header with status-specific color -->
                     <tr>
                         <td style="background-color: {{ $order->status === 'active' ? '#10b981' : ($order->status === 'pending' ? '#f59e0b' : ($order->status === 'expired' ? '#ef4444' : '#6b7280')) }}; padding: 40px 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ config('app.name') }}</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ $company_name ?? config('app.name') }}</h1>
                             <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Order Status Update</p>
                         </td>
                     </tr>
@@ -203,7 +203,7 @@
                             
                             <p style="margin: 20px 0 0 0; font-size: 14px; color: #718096; line-height: 1.6;">
                                 Best regards,<br>
-                                <strong style="color: #3b82f6;">The {{ config('app.name') }} Team</strong>
+                                <strong style="color: #3b82f6;">The {{ $team_name ?? ($company_name ?? config('app.name')) . ' Team' }}</strong>
                             </p>
                             
                         </td>
@@ -213,9 +213,16 @@
                     <tr>
                         <td style="background-color: #1e293b; padding: 30px; text-align: center;">
                             <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1; font-weight: 600;">Order #{{ $order->order_number }} | Status: {{ ucfirst($order->status) }}</p>
-                            <p style="margin: 0 0 15px 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
-                            
-                        
+                            <p style="margin: 0 0 15px 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
+                            @if(isset($website) && $website)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;"><a href="{{ $website }}" style="color: #cbd5e1;">{{ $website }}</a></p>
+                            @endif
+                            @if(isset($contact_email) && $contact_email)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;">Contact: <a href="mailto:{{ $contact_email }}" style="color: #cbd5e1;">{{ $contact_email }}</a></p>
+                            @endif
+                            @if(isset($phone_number) && $phone_number)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;">Phone: {{ $phone_number }}</p>
+                            @endif
                         </td>
                     </tr>
                     

@@ -14,7 +14,7 @@
                     <!-- Header -->
                     <tr>
                         <td style="background-color: #10b981; padding: 40px 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ config('app.name') }}</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">{{ $company_name ?? config('app.name') }}</h1>
                             <p style="margin: 10px 0 0 0; color: #d1fae5; font-size: 16px;">Account Renewed Successfully</p>
                         </td>
                     </tr>
@@ -149,7 +149,15 @@
                                         <p style="margin: 0 0 12px 0; font-size: 18px; color: #334155; font-weight: bold;">Need Help?</p>
                                         <p style="margin: 0 0 10px 0; font-size: 14px; color: #475569;">If you have any questions about your renewal, please don't hesitate to contact us:</p>
                                         <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.8;">
-                                            <li>Email: contact@smarters-proiptv.com</li>
+                                            @if(isset($contact_email) && $contact_email)
+                                            <li>Email: <a href="mailto:{{ $contact_email }}" style="color: #0369a1;">{{ $contact_email }}</a></li>
+                                            @endif
+                                            @if(isset($phone_number) && $phone_number)
+                                            <li>Phone: {{ $phone_number }}</li>
+                                            @endif
+                                            @if(isset($website) && $website)
+                                            <li>Website: <a href="{{ $website }}" style="color: #0369a1;">{{ $website }}</a></li>
+                                            @endif
                                         </ul>
                                     </td>
                                 </tr>
@@ -161,9 +169,18 @@
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #1e293b; padding: 30px; text-align: center;">
-                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #cbd5e1; font-weight: 600;">Thank you for choosing {{ config('app.name') }}!</p>
+                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #cbd5e1; font-weight: 600;">Thank you for choosing {{ $company_name ?? config('app.name') }}!</p>
                             <p style="margin: 0 0 8px 0; font-size: 13px; color: #cbd5e1;">This is an automated message. Please do not reply to this email.</p>
-                            <p style="margin: 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+                            <p style="margin: 0; font-size: 13px; color: #cbd5e1;">&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
+                            @if(isset($website) && $website)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;"><a href="{{ $website }}" style="color: #cbd5e1;">{{ $website }}</a></p>
+                            @endif
+                            @if(isset($contact_email) && $contact_email)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;">Contact: <a href="mailto:{{ $contact_email }}" style="color: #cbd5e1;">{{ $contact_email }}</a></p>
+                            @endif
+                            @if(isset($phone_number) && $phone_number)
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: #cbd5e1;">Phone: {{ $phone_number }}</p>
+                            @endif
                         </td>
                     </tr>
                     

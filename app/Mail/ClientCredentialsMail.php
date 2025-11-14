@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\User;
+use App\Services\SourceMailService;
 
 class ClientCredentialsMail extends Mailable
 {
@@ -16,6 +17,9 @@ class ClientCredentialsMail extends Mailable
     public $client;
     public $orders;
     public $loginUrl;
+    protected SourceMailService $sourceMailService;
+    protected $source;
+    public $mailerName;
 
     /**
      * Create a new message instance.
@@ -25,6 +29,14 @@ class ClientCredentialsMail extends Mailable
         $this->client = $client;
         $this->orders = is_array($orders) ? collect($orders) : $orders;
         $this->loginUrl = route('login');
+        $this->sourceMailService = new SourceMailService();
+        
+        // Get source from first order if available
+        $firstOrder = $this->orders->first();
+        if ($firstOrder) {
+            $this->source = $this->sourceMailService->getSource(null, $firstOrder);
+            $this->mailerName = $this->sourceMailService->configureMailForSource($this->source);
+        }
     }
 
     /**
@@ -32,9 +44,21 @@ class ClientCredentialsMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Your IPTV Service Credentials - ' . config('app.name'),
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        $companyName = $sourceVars['company_name'] ?? config('app.name');
+        
+        $envelope = new Envelope(
+            subject: 'Your IPTV Service Credentials - ' . $companyName,
         );
+
+        if ($this->source && $this->source->smtp_from_address) {
+            $envelope->from(
+                $this->source->smtp_from_address,
+                $this->source->smtp_from_name ?? $this->source->company_name ?? config('app.name')
+            );
+        }
+
+        return $envelope;
     }
 
     /**
@@ -42,13 +66,15 @@ class ClientCredentialsMail extends Mailable
      */
     public function content(): Content
     {
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        
         return new Content(
             view: 'emails.client-credentials',
             with: [
                 'client' => $this->client,
                 'orders' => $this->orders,
                 'loginUrl' => $this->loginUrl,
-            ],
+            ] + $sourceVars,
         );
     }
 

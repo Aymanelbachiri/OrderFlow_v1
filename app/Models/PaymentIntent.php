@@ -112,6 +112,19 @@ class PaymentIntent extends Model
         $orderData['order_type'] = $orderData['order_type'] ?? $this->order_type;
         if (($orderData['order_type'] ?? null) === 'credit_pack') {
             $orderData['expires_at'] = null;
+            // Ensure reseller_credit_pack_id is set from payment intent or order_data
+            if (!isset($orderData['reseller_credit_pack_id']) && $this->reseller_credit_pack_id) {
+                $orderData['reseller_credit_pack_id'] = $this->reseller_credit_pack_id;
+            }
+            // If reseller_credit_pack_id is in order_data but not set at top level, use it
+            if (!isset($orderData['reseller_credit_pack_id']) && isset($orderData['pricing_plan_id'])) {
+                // For credit pack orders, pricing_plan_id might contain the credit pack ID
+                // Try to find if it's actually a credit pack ID
+                $possibleCreditPack = \App\Models\ResellerCreditPack::find($orderData['pricing_plan_id']);
+                if ($possibleCreditPack) {
+                    $orderData['reseller_credit_pack_id'] = $possibleCreditPack->id;
+                }
+            }
         }
 
         // Handle renewal credentials if customer chose to keep existing credentials

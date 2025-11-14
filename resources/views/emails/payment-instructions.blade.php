@@ -77,7 +77,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
+        <h1>{{ $company_name ?? config('app.name') }}</h1>
         <h2>Payment Instructions</h2>
     </div>
 
@@ -173,20 +173,32 @@
             <li>Check our FAQ section for common questions</li>
         </ul>
 
-        <p>Thank you for choosing {{ config('app.name') }}. We look forward to providing you with excellent IPTV service!</p>
+        <p>Thank you for choosing {{ $company_name ?? config('app.name') }}. We look forward to providing you with excellent IPTV service!</p>
 
         <p>Best regards,<br>
-        The {{ config('app.name') }} Team</p>
+        The {{ $team_name ?? ($company_name ?? config('app.name')) . ' Team' }}</p>
     </div>
 
     <div class="footer">
         <p>Order #{{ $order->order_number }} | Amount: ${{ number_format($order->amount, 2) }}</p>
-        <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+        <p>&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
         
-        @if(config('app.url'))
+        @if(isset($website) && $website)
+        <p>
+            <a href="{{ $website }}" style="color: #007bff;">{{ $website }}</a>
+        </p>
+        @elseif(config('app.url'))
         <p>
             <a href="{{ config('app.url') }}" style="color: #007bff;">Visit our website</a>
         </p>
+        @endif
+        
+        @if(isset($contact_email) && $contact_email)
+        <p>Contact: <a href="mailto:{{ $contact_email }}" style="color: #007bff;">{{ $contact_email }}</a></p>
+        @endif
+        
+        @if(isset($phone_number) && $phone_number)
+        <p>Phone: {{ $phone_number }}</p>
         @endif
         
         <p style="font-size: 12px; color: #999;">

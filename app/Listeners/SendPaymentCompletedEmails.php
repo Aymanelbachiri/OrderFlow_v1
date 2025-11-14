@@ -31,30 +31,123 @@ class SendPaymentCompletedEmails
             // Check order type and send appropriate emails
             if ($order->order_type === 'credit_pack') {
                 // Send reseller-specific order confirmation
-                Mail::to($order->user->email)->send(new \App\Mail\ResellerOrderConfirmationMail($order));
+                try {
+                    $resellerMail = new \App\Mail\ResellerOrderConfirmationMail($order);
+                    if ($resellerMail->mailerName) {
+                        Mail::mailer($resellerMail->mailerName)->to($order->user->email)->send($resellerMail);
+                    } else {
+                        Mail::to($order->user->email)->send($resellerMail);
+                    }
+                } catch (\Exception $resellerEmailError) {
+                    Log::error('Failed to send reseller order confirmation email: ' . $resellerEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
+                }
                 
                 // Send reseller-specific admin notification
-                $adminEmails = $emailService->getAdminEmails();
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
+                // Admin emails should use default mailer (not source-specific)
+                try {
+                    $adminEmails = $emailService->getAdminEmails();
+                    foreach ($adminEmails as $adminEmail) {
+                        Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
+                    }
+                } catch (\Exception $adminEmailError) {
+                    Log::error('Failed to send reseller admin notification email: ' . $adminEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
                 }
             } elseif ($order->order_type === 'custom_product') {
                 // Send custom product order confirmation
-                Mail::to($order->user->email)->send(new \App\Mail\CustomProductOrderMail($order));
+                try {
+                    $customProductMail = new \App\Mail\CustomProductOrderMail($order);
+                    if ($customProductMail->mailerName) {
+                        Mail::mailer($customProductMail->mailerName)->to($order->user->email)->send($customProductMail);
+                    } else {
+                        Mail::to($order->user->email)->send($customProductMail);
+                    }
+                } catch (\Exception $customProductEmailError) {
+                    Log::error('Failed to send custom product order confirmation email: ' . $customProductEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
+                }
                 
                 // Send custom product admin notification
-                $adminEmails = $emailService->getAdminEmails();
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
+                // Admin emails should use default mailer (not source-specific)
+                try {
+                    $adminEmails = $emailService->getAdminEmails();
+                    foreach ($adminEmails as $adminEmail) {
+                        Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
+                    }
+                } catch (\Exception $adminEmailError) {
+                    Log::error('Failed to send custom product admin notification email: ' . $adminEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
                 }
             } else {
                 // Send standard order confirmation email to client
-                Mail::to($order->user->email)->send(new \App\Mail\NewOrderClientMail($order));
+                try {
+                    $clientMail = new \App\Mail\NewOrderClientMail($order);
+                    if ($clientMail->mailerName) {
+                        Mail::mailer($clientMail->mailerName)->to($order->user->email)->send($clientMail);
+                    } else {
+                        Mail::to($order->user->email)->send($clientMail);
+                    }
+                } catch (\Exception $clientEmailError) {
+                    Log::error('Failed to send client order confirmation email: ' . $clientEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
+                }
 
                 // Send standard new order notification email to admin(s)
-                $adminEmails = $emailService->getAdminEmails();
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
+                // Admin emails should use default mailer (not source-specific)
+                try {
+                    $adminEmails = $emailService->getAdminEmails();
+                    Log::info('Attempting to send admin emails', [
+                        'admin_emails' => $adminEmails,
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
+                    
+                    if (empty($adminEmails)) {
+                        Log::warning('No admin emails found to send notification to', [
+                            'order_id' => $order->id,
+                            'order_number' => $order->order_number,
+                        ]);
+                    } else {
+                        foreach ($adminEmails as $adminEmail) {
+                            try {
+                                Log::info('Sending admin email to: ' . $adminEmail, [
+                                    'order_id' => $order->id,
+                                    'order_number' => $order->order_number,
+                                ]);
+                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
+                                Log::info('Admin email sent successfully to: ' . $adminEmail, [
+                                    'order_id' => $order->id,
+                                    'order_number' => $order->order_number,
+                                ]);
+                            } catch (\Exception $singleAdminEmailError) {
+                                Log::error('Failed to send admin email to ' . $adminEmail . ': ' . $singleAdminEmailError->getMessage(), [
+                                    'order_id' => $order->id,
+                                    'order_number' => $order->order_number,
+                                    'admin_email' => $adminEmail,
+                                    'error' => $singleAdminEmailError->getMessage(),
+                                    'trace' => $singleAdminEmailError->getTraceAsString(),
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Exception $adminEmailError) {
+                    Log::error('Failed to send admin order notification email: ' . $adminEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'error' => $adminEmailError->getMessage(),
+                        'trace' => $adminEmailError->getTraceAsString(),
+                    ]);
                 }
             }
 
@@ -92,30 +185,107 @@ class SendPaymentCompletedEmails
             // Check order type and send appropriate emails
             if ($order->order_type === 'credit_pack') {
                 // Send reseller-specific order confirmation
-                Mail::to($order->user->email)->send(new \App\Mail\ResellerOrderConfirmationMail($order));
+                try {
+                    $resellerMail = new \App\Mail\ResellerOrderConfirmationMail($order);
+                    if ($resellerMail->mailerName) {
+                        Mail::mailer($resellerMail->mailerName)->to($order->user->email)->send($resellerMail);
+                    } else {
+                        Mail::to($order->user->email)->send($resellerMail);
+                    }
+                } catch (\Exception $resellerEmailError) {
+                    Log::error('Fallback: Failed to send reseller order confirmation email: ' . $resellerEmailError->getMessage());
+                }
                 
                 // Send reseller-specific admin notification
-                $adminEmails = $emailService->getAdminEmails();
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
+                // Admin emails should use default mailer (not source-specific)
+                try {
+                    $adminEmails = $emailService->getAdminEmails();
+                    foreach ($adminEmails as $adminEmail) {
+                        Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
+                    }
+                } catch (\Exception $adminEmailError) {
+                    Log::error('Fallback: Failed to send reseller admin notification email: ' . $adminEmailError->getMessage());
                 }
             } elseif ($order->order_type === 'custom_product') {
                 // Send custom product order confirmation
-                Mail::to($order->user->email)->send(new \App\Mail\CustomProductOrderMail($order));
+                try {
+                    $customProductMail = new \App\Mail\CustomProductOrderMail($order);
+                    if ($customProductMail->mailerName) {
+                        Mail::mailer($customProductMail->mailerName)->to($order->user->email)->send($customProductMail);
+                    } else {
+                        Mail::to($order->user->email)->send($customProductMail);
+                    }
+                } catch (\Exception $customProductEmailError) {
+                    Log::error('Fallback: Failed to send custom product order confirmation email: ' . $customProductEmailError->getMessage());
+                }
                 
                 // Send custom product admin notification
-                $adminEmails = $emailService->getAdminEmails();
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
+                // Admin emails should use default mailer (not source-specific)
+                try {
+                    $adminEmails = $emailService->getAdminEmails();
+                    foreach ($adminEmails as $adminEmail) {
+                        Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
+                    }
+                } catch (\Exception $adminEmailError) {
+                    Log::error('Fallback: Failed to send custom product admin notification email: ' . $adminEmailError->getMessage());
                 }
             } else {
                 // Fallback email to customer using Mailable
-                Mail::to($order->user->email)->send(new \App\Mail\NewOrderClientMail($order));
+                try {
+                    $clientMail = new \App\Mail\NewOrderClientMail($order);
+                    if ($clientMail->mailerName) {
+                        Mail::mailer($clientMail->mailerName)->to($order->user->email)->send($clientMail);
+                    } else {
+                        Mail::to($order->user->email)->send($clientMail);
+                    }
+                } catch (\Exception $clientEmailError) {
+                    Log::error('Fallback: Failed to send client order confirmation email: ' . $clientEmailError->getMessage());
+                }
 
                 // Fallback email to admin using Mailable
-                $adminEmails = $emailService->getAdminEmails();
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
+                try {
+                    $adminEmails = $emailService->getAdminEmails();
+                    Log::info('Fallback: Attempting to send admin emails', [
+                        'admin_emails' => $adminEmails,
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
+                    
+                    if (empty($adminEmails)) {
+                        Log::warning('Fallback: No admin emails found to send notification to', [
+                            'order_id' => $order->id,
+                            'order_number' => $order->order_number,
+                        ]);
+                    } else {
+                        foreach ($adminEmails as $adminEmail) {
+                            try {
+                                Log::info('Fallback: Sending admin email to: ' . $adminEmail, [
+                                    'order_id' => $order->id,
+                                    'order_number' => $order->order_number,
+                                ]);
+                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
+                                Log::info('Fallback: Admin email sent successfully to: ' . $adminEmail, [
+                                    'order_id' => $order->id,
+                                    'order_number' => $order->order_number,
+                                ]);
+                            } catch (\Exception $singleAdminEmailError) {
+                                Log::error('Fallback: Failed to send admin email to ' . $adminEmail . ': ' . $singleAdminEmailError->getMessage(), [
+                                    'order_id' => $order->id,
+                                    'order_number' => $order->order_number,
+                                    'admin_email' => $adminEmail,
+                                    'error' => $singleAdminEmailError->getMessage(),
+                                    'trace' => $singleAdminEmailError->getTraceAsString(),
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Exception $adminEmailError) {
+                    Log::error('Fallback: Failed to send admin order notification email: ' . $adminEmailError->getMessage(), [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'error' => $adminEmailError->getMessage(),
+                        'trace' => $adminEmailError->getTraceAsString(),
+                    ]);
                 }
             }
 

@@ -65,7 +65,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
+        <h1>{{ $company_name ?? config('app.name') }}</h1>
         <h2>Order Confirmation</h2>
     </div>
 
@@ -177,17 +177,24 @@
 
         <p>If you have any questions about your order or need assistance, please don't hesitate to contact our support team.</p>
 
-        <p>Thank you for choosing {{ config('app.name') }}!</p>
+        <p>Thank you for choosing {{ $company_name ?? config('app.name') }}!</p>
 
         <p>Best regards,<br>
-        The {{ config('app.name') }} Team</p>
+        The {{ $team_name ?? ($company_name ?? config('app.name')) . ' Team' }}</p>
     </div>
 
     <div class="footer">
         <p>Order #{{ $order->order_number }} | {{ $order->created_at->format('M d, Y') }}</p>
-        <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
-        
-        
+        <p>&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
+        @if(isset($website) && $website)
+        <p><a href="{{ $website }}" style="color: #6c757d;">{{ $website }}</a></p>
+        @endif
+        @if(isset($contact_email) && $contact_email)
+        <p>Contact: <a href="mailto:{{ $contact_email }}" style="color: #6c757d;">{{ $contact_email }}</a></p>
+        @endif
+        @if(isset($phone_number) && $phone_number)
+        <p>Phone: {{ $phone_number }}</p>
+        @endif
     </div>
 </body>
 </html>

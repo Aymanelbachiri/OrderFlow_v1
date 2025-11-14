@@ -13,12 +13,28 @@ class Source extends Model
         'name',
         'return_url',
         'is_active',
+        // SMTP Configuration
+        'smtp_mailer',
+        'smtp_host',
+        'smtp_port',
+        'smtp_username',
+        'smtp_password',
+        'smtp_encryption',
+        'smtp_from_address',
+        'smtp_from_name',
+        // Email Template Variables
+        'company_name',
+        'contact_email',
+        'website',
+        'phone_number',
+        'team_name',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'smtp_port' => 'integer',
         ];
     }
 }

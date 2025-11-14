@@ -9,12 +9,16 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Order;
+use App\Services\SourceMailService;
 
 class NewOrderClientMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $order;
+    protected SourceMailService $sourceMailService;
+    protected $source;
+    public $mailerName;
 
     /**
      * Create a new message instance.
@@ -22,6 +26,9 @@ class NewOrderClientMail extends Mailable
     public function __construct(Order $order)
     {
         $this->order = $order;
+        $this->sourceMailService = new SourceMailService();
+        $this->source = $this->sourceMailService->getSource(null, $order);
+        $this->mailerName = $this->sourceMailService->configureMailForSource($this->source);
     }
 
     /**
@@ -29,9 +36,21 @@ class NewOrderClientMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Order Confirmation - ' . $this->order->order_number . ' - ' . config('app.name'),
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        $companyName = $sourceVars['company_name'] ?? config('app.name');
+        
+        $envelope = new Envelope(
+            subject: 'Order Confirmation - ' . $this->order->order_number . ' - ' . $companyName,
         );
+
+        if ($this->source && $this->source->smtp_from_address) {
+            $envelope->from(
+                $this->source->smtp_from_address,
+                $this->source->smtp_from_name ?? $this->source->company_name ?? config('app.name')
+            );
+        }
+
+        return $envelope;
     }
 
     /**
@@ -39,13 +58,15 @@ class NewOrderClientMail extends Mailable
      */
     public function content(): Content
     {
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        
         return new Content(
             view: 'emails.new-order-client',
             with: [
                 'order' => $this->order,
                 'customer' => $this->order->user,
                 'plan' => $this->order->pricingPlan,
-            ],
+            ] + $sourceVars,
         );
     }
 

@@ -60,14 +60,14 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
+        <h1>{{ $company_name ?? config('app.name') }}</h1>
         <h2>Password Reset Request</h2>
     </div>
 
     <div class="content">
         <p>Hello {{ $user->name }},</p>
 
-        <p>We received a request to reset your password for your {{ config('app.name') }} account. If you made this request, please click the button below to reset your password:</p>
+        <p>We received a request to reset your password for your {{ $company_name ?? config('app.name') }} account. If you made this request, please click the button below to reset your password:</p>
 
         <div style="text-align: center;">
             <a href="{{ $resetUrl }}" class="button">Reset Password</a>
@@ -90,12 +90,12 @@
         <p>If you're having trouble with your account or didn't request this password reset, please contact our support team immediately.</p>
 
         <p>Best regards,<br>
-        The {{ config('app.name') }} Team</p>
+        The {{ $team_name ?? ($company_name ?? config('app.name')) . ' Team' }}</p>
     </div>
 
     <div class="footer">
         <p>This email was sent to {{ $user->email }} because a password reset was requested for your account.</p>
-        <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+        <p>&copy; {{ date('Y') }} {{ $company_name ?? config('app.name') }}. All rights reserved.</p>
         
        
     </div>

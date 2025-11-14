@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Order;
+use App\Services\SourceMailService;
 
 class AccountRenewedMail extends Mailable
 {
@@ -16,6 +17,9 @@ class AccountRenewedMail extends Mailable
 
     public $order;
     public $originalOrder;
+    protected SourceMailService $sourceMailService;
+    protected $source;
+    public $mailerName;
 
     /**
      * Create a new message instance.
@@ -24,6 +28,9 @@ class AccountRenewedMail extends Mailable
     {
         $this->order = $order;
         $this->originalOrder = $originalOrder;
+        $this->sourceMailService = new SourceMailService();
+        $this->source = $this->sourceMailService->getSource(null, $order);
+        $this->mailerName = $this->sourceMailService->configureMailForSource($this->source);
     }
 
     /**
@@ -31,9 +38,21 @@ class AccountRenewedMail extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Account Renewed - ' . $this->order->order_number . ' - ' . config('app.name'),
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        $companyName = $sourceVars['company_name'] ?? config('app.name');
+        
+        $envelope = new Envelope(
+            subject: 'Account Renewed - ' . $this->order->order_number . ' - ' . $companyName,
         );
+
+        if ($this->source && $this->source->smtp_from_address) {
+            $envelope->from(
+                $this->source->smtp_from_address,
+                $this->source->smtp_from_name ?? $this->source->company_name ?? config('app.name')
+            );
+        }
+
+        return $envelope;
     }
 
     /**
@@ -41,6 +60,8 @@ class AccountRenewedMail extends Mailable
      */
     public function content(): Content
     {
+        $sourceVars = $this->sourceMailService->getEmailVariables($this->source);
+        
         return new Content(
             view: 'emails.account-renewed',
             with: [
@@ -48,7 +69,7 @@ class AccountRenewedMail extends Mailable
                 'customer' => $this->order->user,
                 'plan' => $this->order->pricingPlan,
                 'originalOrder' => $this->originalOrder,
-            ],
+            ] + $sourceVars,
         );
     }
 

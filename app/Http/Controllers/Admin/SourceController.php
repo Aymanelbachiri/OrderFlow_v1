@@ -44,9 +44,25 @@ class SourceController extends Controller
             'name' => 'required|string|max:255|unique:sources,name',
             'return_url' => 'required|url|max:2048',
             'is_active' => 'sometimes|boolean',
+            // SMTP Configuration
+            'smtp_mailer' => 'nullable|string|max:255',
+            'smtp_host' => 'nullable|string|max:255',
+            'smtp_port' => 'nullable|integer|min:1|max:65535',
+            'smtp_username' => 'nullable|string|max:255',
+            'smtp_password' => 'nullable|string|max:255',
+            'smtp_encryption' => 'nullable|string|max:255',
+            'smtp_from_address' => 'nullable|email|max:255',
+            'smtp_from_name' => 'nullable|string|max:255',
+            // Email Template Variables
+            'company_name' => 'nullable|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+            'website' => 'nullable|url|max:255',
+            'phone_number' => 'nullable|string|max:255',
+            'team_name' => 'nullable|string|max:255',
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+        $validated['smtp_mailer'] = $validated['smtp_mailer'] ?? 'smtp';
 
         Source::create($validated);
         
@@ -68,9 +84,30 @@ class SourceController extends Controller
             'name' => 'required|string|max:255|unique:sources,name,' . $source->id,
             'return_url' => 'required|url|max:2048',
             'is_active' => 'sometimes|boolean',
+            // SMTP Configuration
+            'smtp_mailer' => 'nullable|string|max:255',
+            'smtp_host' => 'nullable|string|max:255',
+            'smtp_port' => 'nullable|integer|min:1|max:65535',
+            'smtp_username' => 'nullable|string|max:255',
+            'smtp_password' => 'nullable|string|max:255',
+            'smtp_encryption' => 'nullable|string|max:255',
+            'smtp_from_address' => 'nullable|email|max:255',
+            'smtp_from_name' => 'nullable|string|max:255',
+            // Email Template Variables
+            'company_name' => 'nullable|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+            'website' => 'nullable|url|max:255',
+            'phone_number' => 'nullable|string|max:255',
+            'team_name' => 'nullable|string|max:255',
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? $source->is_active);
+        $validated['smtp_mailer'] = $validated['smtp_mailer'] ?? 'smtp';
+
+        // Don't update password if it's empty (to preserve existing password)
+        if (empty($validated['smtp_password'])) {
+            unset($validated['smtp_password']);
+        }
 
         $source->update($validated);
         
