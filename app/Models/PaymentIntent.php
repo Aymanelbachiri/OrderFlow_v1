@@ -163,6 +163,29 @@ class PaymentIntent extends Model
         // Create the order (source will be included from order_data if present)
         $order = Order::create($orderData);
 
+        // If this is a renewal order, mark the original order as completed
+        if (isset($this->order_data['subscription_type']) && $this->order_data['subscription_type'] === 'renewal') {
+            if (isset($this->order_data['renewal_of_order_id'])) {
+                $originalOrderId = $this->order_data['renewal_of_order_id'];
+                $originalOrder = Order::find($originalOrderId);
+                
+                if ($originalOrder) {
+                    // Mark the original order as completed so it won't receive renewal reminders
+                    $originalOrder->update([
+                        'status' => 'completed',
+                        'completed_at' => now(),
+                    ]);
+                    
+                    \Log::info('Marked original order as completed after renewal', [
+                        'original_order_id' => $originalOrderId,
+                        'original_order_number' => $originalOrder->order_number,
+                        'renewal_order_id' => $order->id,
+                        'renewal_order_number' => $order->order_number,
+                    ]);
+                }
+            }
+        }
+
         // Create payment record
         Payment::create([
             'user_id' => $this->user_id,

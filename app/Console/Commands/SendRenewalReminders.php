@@ -46,6 +46,7 @@ class SendRenewalReminders extends Command
                 // Handle expired orders (0 days) - orders that expire TODAY or are already expired
                 $orders = Order::where('status', 'active')
                     ->whereDate('expires_at', '<=', now()->toDateString())
+                    ->where('order_type', 'subscription') // Only subscription orders, not credit packs
                     ->with(['user', 'pricingPlan'])
                     ->get();
             } else {
@@ -56,9 +57,35 @@ class SendRenewalReminders extends Command
                 
                 $orders = Order::where('status', 'active')
                     ->whereBetween('expires_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->where('order_type', 'subscription') // Only subscription orders, not credit packs
                     ->with(['user', 'pricingPlan'])
                     ->get();
             }
+            
+            // Filter out orders that have been renewed
+            // An order is considered renewed if:
+            // 1. It's already marked as completed, OR
+            // 2. There's a newer active/pending renewal order for the same user
+            $orders = $orders->filter(function ($order) {
+                // Skip if already completed
+                if ($order->status === 'completed') {
+                    return false;
+                }
+                
+                // Skip if this order itself is a renewal (renewal orders don't need renewal reminders)
+                if ($order->subscription_type === 'renewal') {
+                    return false;
+                }
+                
+                // Check if there's a newer renewal order for this user that is active or pending
+                $hasRenewal = Order::where('user_id', $order->user_id)
+                    ->where('subscription_type', 'renewal')
+                    ->where('id', '>', $order->id) // Newer order
+                    ->whereIn('status', ['active', 'pending']) // Active or pending renewal
+                    ->exists();
+                
+                return !$hasRenewal;
+            });
 
             $this->info("Found " . $orders->count() . " orders for {$days}-day reminder");
 
