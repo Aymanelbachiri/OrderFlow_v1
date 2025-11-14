@@ -478,9 +478,9 @@
                                         <svg class="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
                                         </svg>
-                                    <div class="ml-3">
+                                    <div class="ml-3 flex-1 min-w-0">
                                         <h4 class="text-sm font-medium text-purple-800 dark:text-purple-200">Crypto Setup</h4>
-                                        <p class="text-sm text-purple-700 dark:text-purple-300 mt-1">Get your API key and webhook secret from your Coinbase Commerce dashboard. Webhook URL: <code class="bg-purple-100 dark:bg-purple-800 px-1 rounded">{{ route('webhooks.coinbase-commerce') }}</code></p>
+                                        <p class="text-sm text-purple-700 dark:text-purple-300 mt-1 break-words">Get your API key and webhook secret from your Coinbase Commerce dashboard. Webhook URL: <code class="bg-purple-100 dark:bg-purple-800 px-1 rounded break-all">{{ route('webhooks.coinbase-commerce') }}</code></p>
                                     </div>
                                     </div>
                                 </div>
