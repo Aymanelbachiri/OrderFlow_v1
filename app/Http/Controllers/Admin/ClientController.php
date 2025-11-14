@@ -99,7 +99,8 @@ class ClientController extends Controller
      */
     public function edit(User $client)
     {
-        return view('admin.clients.edit', compact('client'));
+        $sources = Source::orderBy('name')->get();
+        return view('admin.clients.edit', compact('client', 'sources'));
     }
 
     /**
@@ -111,6 +112,7 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $client->id,
             'phone' => 'nullable|string|max:20',
+            'source' => 'nullable|string|max:255',
             'role' => 'required|in:client,reseller',
             'is_active' => 'boolean',
             'suspension_reason' => 'nullable|string',
@@ -120,6 +122,7 @@ class ClientController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
+            'source' => $validated['source'] ?? null,
             'role' => $validated['role'],
             'is_active' => $request->boolean('is_active'),
         ];
