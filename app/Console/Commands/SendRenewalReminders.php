@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\RenewalNotification;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Mail;
+use App\Services\SourceMailService;
 
 class SendRenewalReminders extends Command
 {
@@ -94,11 +95,20 @@ class SendRenewalReminders extends Command
                 $actualDays = now()->diffInDays($order->expires_at, false);
                 
                 // Check if this order should get this specific reminder
-                if ($days === 0 && $actualDays > 0) {
-                    continue; // Skip if not expired yet
-                }
-                if ($days > 0 && abs($actualDays - $days) > 0.9) {
-                    continue; // Skip if not close enough to the target days
+                if ($days === 0) {
+                    // For 0-day (expired) reminders, check if order is expired or expires today
+                    if ($actualDays > 0) {
+                        continue; // Skip if not expired yet
+                    }
+                } else {
+                    // For future reminders, check if actual days is within acceptable range
+                    // Accept orders that expire within days ± 1 day (e.g., for 3-day reminder, accept 2.0 to 4.0 days)
+                    $minDays = $days - 1.0;
+                    $maxDays = $days + 1.0;
+                    
+                    if ($actualDays < $minDays || $actualDays > $maxDays) {
+                        continue; // Skip if not within acceptable range
+                    }
                 }
 
                 // Check if reminder already sent for this specific day
@@ -140,10 +150,18 @@ class SendRenewalReminders extends Command
     private function sendRenewalReminder(Order $order, int $days): bool
     {
         try {
+            $sourceMailService = new SourceMailService();
+            $source = $sourceMailService->getSource(null, $order);
+            $sourceVars = $sourceMailService->getEmailVariables($source);
+            
             $customerName = $order->user->name;
             $orderNumber = $order->order_number;
             $expiresAt = $order->expires_at->format('M d, Y');
             $planName = $order->pricingPlan->display_name;
+            $companyName = $sourceVars['company_name'] ?? config('app.name');
+            $contactEmail = $sourceVars['contact_email'] ?? 'contact@smarters-proiptv.com';
+            $website = $sourceVars['website'] ?? config('app.url', 'http://smarters-proiptv.com');
+            $websiteHost = parse_url($website, PHP_URL_HOST) ?: $website;
             
             // Get renewal link from settings or use default
             $customRenewalUrl = SystemSetting::get('renewal_link_url', '');
@@ -182,7 +200,7 @@ class SendRenewalReminders extends Command
                 
                 <!-- Header -->
                 <div style=\"background-color: #495057; padding: 20px; text-align: center;\">
-                    <h1 style=\"color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;\">" . config('app.name', 'SMARTERS PRO IPTV') . "</h1>
+                    <h1 style=\"color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;\">{$companyName}</h1>
                 </div>
                 
                 <!-- Content -->
@@ -209,15 +227,15 @@ class SendRenewalReminders extends Command
                     <p style=\"font-size: 14px; line-height: 1.5; color: #495057; margin: 0 0 20px 0;\">If you have any questions or need assistance, please don't hesitate to reach out to our support team.</p>
                     
                     <div style=\"border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 25px;\">
-                        <p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Support Email: <a href=\"mailto:contact@smarters-proiptv.com\" style=\"color: #007bff; text-decoration: none;\">contact@smarters-proiptv.com</a></p>
-                        <p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Website: <a href=\"" . config('app.url', 'http://smarters-proiptv.com') . "\" style=\"color: #007bff; text-decoration: none;\">" . parse_url(config('app.url', 'http://checkout.smarters-proiptv.com'), PHP_URL_HOST) . "</a></p>
+                        <p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Support Email: <a href=\"mailto:{$contactEmail}\" style=\"color: #007bff; text-decoration: none;\">{$contactEmail}</a></p>
+                        <p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Website: <a href=\"{$website}\" style=\"color: #007bff; text-decoration: none;\">{$websiteHost}</a></p>
                     </div>
                 </div>
                 
                 <!-- Footer -->
                 <div style=\"background-color: #f8f9fa; padding: 15px 25px; text-align: center; border-top: 1px solid #dee2e6;\">
                     <p style=\"font-size: 12px; color: #6c757d; margin: 0;\">This is an automated message. If you have already renewed your subscription, please disregard this notice.</p>
-                    <p style=\"font-size: 12px; color: #6c757d; margin: 5px 0 0 0;\">&copy; 2025 " . config('app.name', 'SMARTERS PRO IPTV') . ". All rights reserved.</p>
+                    <p style=\"font-size: 12px; color: #6c757d; margin: 5px 0 0 0;\">&copy; 2025 {$companyName}. All rights reserved.</p>
                 </div>
                 
                 </div>
@@ -225,10 +243,28 @@ class SendRenewalReminders extends Command
                 </html>
             ";
 
-            Mail::html($body, function ($message) use ($order, $subject) {
-                $message->to($order->user->email)
-                       ->subject($subject);
-            });
+            // Configure mailer for source and send email
+            $mailerName = $sourceMailService->configureMailForSource($source);
+            
+            if ($mailerName) {
+                // Use source-specific mailer
+                Mail::mailer($mailerName)->html($body, function ($message) use ($order, $subject, $source, $sourceVars) {
+                    $message->to($order->user->email)->subject($subject);
+                    
+                    // Set from address if source is configured
+                    if ($source && $source->smtp_from_address) {
+                        $message->from(
+                            $source->smtp_from_address,
+                            $source->smtp_from_name ?? $source->company_name ?? $sourceVars['company_name'] ?? config('app.name')
+                        );
+                    }
+                });
+            } else {
+                // Fallback to default mailer
+                Mail::html($body, function ($message) use ($order, $subject) {
+                    $message->to($order->user->email)->subject($subject);
+                });
+            }
 
             return true;
         } catch (\Exception $e) {
