@@ -24,6 +24,7 @@ class PublicRenewalController extends Controller
         if ($email || $orderNumber) {
             $query = Order::where('order_type', 'subscription')
                 ->where('status', '!=', 'cancelled')
+                ->where('status', '!=', 'completed')
                 ->with(['user', 'pricingPlan']);
             
             if ($email) {
@@ -73,6 +74,11 @@ class PublicRenewalController extends Controller
         if ($order->status === 'cancelled') {
             return redirect()->route('renewal.lookup')
                 ->with('error', 'This subscription has been cancelled and cannot be renewed.');
+        }
+        
+        if ($order->status === 'completed') {
+            return redirect()->route('renewal.lookup')
+                ->with('error', 'This subscription has already been renewed and cannot be renewed again.');
         }
         
         // Get the same pricing plan (if still active) or suggest alternatives
@@ -154,6 +160,17 @@ class PublicRenewalController extends Controller
         if (!$originalOrder) {
             return redirect()->route('renewal.lookup')
                 ->with('error', 'Subscription not found. Please check your order number and email address.');
+        }
+        
+        // Check if order can be renewed
+        if ($originalOrder->status === 'cancelled') {
+            return redirect()->route('renewal.lookup')
+                ->with('error', 'This subscription has been cancelled and cannot be renewed.');
+        }
+        
+        if ($originalOrder->status === 'completed') {
+            return redirect()->route('renewal.lookup')
+                ->with('error', 'This subscription has already been renewed and cannot be renewed again.');
         }
         
         // Validate source
@@ -291,6 +308,17 @@ class PublicRenewalController extends Controller
         if (!$order || !$order->pricingPlan) {
             return redirect()->route('renewal.lookup')
                 ->with('error', 'Subscription not found or plan no longer available.');
+        }
+        
+        // Check if order can be renewed
+        if ($order->status === 'cancelled') {
+            return redirect()->route('renewal.lookup')
+                ->with('error', 'This subscription has been cancelled and cannot be renewed.');
+        }
+        
+        if ($order->status === 'completed') {
+            return redirect()->route('renewal.lookup')
+                ->with('error', 'This subscription has already been renewed and cannot be renewed again.');
         }
         
         // Check if same plan is still active
