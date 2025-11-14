@@ -192,6 +192,25 @@
                         @enderror
                     </div>
 
+                    <!-- Source -->
+                    <div class="space-y-2">
+                        <label for="source" class="block text-sm font-medium text-[#201E1F]/60">Source (Optional)</label>
+                        <select id="source" 
+                                name="source" 
+                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 @error('source') border-red-300 @enderror">
+                            <option value="">No Source</option>
+                            @foreach($sources as $source)
+                            <option value="{{ $source->name }}" {{ old('source', $order->source) == $source->name ? 'selected' : '' }}>
+                                {{ $source->name }}@if(!$source->is_active) (Inactive)@endif
+                            </option>
+                            @endforeach
+                        </select>
+                        @error('source')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="text-xs text-gray-500 mt-1">Select the source where this order originated from</p>
+                    </div>
+
                     <!-- Start Date -->
                     <div class="space-y-2">
                         <label for="starts_at" class="block text-sm font-medium text-[#201E1F]/60">Start Date</label>

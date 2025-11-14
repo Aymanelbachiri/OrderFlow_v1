@@ -48,9 +48,9 @@ class SendPaymentCompletedEmails
                 // Send reseller-specific admin notification
                 // Admin emails should use default mailer (not source-specific)
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    foreach ($adminEmails as $adminEmail) {
-                        Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
+                $adminEmails = $emailService->getAdminEmails();
+                foreach ($adminEmails as $adminEmail) {
+                    Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
                     }
                 } catch (\Exception $adminEmailError) {
                     Log::error('Failed to send reseller admin notification email: ' . $adminEmailError->getMessage(), [
@@ -77,9 +77,9 @@ class SendPaymentCompletedEmails
                 // Send custom product admin notification
                 // Admin emails should use default mailer (not source-specific)
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    foreach ($adminEmails as $adminEmail) {
-                        Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
+                $adminEmails = $emailService->getAdminEmails();
+                foreach ($adminEmails as $adminEmail) {
+                    Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
                     }
                 } catch (\Exception $adminEmailError) {
                     Log::error('Failed to send custom product admin notification email: ' . $adminEmailError->getMessage(), [
@@ -106,7 +106,7 @@ class SendPaymentCompletedEmails
                 // Send standard new order notification email to admin(s)
                 // Admin emails should use default mailer (not source-specific)
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
+                $adminEmails = $emailService->getAdminEmails();
                     Log::info('Attempting to send admin emails', [
                         'admin_emails' => $adminEmails,
                         'order_id' => $order->id,
@@ -119,13 +119,13 @@ class SendPaymentCompletedEmails
                             'order_number' => $order->order_number,
                         ]);
                     } else {
-                        foreach ($adminEmails as $adminEmail) {
+                foreach ($adminEmails as $adminEmail) {
                             try {
                                 Log::info('Sending admin email to: ' . $adminEmail, [
                                     'order_id' => $order->id,
                                     'order_number' => $order->order_number,
                                 ]);
-                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
+                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
                                 Log::info('Admin email sent successfully to: ' . $adminEmail, [
                                     'order_id' => $order->id,
                                     'order_number' => $order->order_number,
@@ -199,9 +199,9 @@ class SendPaymentCompletedEmails
                 // Send reseller-specific admin notification
                 // Admin emails should use default mailer (not source-specific)
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    foreach ($adminEmails as $adminEmail) {
-                        Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
+                $adminEmails = $emailService->getAdminEmails();
+                foreach ($adminEmails as $adminEmail) {
+                    Mail::to($adminEmail)->send(new \App\Mail\NewResellerOrderAdminMail($order));
                     }
                 } catch (\Exception $adminEmailError) {
                     Log::error('Fallback: Failed to send reseller admin notification email: ' . $adminEmailError->getMessage());
@@ -222,9 +222,9 @@ class SendPaymentCompletedEmails
                 // Send custom product admin notification
                 // Admin emails should use default mailer (not source-specific)
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    foreach ($adminEmails as $adminEmail) {
-                        Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
+                $adminEmails = $emailService->getAdminEmails();
+                foreach ($adminEmails as $adminEmail) {
+                    Mail::to($adminEmail)->send(new \App\Mail\CustomProductOrderAdminMail($order));
                     }
                 } catch (\Exception $adminEmailError) {
                     Log::error('Fallback: Failed to send custom product admin notification email: ' . $adminEmailError->getMessage());
@@ -244,7 +244,7 @@ class SendPaymentCompletedEmails
 
                 // Fallback email to admin using Mailable
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
+                $adminEmails = $emailService->getAdminEmails();
                     Log::info('Fallback: Attempting to send admin emails', [
                         'admin_emails' => $adminEmails,
                         'order_id' => $order->id,
@@ -257,13 +257,13 @@ class SendPaymentCompletedEmails
                             'order_number' => $order->order_number,
                         ]);
                     } else {
-                        foreach ($adminEmails as $adminEmail) {
+                foreach ($adminEmails as $adminEmail) {
                             try {
                                 Log::info('Fallback: Sending admin email to: ' . $adminEmail, [
                                     'order_id' => $order->id,
                                     'order_number' => $order->order_number,
                                 ]);
-                                Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
+                    Mail::to($adminEmail)->send(new \App\Mail\NewOrderAdminMail($order));
                                 Log::info('Fallback: Admin email sent successfully to: ' . $adminEmail, [
                                     'order_id' => $order->id,
                                     'order_number' => $order->order_number,

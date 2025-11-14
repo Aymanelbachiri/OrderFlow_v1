@@ -40,19 +40,19 @@ class MailConfigServiceProvider extends ServiceProvider
     {
         // Try to get SMTP settings from database first (for backward compatibility)
         $smtpSetting = SmtpSetting::getFirst();
-        
+
         if ($smtpSetting && $smtpSetting->host && $smtpSetting->from_address) {
             // Use database SMTP settings as default (for admin emails)
-            Config::set('mail.mailers.smtp', [
+        Config::set('mail.mailers.smtp', [
                 'transport' => $smtpSetting->mailer ?? 'smtp',
                 'host' => $smtpSetting->host,
-                'port' => $smtpSetting->port ?? env('MAIL_PORT', 587),
-                'encryption' => $smtpSetting->encryption ?? env('MAIL_ENCRYPTION', 'tls'),
+            'port' => $smtpSetting->port ?? env('MAIL_PORT', 587),
+            'encryption' => $smtpSetting->encryption ?? env('MAIL_ENCRYPTION', 'tls'),
                 'username' => $smtpSetting->username,
                 'password' => $smtpSetting->password,
-                'timeout' => env('MAIL_TIMEOUT', 60),
-                'local_domain' => env('MAIL_EHLO_DOMAIN'),
-            ]);
+            'timeout' => env('MAIL_TIMEOUT', 60),
+            'local_domain' => env('MAIL_EHLO_DOMAIN'),
+        ]);
 
             Config::set('mail.from', [
                 'address' => $smtpSetting->from_address,
@@ -62,11 +62,11 @@ class MailConfigServiceProvider extends ServiceProvider
             Config::set('mail.default', $smtpSetting->mailer ?? 'smtp');
         } else {
             // Fallback to environment variables
-            Config::set('mail.from', [
+        Config::set('mail.from', [
                 'address' => env('MAIL_FROM_ADDRESS', 'noreply@example.com'),
                 'name' => env('MAIL_FROM_NAME', config('app.name')),
-            ]);
-            
+        ]);
+
             // Ensure default SMTP mailer is configured from env
             if (!Config::has('mail.mailers.smtp.host')) {
                 Config::set('mail.mailers.smtp', [

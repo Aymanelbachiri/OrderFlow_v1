@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Order;
+use App\Models\Source;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
@@ -51,7 +52,8 @@ class ClientController extends Controller
      */
     public function create()
     {
-        return view('admin.clients.create');
+        $sources = Source::orderBy('name')->get();
+        return view('admin.clients.create', compact('sources'));
     }
 
     /**
@@ -63,12 +65,14 @@ class ClientController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'nullable|string|max:20',
+            'source' => 'nullable|string|max:255',
         ]);
 
         $client = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
+            'source' => $validated['source'] ?? null,
             'password' => null, // Clients don't need passwords
             'role' => 'client',
             'email_verified_at' => now(), // Clients don't need email verification, auto-verify

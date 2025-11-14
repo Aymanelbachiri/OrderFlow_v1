@@ -59,6 +59,25 @@
                     @enderror
                 </div>
 
+                <!-- Source Selection -->
+                <div class="md:col-span-2">
+                    <label for="source" class="block text-sm font-semibold text-[#201E1F] mb-2">Source (Optional)</label>
+                    <select id="source" 
+                            name="source" 
+                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] transition-all duration-200 @error('source') border-red-500 @enderror">
+                        <option value="">No Source</option>
+                        @foreach($sources as $source)
+                        <option value="{{ $source->name }}" {{ old('source') == $source->name ? 'selected' : '' }}>
+                            {{ $source->name }}@if(!$source->is_active) (Inactive)@endif
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('source')
+                        <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-2 text-sm text-[#201E1F]/50">Select the source where this order originated from</p>
+                </div>
+
                 <!-- Pricing Plan (for clients) -->
                 <div class="md:col-span-2" id="pricing_plan_container">
                     <label for="pricing_plan_id" class="block text-sm font-semibold text-[#201E1F] mb-2">Pricing Plan</label>

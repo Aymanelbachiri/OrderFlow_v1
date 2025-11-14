@@ -47,7 +47,7 @@ class ResellerOrderConfirmationMail extends Mailable
             $envelope->from(
                 $this->source->smtp_from_address,
                 $this->source->smtp_from_name ?? $this->source->company_name ?? config('app.name')
-            );
+        );
         }
 
         return $envelope;

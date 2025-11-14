@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\PricingPlan;
+use App\Models\Source;
 use App\Mail\ResellerCredentialsMail;
 use App\Events\ResellerOrderActivated;
 use Illuminate\Support\Facades\Mail;
@@ -114,8 +115,9 @@ class OrderController extends Controller
         $users = User::whereIn('role', ['client', 'reseller'])->orderBy('name')->get();
         $pricingPlans = PricingPlan::where('is_active', true)->orderBy('display_name')->get();
         $resellerCreditPacks = \App\Models\ResellerCreditPack::where('is_active', true)->orderBy('name')->get();
+        $sources = Source::orderBy('name')->get();
 
-        return view('admin.orders.create', compact('users', 'pricingPlans', 'resellerCreditPacks'));
+        return view('admin.orders.create', compact('users', 'pricingPlans', 'resellerCreditPacks', 'sources'));
     }
 
     /**
@@ -127,6 +129,7 @@ class OrderController extends Controller
             'user_id' => 'required|exists:users,id',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
             'reseller_credit_pack_id' => 'nullable|exists:reseller_credit_packs,id',
+            'source' => 'nullable|string|max:255',
             'payment_method' => 'required|in:email_link,stripe,paypal,crypto,manual',
             'status' => 'required|in:pending,active,expired,cancelled',
             'amount' => 'nullable|numeric|min:0',
@@ -196,6 +199,7 @@ class OrderController extends Controller
             'expires_at' => $expiresAt,
             'admin_notes' => $validated['admin_notes'],
             'order_type' => $orderType,
+            'source' => $validated['source'] ?? null,
         ];
         
         // Set pricing_plan_id or reseller_credit_pack_id based on order type
@@ -242,7 +246,8 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
-        return view('admin.orders.edit', compact('order'));
+        $sources = Source::orderBy('name')->get();
+        return view('admin.orders.edit', compact('order', 'sources'));
     }
 
     /**
@@ -263,6 +268,7 @@ class OrderController extends Controller
             'amount' => 'required|numeric|min:0',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
             'reseller_credit_pack_id' => 'nullable|exists:reseller_credit_packs,id',
+            'source' => 'nullable|string|max:255',
             'subscription_type' => 'nullable|in:new,renewal',
             'payment_method' => 'required|in:email_link,stripe,paypal,crypto,manual',
             'starts_at' => 'nullable|date',
@@ -454,7 +460,7 @@ class OrderController extends Controller
             }
             
             if ($order->user->role === 'reseller' || ($order->pricingPlan && $order->pricingPlan->plan_type === 'reseller')) {
-                // Use the new ResellerCredentialsMail for reseller orders
+            // Use the new ResellerCredentialsMail for reseller orders
                 $resellerMail = new ResellerCredentialsMail($order, $order->user);
                 if ($resellerMail->mailerName) {
                     Mail::mailer($resellerMail->mailerName)->to($order->user->email)->send($resellerMail);
@@ -462,27 +468,27 @@ class OrderController extends Controller
                     Mail::to($order->user->email)->send($resellerMail);
                 }
 
-                // Trigger the reseller order activated event
-                ResellerOrderActivated::dispatch($order);
-            } else {
-                // Send credentials email for regular orders
-                $processedOrders = collect();
+            // Trigger the reseller order activated event
+            ResellerOrderActivated::dispatch($order);
+        } else {
+            // Send credentials email for regular orders
+            $processedOrders = collect();
 
-                if ($order->devices && is_array($order->devices) && count($order->devices) > 0) {
-                    foreach ($order->devices as $device) {
-                        $processedOrders->push((object)[
-                            'subscription_username' => $device['username'] ?? null,
-                            'subscription_password' => $device['password'] ?? null,
-                            'subscription_url' => $device['url'] ?? null,
-                        ]);
-                    }
-                } else {
+            if ($order->devices && is_array($order->devices) && count($order->devices) > 0) {
+                foreach ($order->devices as $device) {
                     $processedOrders->push((object)[
-                        'subscription_username' => $order->subscription_username,
-                        'subscription_password' => $order->subscription_password,
-                        'subscription_url' => $order->subscription_url,
+                        'subscription_username' => $device['username'] ?? null,
+                        'subscription_password' => $device['password'] ?? null,
+                        'subscription_url' => $device['url'] ?? null,
                     ]);
                 }
+            } else {
+                $processedOrders->push((object)[
+                    'subscription_username' => $order->subscription_username,
+                    'subscription_password' => $order->subscription_password,
+                    'subscription_url' => $order->subscription_url,
+                ]);
+            }
 
                 $clientMail = new ClientCredentialsMail($order->user, $processedOrders);
                 if ($clientMail->mailerName) {
@@ -490,15 +496,15 @@ class OrderController extends Controller
                 } else {
                     Mail::to($order->user->email)->send($clientMail);
                 }
-            }
+        }
 
-            $order->update([
-                'credentials_sent' => true,
-                'credentials_sent_at' => now(),
-            ]);
+        $order->update([
+            'credentials_sent' => true,
+            'credentials_sent_at' => now(),
+        ]);
 
-            return redirect()->back()
-                ->with('success', 'Credentials sent successfully.');
+        return redirect()->back()
+            ->with('success', 'Credentials sent successfully.');
         } catch (\Exception $e) {
             Log::error('Failed to send credentials email', [
                 'order_id' => $order->id,
