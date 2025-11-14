@@ -43,6 +43,7 @@ class SourceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:sources,name',
             'return_url' => 'required|url|max:2048',
+            'renewal_url' => 'nullable|url|max:2048',
             'is_active' => 'sometimes|boolean',
             // SMTP Configuration
             'smtp_mailer' => 'nullable|string|max:255',
@@ -83,6 +84,7 @@ class SourceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:sources,name,' . $source->id,
             'return_url' => 'required|url|max:2048',
+            'renewal_url' => 'nullable|url|max:2048',
             'is_active' => 'sometimes|boolean',
             // SMTP Configuration
             'smtp_mailer' => 'nullable|string|max:255',

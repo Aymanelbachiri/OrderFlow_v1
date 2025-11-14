@@ -163,17 +163,25 @@ class SendRenewalReminders extends Command
             $website = $sourceVars['website'] ?? config('app.url', 'http://smarters-proiptv.com');
             $websiteHost = parse_url($website, PHP_URL_HOST) ?: $website;
             
-            // Get renewal link from settings or use default
-            $customRenewalUrl = SystemSetting::get('renewal_link_url', '');
-            if (!empty($customRenewalUrl)) {
-                $renewalLink = $customRenewalUrl;
+            // Get renewal link - priority: source renewal_url > system setting > default route
+            $renewalLink = null;
+            
+            // First, check if source has a custom renewal URL
+            if ($source && !empty($source->renewal_url)) {
+                $renewalLink = $source->renewal_url;
             } else {
-                // Use the new public renewal route, preserving source if available
-                $renewalLink = route('renewal.show', [
-                    'orderNumber' => $order->order_number,
-                    'email' => $order->user->email,
-                    'source' => $order->source ?? null
-                ]);
+                // Fallback to system setting
+                $customRenewalUrl = SystemSetting::get('renewal_link_url', '');
+                if (!empty($customRenewalUrl)) {
+                    $renewalLink = $customRenewalUrl;
+                } else {
+                    // Use the default public renewal route, preserving source if available
+                    $renewalLink = route('renewal.show', [
+                        'orderNumber' => $order->order_number,
+                        'email' => $order->user->email,
+                        'source' => $order->source ?? null
+                    ]);
+                }
             }
 
             // Determine email content based on days

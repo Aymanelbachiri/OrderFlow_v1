@@ -12,6 +12,7 @@ class Source extends Model
     protected $fillable = [
         'name',
         'return_url',
+        'renewal_url',
         'is_active',
         // SMTP Configuration
         'smtp_mailer',
