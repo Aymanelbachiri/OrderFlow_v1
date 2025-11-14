@@ -674,15 +674,19 @@ function updatePreview() {
         const itemDisplayText = selectedItem.textContent.split(' - $')[0];
         document.getElementById('preview-plan').textContent = itemDisplayText;
         
-        // Auto-fill amount if not manually set
-        if (!amountInput.value) {
+        // Always update amount when plan/credit pack changes
+        if (amountInput && itemPrice) {
             amountInput.value = itemPrice;
         }
         
-        document.getElementById('preview-amount').textContent = '$' + (amountInput.value || itemPrice);
+        document.getElementById('preview-amount').textContent = '$' + (itemPrice || '0.00');
     } else {
         document.getElementById('preview-plan').textContent = itemText;
         document.getElementById('preview-amount').textContent = '$0.00';
+        // Clear amount if no plan selected
+        if (amountInput) {
+            amountInput.value = '';
+        }
     }
 }
 
@@ -704,8 +708,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    document.getElementById('reseller_credit_pack_id')?.addEventListener('change', updatePreview);
-    document.getElementById('amount')?.addEventListener('input', updatePreview);
+    const creditPackSelect = document.getElementById('reseller_credit_pack_id');
+    if (creditPackSelect) {
+        creditPackSelect.addEventListener('change', function() {
+            updatePreview();
+        });
+    }
+    
+    // Don't auto-update amount when user manually types in it
+    // But still update preview display
+    const amountInput = document.getElementById('amount');
+    if (amountInput) {
+        let isManualEdit = false;
+        amountInput.addEventListener('input', function() {
+            isManualEdit = true;
+            updatePreview();
+        });
+        amountInput.addEventListener('focus', function() {
+            isManualEdit = false; // Reset on focus so plan changes can update it again
+        });
+    }
     
     // Initial setup
     togglePlanSelection();
