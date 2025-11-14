@@ -201,6 +201,122 @@
                 <p class="mt-2 text-sm text-[#201E1F]/50">Leave blank to calculate from plan duration, or set custom expiry date</p>
             </div>
 
+            <!-- Service Credentials -->
+            <div class="mt-8 border-t border-gray-200 pt-8">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-[#201E1F]">Service Credentials (Optional)</h3>
+                </div>
+
+                <!-- Client Credentials Container (shown when client is selected) -->
+                <div id="clientCredentialsContainer" class="hidden">
+                    <!-- Single Device Container (default for 1 device plans) -->
+                    <div id="singleDeviceContainer" class="bg-white rounded-lg border border-gray-200 p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Subscription Username -->
+                            <div class="space-y-2">
+                                <label for="subscription_username" class="block text-sm font-medium text-[#201E1F]/60">IPTV Username</label>
+                                <input type="text"
+                                       id="subscription_username"
+                                       name="subscription_username"
+                                       value="{{ old('subscription_username') }}"
+                                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                       placeholder="IPTV service username">
+                                @error('subscription_username')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Subscription Password -->
+                            <div class="space-y-2">
+                                <label for="subscription_password" class="block text-sm font-medium text-[#201E1F]/60">IPTV Password</label>
+                                <input type="text"
+                                       id="subscription_password"
+                                       name="subscription_password"
+                                       value="{{ old('subscription_password') }}"
+                                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                       placeholder="IPTV service password">
+                                @error('subscription_password')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Subscription URL -->
+                            <div class="md:col-span-2 space-y-2">
+                                <label for="subscription_url" class="block text-sm font-medium text-[#201E1F]/60">IPTV Server URL</label>
+                                <input type="url"
+                                       id="subscription_url"
+                                       name="subscription_url"
+                                       value="{{ old('subscription_url') }}"
+                                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                       placeholder="http://your-server.com:8080">
+                                @error('subscription_url')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamic Multi-Device Container (hidden by default) -->
+                    <div id="dynamicDevicesContainer" class="space-y-6 hidden"></div>
+                </div>
+
+                <!-- Reseller Credentials Container (shown when reseller is selected or credit pack is selected) -->
+                <div id="resellerCredentialsContainer" class="hidden">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <h4 class="text-lg font-medium text-green-800 mb-4">Reseller Panel Credentials</h4>
+                        <p class="text-sm text-green-700 mb-4">
+                            Enter the reseller panel credentials for this order.
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label for="reseller_login_url" class="block text-sm font-medium text-green-800">Panel URL</label>
+                                <input type="url"
+                                       id="reseller_login_url"
+                                       name="reseller_login_url"
+                                       value="{{ old('reseller_login_url') }}"
+                                       class="w-full px-4 py-3 bg-white border border-green-300 rounded-lg text-green-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-300"
+                                       placeholder="https://panel.example.com">
+                                @error('reseller_login_url')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="reseller_username" class="block text-sm font-medium text-green-800">Username</label>
+                                <input type="text"
+                                       id="reseller_username"
+                                       name="reseller_username"
+                                       value="{{ old('reseller_username') }}"
+                                       class="w-full px-4 py-3 bg-white border border-green-300 rounded-lg text-green-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-300"
+                                       placeholder="Enter username">
+                                @error('reseller_username')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="md:col-span-2 space-y-2">
+                                <label for="reseller_password" class="block text-sm font-medium text-green-800">Password</label>
+                                <input type="text"
+                                       id="reseller_password"
+                                       name="reseller_password"
+                                       value="{{ old('reseller_password') }}"
+                                       class="w-full px-4 py-3 bg-white border border-green-300 rounded-lg text-green-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-300"
+                                       placeholder="Enter password">
+                                @error('reseller_password')
+                                    <p class="text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Admin Notes -->
             <div class="mt-6">
                 <label for="admin_notes" class="block text-sm font-semibold text-[#201E1F] mb-2">Admin Notes (Optional)</label>
@@ -317,6 +433,11 @@
 </style>
 
 <script>
+// Get pricing plan device counts for dynamic field generation
+const pricingPlans = @json(\App\Models\PricingPlan::where('is_active', true)->get()->mapWithKeys(function($plan) {
+    return [$plan->id => $plan->device_count];
+}));
+
 // Get user role from option text
 function getUserRole(userSelect) {
     if (!userSelect.value) return null;
@@ -328,6 +449,169 @@ function getUserRole(userSelect) {
         return 'client';
     }
     return null;
+}
+
+// Toggle credentials sections based on user role
+function toggleCredentialsSections() {
+    const userSelect = document.getElementById('user_id');
+    const userRole = getUserRole(userSelect);
+    const clientCredentialsContainer = document.getElementById('clientCredentialsContainer');
+    const resellerCredentialsContainer = document.getElementById('resellerCredentialsContainer');
+    
+    if (userRole === 'reseller') {
+        // Show reseller credentials, hide client credentials
+        if (clientCredentialsContainer) clientCredentialsContainer.classList.add('hidden');
+        if (resellerCredentialsContainer) resellerCredentialsContainer.classList.remove('hidden');
+    } else if (userRole === 'client') {
+        // Show client credentials, hide reseller credentials
+        if (clientCredentialsContainer) clientCredentialsContainer.classList.remove('hidden');
+        if (resellerCredentialsContainer) resellerCredentialsContainer.classList.add('hidden');
+        // Update device fields when client is selected
+        updateDeviceFields();
+    } else {
+        // Hide both if no user selected
+        if (clientCredentialsContainer) clientCredentialsContainer.classList.add('hidden');
+        if (resellerCredentialsContainer) resellerCredentialsContainer.classList.add('hidden');
+    }
+}
+
+// Function to generate device fields based on device count
+function generateDeviceFields(deviceCount) {
+    const container = document.getElementById('dynamicDevicesContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (deviceCount <= 1) {
+        container.classList.add('hidden');
+        const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+        if (singleDeviceContainer) {
+            singleDeviceContainer.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    // Hide single device container
+    const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+    if (singleDeviceContainer) {
+        singleDeviceContainer.classList.add('hidden');
+        // Disable single device fields
+        const singleDeviceFields = singleDeviceContainer.querySelectorAll('input');
+        singleDeviceFields.forEach(field => {
+            field.disabled = true;
+            field.removeAttribute('name');
+        });
+    }
+    
+    // Ensure dynamic devices container is visible
+    container.classList.remove('hidden');
+    
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Generate fields for each device (0-based indexing)
+    for (let i = 0; i < deviceCount; i++) {
+        const deviceNumber = i + 1; // Display number (1-based for user display)
+        const deviceIndex = i; // Array index (0-based for form submission)
+        
+        const deviceDiv = document.createElement('div');
+        deviceDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-6';
+        
+        deviceDiv.innerHTML = `
+            <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device ${deviceNumber} Credentials</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label for="device_${deviceIndex}_username" class="block text-sm font-medium text-[#201E1F]/60">Username</label>
+                    <input type="text"
+                           id="device_${deviceIndex}_username"
+                           name="devices[${deviceIndex}][username]"
+                           value=""
+                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                           placeholder="Username for device ${deviceNumber}">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="device_${deviceIndex}_password" class="block text-sm font-medium text-[#201E1F]/60">Password</label>
+                    <input type="text"
+                           id="device_${deviceIndex}_password"
+                           name="devices[${deviceIndex}][password]"
+                           value=""
+                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                           placeholder="Password for device ${deviceNumber}">
+                </div>
+
+                <div class="md:col-span-2 space-y-2">
+                    <label for="device_${deviceIndex}_url" class="block text-sm font-medium text-[#201E1F]/60">Server URL</label>
+                    <input type="url"
+                           id="device_${deviceIndex}_url"
+                           name="devices[${deviceIndex}][url]"
+                           value=""
+                           class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                           placeholder="http://server${deviceNumber}.example.com:8080">
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(deviceDiv);
+    }
+}
+
+// Function to update device fields based on pricing plan
+function updateDeviceFields() {
+    const pricingPlanSelect = document.getElementById('pricing_plan_id');
+    const singleDeviceContainer = document.getElementById('singleDeviceContainer');
+    const dynamicDevicesContainer = document.getElementById('dynamicDevicesContainer');
+    
+    // Determine device count from pricing plan
+    let deviceCount = 1;
+    
+    if (pricingPlanSelect && pricingPlanSelect.value) {
+        const planId = parseInt(pricingPlanSelect.value);
+        deviceCount = pricingPlans[planId] || 1;
+    }
+    
+    if (deviceCount > 1) {
+        // Hide single device container and show multi-device fields
+        if (singleDeviceContainer) {
+            singleDeviceContainer.classList.add('hidden');
+            // Disable single device fields
+            const singleDeviceFields = singleDeviceContainer.querySelectorAll('input');
+            singleDeviceFields.forEach(field => {
+                field.disabled = true;
+                field.removeAttribute('name');
+            });
+        }
+        if (dynamicDevicesContainer) {
+            dynamicDevicesContainer.classList.remove('hidden');
+            generateDeviceFields(deviceCount);
+        }
+    } else {
+        // Show single device container for 1 device plans
+        if (singleDeviceContainer) {
+            singleDeviceContainer.classList.remove('hidden');
+            // Re-enable single device fields
+            const singleDeviceFields = singleDeviceContainer.querySelectorAll('input');
+            singleDeviceFields.forEach(field => {
+                field.disabled = false;
+                const fieldId = field.id;
+                if (fieldId.includes('subscription_username')) {
+                    field.setAttribute('name', 'subscription_username');
+                } else if (fieldId.includes('subscription_password')) {
+                    field.setAttribute('name', 'subscription_password');
+                } else if (fieldId.includes('subscription_url')) {
+                    field.setAttribute('name', 'subscription_url');
+                }
+            });
+        }
+        if (dynamicDevicesContainer) {
+            dynamicDevicesContainer.classList.add('hidden');
+            dynamicDevicesContainer.innerHTML = '';
+        }
+    }
 }
 
 // Toggle between pricing plans and reseller credit packs based on user role
@@ -355,6 +639,8 @@ function togglePlanSelection() {
         resellerCreditPackSelect.value = '';
     }
     
+    // Update credentials sections
+    toggleCredentialsSections();
     updatePreview();
 }
 
@@ -401,14 +687,28 @@ function updatePreview() {
 }
 
 // Add event listeners
-document.getElementById('user_id').addEventListener('change', function() {
+document.addEventListener('DOMContentLoaded', function() {
+    const userSelect = document.getElementById('user_id');
+    const pricingPlanSelect = document.getElementById('pricing_plan_id');
+    
+    if (userSelect) {
+        userSelect.addEventListener('change', function() {
+            togglePlanSelection();
+        });
+    }
+    
+    if (pricingPlanSelect) {
+        pricingPlanSelect.addEventListener('change', function() {
+            updateDeviceFields();
+            updatePreview();
+        });
+    }
+    
+    document.getElementById('reseller_credit_pack_id')?.addEventListener('change', updatePreview);
+    document.getElementById('amount')?.addEventListener('input', updatePreview);
+    
+    // Initial setup
     togglePlanSelection();
 });
-document.getElementById('pricing_plan_id').addEventListener('change', updatePreview);
-document.getElementById('reseller_credit_pack_id').addEventListener('change', updatePreview);
-document.getElementById('amount').addEventListener('input', updatePreview);
-
-// Initial setup
-togglePlanSelection();
 </script>
 @endsection

@@ -136,6 +136,16 @@ class OrderController extends Controller
             'starts_at' => 'nullable|date',
             'expires_at' => 'nullable|date|after:starts_at',
             'admin_notes' => 'nullable|string|max:1000',
+            'subscription_username' => 'nullable|string|max:255',
+            'subscription_password' => 'nullable|string|max:255',
+            'subscription_url' => 'nullable|url|max:255',
+            'devices' => 'nullable|array',
+            'devices.*.username' => 'nullable|string|max:255',
+            'devices.*.password' => 'nullable|string|max:255',
+            'devices.*.url' => 'nullable|string|max:255',
+            'reseller_username' => 'nullable|string|max:255',
+            'reseller_password' => 'nullable|string|max:255',
+            'reseller_login_url' => 'nullable|url|max:255',
             'send_order_confirmation' => 'boolean',
             'send_payment_instructions' => 'boolean',
         ]);
@@ -209,6 +219,51 @@ class OrderController extends Controller
             $orderData['pricing_plan_id'] = $validated['reseller_credit_pack_id'];
         } else {
             $orderData['pricing_plan_id'] = $validated['pricing_plan_id'];
+        }
+
+        // Process credentials if provided
+        // Handle multi-device credentials for client orders
+        if ($user->role === 'client' && $request->has('devices') && is_array($request->input('devices'))) {
+            $pricingPlan = $isResellerOrder ? null : PricingPlan::find($validated['pricing_plan_id']);
+            $deviceCount = $pricingPlan ? $pricingPlan->device_count : 1;
+            $inputDevices = $request->input('devices');
+            
+            // Prepare devices data
+            $devices = [];
+            foreach ($inputDevices as $deviceIndex => $deviceData) {
+                if (is_array($deviceData)) {
+                    $devices[] = [
+                        'device_number' => $deviceIndex,
+                        'username' => $deviceData['username'] ?? '',
+                        'password' => $deviceData['password'] ?? '',
+                        'url' => $deviceData['url'] ?? '',
+                    ];
+                }
+            }
+            
+            // For backward compatibility, set the first device as main subscription
+            $firstDevice = $devices[0] ?? null;
+            
+            if ($firstDevice) {
+                $orderData['subscription_username'] = $firstDevice['username'] ?? null;
+                $orderData['subscription_password'] = $firstDevice['password'] ?? null;
+                $orderData['subscription_url'] = $firstDevice['url'] ?? null;
+            }
+            
+            // Set devices array
+            $orderData['devices'] = $devices;
+        } elseif ($user->role === 'client' && ($validated['subscription_username'] ?? null)) {
+            // Single device credentials (backward compatibility)
+            $orderData['subscription_username'] = $validated['subscription_username'] ?? null;
+            $orderData['subscription_password'] = $validated['subscription_password'] ?? null;
+            $orderData['subscription_url'] = $validated['subscription_url'] ?? null;
+        }
+        
+        // Handle reseller credentials
+        if (($user->role === 'reseller' || $isResellerOrder) && ($validated['reseller_username'] ?? null)) {
+            $orderData['reseller_username'] = $validated['reseller_username'] ?? null;
+            $orderData['reseller_password'] = $validated['reseller_password'] ?? null;
+            $orderData['reseller_login_url'] = $validated['reseller_login_url'] ?? null;
         }
 
         $order = Order::create($orderData);
