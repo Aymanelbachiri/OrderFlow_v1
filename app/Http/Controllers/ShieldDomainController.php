@@ -20,30 +20,16 @@ class ShieldDomainController extends Controller
         // Remove port if present
         $host = preg_replace('/:\d+$/', '', $host);
         
-        Log::info('Shield domain request', [
-            'host' => $host,
-            'path' => $path,
-            'full_url' => $request->fullUrl(),
-        ]);
-        
-        // Find the shield domain - check without status/dns restrictions first for debugging
-        $shieldDomain = ShieldDomain::where('domain', $host)->first();
+        // Find the shield domain
+        $shieldDomain = ShieldDomain::where('domain', $host)
+            ->where('status', 'active')
+            ->where('dns_configured', true)
+            ->first();
         
         if (!$shieldDomain) {
-            Log::info('Shield domain not found in database', ['host' => $host]);
             // If not a shield domain, return 404
+            // This is a fallback route, so if we reach here and it's not a shield domain, it's a 404
             abort(404);
-        }
-        
-        // Check if domain is active and DNS configured
-        if ($shieldDomain->status !== 'active' || !$shieldDomain->dns_configured) {
-            Log::warning('Shield domain not active or DNS not configured', [
-                'host' => $host,
-                'status' => $shieldDomain->status,
-                'dns_configured' => $shieldDomain->dns_configured,
-            ]);
-            // Still serve the content, but log the issue
-            // This allows testing even if DNS isn't fully configured
         }
         
         $templateName = $shieldDomain->template_name;

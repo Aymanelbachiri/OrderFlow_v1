@@ -21,8 +21,6 @@ class VerifyCsrfTokenIframe extends Middleware
      */
     protected $except = [
         'webhooks/*',
-        // Shield domain routes should not require CSRF for GET requests
-        // They serve static content and API calls handle their own CSRF
     ];
     
     /**

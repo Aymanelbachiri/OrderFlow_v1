@@ -112,6 +112,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/shield-domains/{shieldDomain}/sync-cloudflare', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'syncCloudflare'])->name('shield-domains.sync-cloudflare');
     Route::post('/shield-domains/{shieldDomain}/configure-dns', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'configureDNS'])->name('shield-domains.configure-dns');
     Route::post('/shield-domains/{shieldDomain}/delete-dns-records', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'deleteDNSRecords'])->name('shield-domains.delete-dns-records');
+    Route::post('/shield-domains/{shieldDomain}/add-to-cpanel', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'addToCPanel'])->name('shield-domains.add-to-cpanel');
 
 
     // Reseller management

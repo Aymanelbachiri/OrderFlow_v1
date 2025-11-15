@@ -283,4 +283,48 @@ class ShieldDomainController extends Controller
                 ->withErrors(['error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Manually add domain to cPanel
+     */
+    public function addToCPanel(ShieldDomain $shieldDomain)
+    {
+        try {
+            $cpanelService = new \App\Services\CPanelService();
+            
+            if (!$cpanelService->isConfigured()) {
+                return back()->with('error', 'cPanel is not configured. Please configure it in Settings.')
+                    ->withErrors(['error' => 'cPanel is not configured']);
+            }
+
+            $result = $cpanelService->addShieldDomain($shieldDomain->domain);
+
+            if ($result['success']) {
+                if ($result['exists'] ?? false) {
+                    $message = "Domain already exists in cPanel as {$result['type']} domain.";
+                } else {
+                    $message = "Domain successfully added to cPanel as parked domain.";
+                }
+                return back()->with('success', $message);
+            } else {
+                $errorMsg = $result['error'] ?? 'Unknown error';
+                Log::error('cPanel domain addition failed', [
+                    'domain' => $shieldDomain->domain,
+                    'error' => $errorMsg,
+                    'full_result' => $result,
+                ]);
+                return back()->with('error', 'Failed to add domain to cPanel: ' . $errorMsg)
+                    ->withErrors(['error' => $errorMsg]);
+            }
+        } catch (\Exception $e) {
+            Log::error('cPanel domain addition exception', [
+                'domain' => $shieldDomain->domain,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with('error', 'Failed to add domain to cPanel: ' . $e->getMessage())
+                ->withErrors(['error' => $e->getMessage()]);
+        }
+    }
 }
