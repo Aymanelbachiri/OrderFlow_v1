@@ -977,14 +977,31 @@ class CloudflareService
                 return strtolower($ns['target'] ?? '');
             }, $nameservers);
 
-            $configured = !empty(array_intersect(
-                array_map('strtolower', $expectedNameservers),
-                $actualNameservers
-            ));
-
             // Get actual nameservers found for better messaging
             $foundNameservers = array_unique($actualNameservers);
             $expectedNameserversLower = array_map('strtolower', $expectedNameservers);
+
+            // Check if nameservers match exactly (preferred)
+            $exactMatch = !empty(array_intersect(
+                $expectedNameserversLower,
+                $actualNameservers
+            ));
+
+            // If no exact match, check if all found nameservers are Cloudflare nameservers
+            // Cloudflare can assign different nameservers to different zones, so we accept any .ns.cloudflare.com
+            $allCloudflareNS = true;
+            foreach ($foundNameservers as $ns) {
+                if (!str_ends_with($ns, '.ns.cloudflare.com')) {
+                    $allCloudflareNS = false;
+                    break;
+                }
+            }
+
+            // Consider configured if:
+            // 1. Exact match with expected nameservers, OR
+            // 2. All found nameservers are Cloudflare nameservers (ending with .ns.cloudflare.com)
+            //    AND we have at least 2 nameservers (Cloudflare always provides at least 2)
+            $configured = $exactMatch || ($allCloudflareNS && count($foundNameservers) >= 2);
 
             return [
                 'success' => true,
@@ -992,9 +1009,13 @@ class CloudflareService
                 'expected_nameservers' => $expectedNameservers,
                 'found_nameservers' => $foundNameservers,
                 'actual_nameservers' => $actualNameservers,
+                'exact_match' => $exactMatch,
+                'all_cloudflare_ns' => $allCloudflareNS,
                 'message' => $configured 
-                    ? 'Nameservers are correctly configured' 
-                    : 'Nameservers do not match. Expected: ' . implode(', ', $expectedNameservers) . '. Found: ' . implode(', ', $foundNameservers),
+                    ? ($exactMatch 
+                        ? 'Nameservers are correctly configured (exact match)' 
+                        : 'Nameservers are correctly configured (Cloudflare nameservers detected)')
+                    : 'Nameservers are not configured correctly. Expected Cloudflare nameservers (ending with .ns.cloudflare.com). Found: ' . implode(', ', $foundNameservers),
             ];
         } catch (\Exception $e) {
             Log::error('DNS Verification Error', [
