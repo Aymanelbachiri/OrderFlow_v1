@@ -240,7 +240,7 @@
                             <span>Configure DNS Records</span>
                         </button>
                     </form>
-                    <p class="text-sm text-gray-600 text-center">Manually create DNS records for Cloudflare Pages</p>
+                    <p class="text-sm text-gray-600 text-center">Manually create DNS records pointing to main SaaS server</p>
                     @endif
 
                     <!-- Sync Cloudflare Button -->

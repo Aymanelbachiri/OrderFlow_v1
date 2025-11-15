@@ -222,7 +222,7 @@
                         <span>Configure DNS Records</span>
                     </button>
                 </form>
-                <p class="mt-2 text-sm text-gray-600">Manually create DNS records for Cloudflare Pages</p>
+                <p class="mt-2 text-sm text-gray-600">Manually create DNS records pointing to main SaaS server</p>
             </div>
             @endif
 
