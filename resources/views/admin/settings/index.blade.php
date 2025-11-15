@@ -312,6 +312,142 @@
                         </div>
                     </div>
 
+                    <!-- cPanel Configuration -->
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 mb-6">
+                        <h3 class="text-lg font-semibold text-[#201E1F] mb-4 flex items-center space-x-2">
+                            <div class="w-6 h-6 bg-gradient-to-br from-green-400 to-green-600 rounded-md flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                </svg>
+                            </div>
+                            <span>cPanel Configuration</span>
+                        </h3>
+                        
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                            <div class="flex items-start space-x-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                <div class="text-sm text-green-700">
+                                    <p class="font-semibold mb-1">Automate Shield Domain Setup</p>
+                                    <p class="text-xs">Configure cPanel API to automatically add shield domains to your server. This eliminates the need to manually add domains in cPanel.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <label for="cpanel_host" class="block text-sm font-semibold text-[#201E1F] mb-2">cPanel Host</label>
+                                <input type="text" id="cpanel_host" name="cpanel_host" 
+                                       value="{{ $settings['cpanel_host'] }}"
+                                       class="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                       placeholder="your-server.com or IP address">
+                                <p class="mt-2 text-xs text-[#201E1F]/60">Your cPanel server hostname or IP address</p>
+                                @error('cpanel_host')
+                                    <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>{{ $message }}</span>
+                                    </p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="cpanel_username" class="block text-sm font-semibold text-[#201E1F] mb-2">cPanel Username</label>
+                                <input type="text" id="cpanel_username" name="cpanel_username" 
+                                       value="{{ $settings['cpanel_username'] }}"
+                                       class="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                       placeholder="Your cPanel username">
+                                <p class="mt-2 text-xs text-[#201E1F]/60">Your cPanel account username</p>
+                                @error('cpanel_username')
+                                    <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>{{ $message }}</span>
+                                    </p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="cpanel_password" class="block text-sm font-semibold text-[#201E1F] mb-2">cPanel Password</label>
+                                <div class="relative">
+                                    <input type="password" id="cpanel_password" name="cpanel_password" 
+                                           value=""
+                                           data-has-password="{{ $settings['cpanel_password'] ? '1' : '0' }}"
+                                           class="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                           placeholder="{{ $settings['cpanel_password'] ? 'Enter new password to update (leave empty to keep current)' : 'Enter your cPanel password' }}">
+                                    @if($settings['cpanel_password'])
+                                    <div class="absolute inset-y-0 right-10 pr-3 flex items-center pointer-events-none">
+                                        <span class="text-xs text-green-600 font-medium">Password configured</span>
+                                    </div>
+                                    @endif
+                                    <button type="button" onclick="togglePasswordVisibility('cpanel_password')" 
+                                            class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                        <svg id="cpanel_password_eye" class="w-5 h-5 text-[#201E1F]/40 hover:text-[#201E1F]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p class="mt-2 text-xs text-[#201E1F]/60">
+                                    @if($settings['cpanel_password'])
+                                        Password is configured. Enter a new password to update it, or leave empty to keep the current password.
+                                    @else
+                                        Your cPanel account password (used for API authentication)
+                                    @endif
+                                </p>
+                                @error('cpanel_password')
+                                    <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>{{ $message }}</span>
+                                    </p>
+                                @enderror
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="cpanel_port" class="block text-sm font-semibold text-[#201E1F] mb-2">Port</label>
+                                    <input type="text" id="cpanel_port" name="cpanel_port" 
+                                           value="{{ $settings['cpanel_port'] }}"
+                                           class="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                           placeholder="2083">
+                                    <p class="mt-2 text-xs text-[#201E1F]/60">cPanel API port (default: 2083 for SSL, 2082 for non-SSL)</p>
+                                    @error('cpanel_port')
+                                        <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            <span>{{ $message }}</span>
+                                        </p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="cpanel_use_ssl" class="block text-sm font-semibold text-[#201E1F] mb-2">Use SSL</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="checkbox" id="cpanel_use_ssl" name="cpanel_use_ssl" value="1"
+                                               {{ $settings['cpanel_use_ssl'] ? 'checked' : '' }}
+                                               class="w-4 h-4 text-[#D63613] border-gray-300 rounded focus:ring-[#D63613]">
+                                        <label for="cpanel_use_ssl" class="text-sm text-[#201E1F]">Enable SSL for cPanel API connections</label>
+                                    </div>
+                                    <p class="mt-2 text-xs text-[#201E1F]/60">Recommended: Enabled (uses port 2083)</p>
+                                    @error('cpanel_use_ssl')
+                                        <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            <span>{{ $message }}</span>
+                                        </p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Submit Button -->
                     <div class="flex justify-end pt-6 border-t border-[#D63613]/10">
                         <button type="submit" 
