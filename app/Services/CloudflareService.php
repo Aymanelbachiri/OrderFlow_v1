@@ -95,11 +95,30 @@ class CloudflareService
                 'token_length' => strlen($this->apiToken),
             ]);
             
-            $response = Http::withHeaders([
+            // Build headers - only add Content-Type for POST/PUT/PATCH requests
+            $headers = [
                 'Authorization' => 'Bearer ' . $this->apiToken,
-                'Content-Type' => 'application/json',
-            ])->withOptions($httpOptions)
-              ->{strtolower($method)}($fullUrl, $data);
+            ];
+            
+            // Only add Content-Type for requests with body
+            if (in_array(strtoupper($method), ['POST', 'PUT', 'PATCH']) && !empty($data)) {
+                $headers['Content-Type'] = 'application/json';
+            }
+            
+            $httpClient = Http::withHeaders($headers)->withOptions($httpOptions);
+            
+            // Handle different HTTP methods
+            if (strtoupper($method) === 'GET') {
+                $response = $httpClient->get($fullUrl, $data);
+            } elseif (strtoupper($method) === 'POST') {
+                $response = $httpClient->post($fullUrl, $data);
+            } elseif (strtoupper($method) === 'PUT') {
+                $response = $httpClient->put($fullUrl, $data);
+            } elseif (strtoupper($method) === 'DELETE') {
+                $response = $httpClient->delete($fullUrl, $data);
+            } else {
+                $response = $httpClient->{strtolower($method)}($fullUrl, $data);
+            }
 
             $statusCode = $response->status();
             $responseBody = $response->json();
