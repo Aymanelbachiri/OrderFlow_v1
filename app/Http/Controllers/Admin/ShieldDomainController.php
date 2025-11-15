@@ -162,6 +162,15 @@ class ShieldDomainController extends Controller
                     'cloudflare_nameservers' => $nameservers,
                 ]);
 
+                // Always trigger DNS scan to import existing records
+                // This will import any existing DNS records from the domain's current nameservers
+                $scanResult = $this->cloudflareService->triggerDNSScan($zoneResult['zone_id']);
+                Log::info('DNS scan triggered for zone', [
+                    'domain' => $shieldDomain->domain,
+                    'zone_id' => $zoneResult['zone_id'],
+                    'existing_zone' => $zoneResult['existing'] ?? false,
+                ]);
+
                 // Create Pages custom domain binding (only if it doesn't exist)
                 if ($pagesProjectId) {
                     $pagesResult = $this->cloudflareService->createPagesCustomDomain(
@@ -169,13 +178,22 @@ class ShieldDomainController extends Controller
                         $zoneResult['zone_id']
                     );
                     
-                    if (!$pagesResult['success']) {
+                    if ($pagesResult['success']) {
+                        Log::info('Pages custom domain added successfully', [
+                            'domain' => $shieldDomain->domain,
+                            'zone_id' => $zoneResult['zone_id'],
+                        ]);
+                    } else {
                         // If it fails because domain already exists, that's okay
                         $errorMsg = $pagesResult['error'] ?? '';
                         if (stripos($errorMsg, 'already exists') === false && stripos($errorMsg, 'duplicate') === false) {
                             Log::warning('Failed to create Pages custom domain', [
                                 'domain' => $shieldDomain->domain,
                                 'error' => $errorMsg,
+                            ]);
+                        } else {
+                            Log::info('Pages custom domain already exists', [
+                                'domain' => $shieldDomain->domain,
                             ]);
                         }
                     }

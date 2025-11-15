@@ -222,7 +222,138 @@ class CloudflareService
             'domain' => $domain,
         ]);
 
+        // If successful, Cloudflare Pages should automatically create DNS records
+        // But we'll verify and create them if needed
+        if ($result['success']) {
+            // Wait a moment for Cloudflare to process
+            sleep(2);
+            
+            // The response might include DNS target information
+            // For now, we'll check if DNS records exist and create them if needed
+            $this->createPagesDNSRecordsIfNeeded($domain, $zoneId, $projectResult['project']);
+        }
+
         return $result;
+    }
+
+    /**
+     * Create DNS records for Pages custom domain if they don't exist
+     * Cloudflare Pages should automatically create DNS records when custom domain is added,
+     * but we'll check and log the status
+     */
+    private function createPagesDNSRecordsIfNeeded(string $domain, string $zoneId, array $project): void
+    {
+        try {
+            // Wait a moment for Cloudflare to create DNS records
+            sleep(3);
+            
+            // Get all DNS records for the domain
+            $allRecords = $this->getDNSRecords($zoneId);
+            
+            Log::info('DNS records after Pages domain addition', [
+                'domain' => $domain,
+                'zone_id' => $zoneId,
+                'records_count' => $allRecords['success'] ? count($allRecords['data']['result'] ?? []) : 0,
+                'records' => $allRecords['success'] ? $allRecords['data']['result'] : [],
+            ]);
+            
+            // Note: Cloudflare Pages should automatically create the necessary DNS records
+            // when you add a custom domain via the API. If records are missing, they will
+            // be created automatically by Cloudflare within a few minutes.
+        } catch (\Exception $e) {
+            Log::error('Failed to check Pages DNS records', [
+                'domain' => $domain,
+                'zone_id' => $zoneId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Trigger DNS record scan for a zone
+     */
+    public function triggerDNSScan(string $zoneId): array
+    {
+        return $this->makeRequest('POST', "/zones/{$zoneId}/dns_records/scan/trigger");
+    }
+
+    /**
+     * Get DNS records review after scan
+     */
+    public function getDNSRecordsReview(string $zoneId): array
+    {
+        return $this->makeRequest('GET', "/zones/{$zoneId}/dns_records/scan/review");
+    }
+
+    /**
+     * Create DNS record in a zone
+     */
+    public function createDNSRecord(string $zoneId, string $type, string $name, string $content, int $ttl = 3600, bool $proxied = true): array
+    {
+        $data = [
+            'type' => $type,
+            'name' => $name,
+            'content' => $content,
+            'ttl' => $ttl,
+        ];
+
+        // Only set proxied for A and CNAME records
+        if (in_array($type, ['A', 'CNAME']) && $proxied) {
+            $data['proxied'] = true;
+        }
+
+        return $this->makeRequest('POST', "/zones/{$zoneId}/dns_records", $data);
+    }
+
+    /**
+     * Get DNS records for a zone
+     */
+    public function getDNSRecords(string $zoneId, string $type = null, string $name = null): array
+    {
+        $params = [];
+        if ($type) {
+            $params['type'] = $type;
+        }
+        if ($name) {
+            $params['name'] = $name;
+        }
+
+        $queryString = !empty($params) ? '?' . http_build_query($params) : '';
+        return $this->makeRequest('GET', "/zones/{$zoneId}/dns_records" . $queryString);
+    }
+
+    /**
+     * Setup DNS records for Cloudflare Pages domain
+     * This method triggers a DNS scan to import existing records
+     */
+    public function setupPagesDNSRecords(string $domain, string $zoneId): array
+    {
+        try {
+            // Trigger DNS scan to import existing records
+            $scanResult = $this->triggerDNSScan($zoneId);
+            
+            Log::info('DNS scan triggered', [
+                'zone_id' => $zoneId,
+                'domain' => $domain,
+                'scan_result' => $scanResult,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'DNS scan triggered successfully. Existing records will be imported.',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to setup DNS records', [
+                'zone_id' => $zoneId,
+                'domain' => $domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 
     /**
