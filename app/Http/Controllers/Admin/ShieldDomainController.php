@@ -244,6 +244,122 @@ class ShieldDomainController extends Controller
     }
 
     /**
+     * Delete Cloudflare zone for a shield domain
+     */
+    public function deleteZone(ShieldDomain $shieldDomain)
+    {
+        try {
+            // Check if Cloudflare is configured
+            if (!$this->cloudflareService->isConfigured()) {
+                return back()->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
+            }
+
+            // Check if zone exists
+            if (!$shieldDomain->cloudflare_zone_id) {
+                return back()->with('info', 'No Cloudflare zone found for this domain.');
+            }
+
+            // Delete the zone
+            $result = $this->cloudflareService->deleteZone($shieldDomain->cloudflare_zone_id);
+
+            if ($result['success']) {
+                // Clear zone information from shield domain
+                $shieldDomain->update([
+                    'cloudflare_zone_id' => null,
+                    'cloudflare_nameservers' => null,
+                    'dns_configured' => false,
+                    'dns_configured_at' => null,
+                    'status' => 'pending',
+                ]);
+
+                Log::info('Cloudflare zone deleted', [
+                    'domain' => $shieldDomain->domain,
+                    'zone_id' => $shieldDomain->cloudflare_zone_id,
+                ]);
+
+                return back()->with('success', 'Cloudflare zone deleted successfully. The domain is now in pending status.');
+            } else {
+                $errorMsg = 'Failed to delete Cloudflare zone: ' . ($result['error'] ?? 'Unknown error');
+                Log::error('Failed to delete Cloudflare zone', [
+                    'domain' => $shieldDomain->domain,
+                    'zone_id' => $shieldDomain->cloudflare_zone_id,
+                    'error' => $result['error'] ?? 'Unknown error',
+                ]);
+                return back()->withErrors(['error' => $errorMsg]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Zone deletion failed', [
+                'domain' => $shieldDomain->domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['error' => 'Zone deletion failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Delete DNS records for shield domain
+     */
+    public function deleteDNSRecords(ShieldDomain $shieldDomain)
+    {
+        try {
+            // Check if Cloudflare is configured
+            if (!$this->cloudflareService->isConfigured()) {
+                return back()->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
+            }
+
+            // Check if zone exists
+            if (!$shieldDomain->cloudflare_zone_id) {
+                return back()->withErrors(['error' => 'No Cloudflare zone ID found. Please create the zone first.']);
+            }
+
+            // Delete DNS records
+            $result = $this->cloudflareService->deleteShieldDomainDNSRecords(
+                $shieldDomain->domain,
+                $shieldDomain->cloudflare_zone_id
+            );
+
+            if ($result['success']) {
+                $deletedCount = count($result['deleted_records'] ?? []);
+                $failedCount = count($result['failed_records'] ?? []);
+                
+                $message = 'DNS records deletion completed. ';
+                if ($deletedCount > 0) {
+                    $message .= "Deleted {$deletedCount} record(s). ";
+                }
+                if ($failedCount > 0) {
+                    $message .= "Warning: {$failedCount} record(s) failed to delete. ";
+                }
+                if ($deletedCount === 0 && $failedCount === 0) {
+                    $message .= 'No matching DNS records found to delete. ';
+                }
+                $message .= 'Check Cloudflare dashboard to verify.';
+
+                Log::info('DNS records deletion completed', [
+                    'domain' => $shieldDomain->domain,
+                    'result' => $result,
+                ]);
+
+                return back()->with('success', $message);
+            } else {
+                $errorMsg = 'DNS records deletion failed: ' . ($result['error'] ?? 'Unknown error');
+                Log::error('DNS records deletion failed', [
+                    'domain' => $shieldDomain->domain,
+                    'result' => $result,
+                ]);
+                return back()->withErrors(['error' => $errorMsg]);
+            }
+        } catch (\Exception $e) {
+            Log::error('DNS records deletion failed', [
+                'domain' => $shieldDomain->domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['error' => 'DNS records deletion failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Manually configure DNS records for shield domain
      */
     public function configureDNS(ShieldDomain $shieldDomain)

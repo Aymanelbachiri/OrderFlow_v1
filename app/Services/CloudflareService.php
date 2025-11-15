@@ -1019,6 +1019,130 @@ class CloudflareService
     }
 
     /**
+     * Delete a DNS record by ID
+     */
+    public function deleteDNSRecord(string $zoneId, string $recordId): array
+    {
+        Log::info('Deleting DNS record', [
+            'zone_id' => $zoneId,
+            'record_id' => $recordId,
+        ]);
+
+        $result = $this->makeRequest('DELETE', "/zones/{$zoneId}/dns_records/{$recordId}");
+        
+        Log::info('DNS record deletion response', [
+            'zone_id' => $zoneId,
+            'record_id' => $recordId,
+            'success' => $result['success'] ?? false,
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * Delete shield domain DNS records (CNAME records pointing to main server)
+     */
+    public function deleteShieldDomainDNSRecords(string $domain, string $zoneId): array
+    {
+        try {
+            $appUrl = config('app.url', env('APP_URL', 'http://localhost'));
+            $mainServerHost = parse_url($appUrl, PHP_URL_HOST);
+            
+            if (!$mainServerHost) {
+                return [
+                    'success' => false,
+                    'error' => 'Could not determine main server hostname from APP_URL.',
+                ];
+            }
+            
+            Log::info('Starting DNS records deletion for shield domain', [
+                'domain' => $domain,
+                'zone_id' => $zoneId,
+                'target_host' => $mainServerHost,
+            ]);
+            
+            // Get all DNS records
+            $allRecords = $this->getDNSRecords($zoneId);
+            if (!$allRecords['success']) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to fetch existing DNS records: ' . ($allRecords['error'] ?? 'Unknown error'),
+                ];
+            }
+            
+            $existingRecords = $allRecords['data']['result'] ?? [];
+            $deletedRecords = [];
+            $failedRecords = [];
+            
+            // Find and delete CNAME records pointing to main server
+            foreach ($existingRecords as $record) {
+                $recordName = rtrim($record['name'], '.');
+                $recordContent = $record['content'] ?? '';
+                $recordType = $record['type'] ?? '';
+                $recordId = $record['id'] ?? '';
+                
+                // Check if this is a CNAME record pointing to main server
+                $isRootRecord = ($recordName === $domain || $recordName === '@') 
+                    && $recordType === 'CNAME' 
+                    && ($recordContent === $mainServerHost || stripos($recordContent, $mainServerHost) !== false);
+                
+                $isWWWRecord = ($recordName === 'www.' . $domain || $recordName === 'www') 
+                    && $recordType === 'CNAME' 
+                    && ($recordContent === $mainServerHost || stripos($recordContent, $mainServerHost) !== false);
+                
+                if (($isRootRecord || $isWWWRecord) && $recordId) {
+                    $deleteResult = $this->deleteDNSRecord($zoneId, $recordId);
+                    
+                    if ($deleteResult['success']) {
+                        $deletedRecords[] = $isRootRecord ? 'root' : 'www';
+                        Log::info('Successfully deleted DNS record', [
+                            'type' => $isRootRecord ? 'root' : 'www',
+                            'record_id' => $recordId,
+                            'name' => $recordName,
+                        ]);
+                    } else {
+                        $failedRecords[] = $isRootRecord ? 'root' : 'www';
+                        Log::error('Failed to delete DNS record', [
+                            'type' => $isRootRecord ? 'root' : 'www',
+                            'record_id' => $recordId,
+                            'error' => $deleteResult['error'] ?? 'Unknown error',
+                        ]);
+                    }
+                }
+            }
+            
+            $result = [
+                'success' => count($deletedRecords) > 0 || count($failedRecords) === 0,
+                'domain' => $domain,
+                'zone_id' => $zoneId,
+                'target_host' => $mainServerHost,
+                'deleted_records' => $deletedRecords,
+                'failed_records' => $failedRecords,
+                'message' => count($deletedRecords) > 0 
+                    ? 'Deleted ' . count($deletedRecords) . ' DNS record(s)' 
+                    : (count($failedRecords) > 0 
+                        ? 'Failed to delete ' . count($failedRecords) . ' record(s)' 
+                        : 'No matching DNS records found to delete'),
+            ];
+
+            Log::info('DNS records deletion completed for shield domain', $result);
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Failed to delete shield domain DNS records', [
+                'domain' => $domain,
+                'zone_id' => $zoneId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Check if Cloudflare is configured
      */
     public function isConfigured(): bool
