@@ -1,5 +1,18 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # Handle Authorization Header (required for API requests)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    
+    # Redirect to public directory (standard Laravel setup)
     RewriteCond %{REQUEST_URI} !^/public
     RewriteRule ^(.*)$ /public/$1 [L,QSA]
+</IfModule>
+
+# Allow requests from multiple domains (shield domains support)
+# This ensures the server accepts requests from any domain pointing to it
+<IfModule mod_headers.c>
+    # Don't restrict by domain - let Laravel handle domain routing
+    Header unset X-Frame-Options
 </IfModule>
