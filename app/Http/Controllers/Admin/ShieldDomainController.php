@@ -283,7 +283,7 @@ class ShieldDomainController extends Controller
     }
 
     /**
-     * Manually configure DNS records for Pages domain
+     * Manually configure DNS records for shield domain
      */
     public function configureDNS(ShieldDomain $shieldDomain)
     {
@@ -291,61 +291,28 @@ class ShieldDomainController extends Controller
             if (!$shieldDomain->cloudflare_zone_id) {
                 return back()->withErrors(['error' => 'No Cloudflare zone ID found. Please create the zone first by clicking "Check Status".']);
             }
-
-            // Get Pages project
-            $projectResult = $this->cloudflareService->getPagesProject();
-            if (!$projectResult['success']) {
-                return back()->withErrors(['error' => 'Failed to get Pages project: ' . ($projectResult['error'] ?? 'Unknown error')]);
-            }
-
-            // Manually trigger DNS record creation
-            $project = $projectResult['project'];
-            $dnsResult = $this->cloudflareService->createPagesDNSRecordsIfNeeded(
+            
+            $dnsResult = $this->cloudflareService->createShieldDomainDNSRecords(
                 $shieldDomain->domain,
-                $shieldDomain->cloudflare_zone_id,
-                $project
+                $shieldDomain->cloudflare_zone_id
             );
 
             if ($dnsResult['success']) {
                 $message = 'DNS records configuration completed. ';
-                
                 $createdCount = count($dnsResult['created_records'] ?? []);
                 $failedCount = count($dnsResult['failed_records'] ?? []);
-                
-                if ($dnsResult['root_record_created'] ?? false) {
-                    $message .= 'Root domain CNAME created. ';
-                }
-                if ($dnsResult['www_record_created'] ?? false) {
-                    $message .= 'WWW subdomain CNAME created. ';
-                }
-                if (($dnsResult['root_record_existed'] ?? false) && ($dnsResult['www_record_existed'] ?? false)) {
-                    $message .= 'DNS records already exist. ';
-                }
-                
-                if ($failedCount > 0) {
-                    $message .= "Warning: {$failedCount} record(s) failed to create. Check logs for details. ";
-                }
-                
-                if ($createdCount === 0 && $failedCount === 0) {
-                    $message .= 'No new records were created (all already exist). ';
-                }
-                
+                $targetHost = $dnsResult['target_host'] ?? 'main server';
+                if ($dnsResult['root_record_created'] ?? false) { $message .= 'Root domain CNAME created pointing to ' . $targetHost . '. '; }
+                if ($dnsResult['www_record_created'] ?? false) { $message .= 'WWW subdomain CNAME created pointing to ' . $targetHost . '. '; }
+                if (($dnsResult['root_record_existed'] ?? false) && ($dnsResult['www_record_existed'] ?? false)) { $message .= 'DNS records already exist. '; }
+                if ($failedCount > 0) { $message .= "Warning: {$failedCount} record(s) failed to create. Check logs for details. "; }
+                if ($createdCount === 0 && $failedCount === 0) { $message .= 'No new records were created (all already exist). '; }
                 $message .= 'Check Cloudflare dashboard to verify. Check Laravel logs for detailed information.';
-                
-                Log::info('DNS configuration completed', [
-                    'domain' => $shieldDomain->domain,
-                    'result' => $dnsResult,
-                ]);
-                
+                Log::info('DNS configuration completed', ['domain' => $shieldDomain->domain, 'result' => $dnsResult,]);
                 return back()->with('success', $message);
             } else {
                 $errorMsg = 'DNS configuration failed: ' . ($dnsResult['error'] ?? 'Unknown error');
-                
-                Log::error('DNS configuration failed', [
-                    'domain' => $shieldDomain->domain,
-                    'result' => $dnsResult,
-                ]);
-                
+                Log::error('DNS configuration failed', ['domain' => $shieldDomain->domain, 'result' => $dnsResult,]);
                 return back()->withErrors(['error' => $errorMsg]);
             }
         } catch (\Exception $e) {
