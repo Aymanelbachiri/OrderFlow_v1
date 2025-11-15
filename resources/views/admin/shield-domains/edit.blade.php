@@ -100,7 +100,25 @@
                 <p class="mt-1 text-xs text-[#201E1F]/60">Status is automatically managed by the system</p>
             </div>
 
+            <!-- Create Zone Button -->
+            @if(!$shieldDomain->cloudflare_zone_id)
+            <div class="mb-6">
+                <form method="POST" action="{{ route('admin.shield-domains.create-zone', $shieldDomain) }}" class="inline">
+                    @csrf
+                    <button type="submit" 
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-all duration-200 flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>Create Cloudflare Zone</span>
+                    </button>
+                </form>
+                <p class="mt-2 text-sm text-gray-600">Create Cloudflare zone and get nameservers for this domain</p>
+            </div>
+            @endif
+
             <!-- Check Status Button -->
+            @if($shieldDomain->cloudflare_zone_id)
             <div class="mb-6">
                 <form method="POST" action="{{ route('admin.shield-domains.verify-dns', $shieldDomain) }}" class="inline">
                     @csrf
@@ -109,19 +127,18 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        <span>Check Status</span>
+                        <span>Check Nameserver Status</span>
                     </button>
                 </form>
                 <p class="mt-2 text-sm text-gray-600">
-                    @if(!$shieldDomain->cloudflare_zone_id)
-                        Click to create Cloudflare zone and get nameservers.
-                    @elseif(!$shieldDomain->dns_configured)
-                        Click to verify if DNS nameservers are configured correctly.
+                    @if(!$shieldDomain->dns_configured)
+                        Verify if DNS nameservers are configured correctly at your registrar
                     @else
-                        Click to re-check DNS status.
+                        Re-check DNS nameserver status
                     @endif
                 </p>
             </div>
+            @endif
 
             <!-- DNS Info - Always show instructions -->
             @php

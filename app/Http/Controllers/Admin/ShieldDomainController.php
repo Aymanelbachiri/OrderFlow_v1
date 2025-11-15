@@ -129,7 +129,62 @@ class ShieldDomainController extends Controller
     }
 
     /**
-     * Verify DNS configuration for a shield domain
+     * Create Cloudflare zone for a shield domain
+     */
+    public function createZone(ShieldDomain $shieldDomain)
+    {
+        try {
+            // Check if Cloudflare is configured
+            if (!$this->cloudflareService->isConfigured()) {
+                return back()->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
+            }
+
+            // Check if zone already exists
+            if ($shieldDomain->cloudflare_zone_id) {
+                return back()->with('info', 'Cloudflare zone already exists. Zone ID: ' . $shieldDomain->cloudflare_zone_id);
+            }
+
+            // Create Cloudflare zone or get existing one
+            $zoneResult = $this->cloudflareService->addZone($shieldDomain->domain);
+            
+            if (!$zoneResult['success']) {
+                return back()->withErrors(['error' => 'Failed to create/get Cloudflare zone: ' . ($zoneResult['error'] ?? 'Unknown error')]);
+            }
+
+            // Get nameservers
+            $nameservers = $zoneResult['nameservers'] ?? [];
+
+            // Update shield domain with zone info
+            $shieldDomain->update([
+                'cloudflare_zone_id' => $zoneResult['zone_id'],
+                'cloudflare_nameservers' => $nameservers,
+            ]);
+
+            // Trigger DNS scan to import existing records
+            $scanResult = $this->cloudflareService->triggerDNSScan($zoneResult['zone_id']);
+            Log::info('DNS scan triggered for zone', [
+                'domain' => $shieldDomain->domain,
+                'zone_id' => $zoneResult['zone_id'],
+                'existing_zone' => $zoneResult['existing'] ?? false,
+            ]);
+
+            $message = ($zoneResult['existing'] ?? false) 
+                ? 'Cloudflare zone already exists and has been linked! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar.'
+                : 'Cloudflare zone created successfully! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar.';
+
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            Log::error('Zone creation failed', [
+                'domain' => $shieldDomain->domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['error' => 'Zone creation failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Check DNS nameserver status only
      */
     public function verifyDNS(ShieldDomain $shieldDomain)
     {
@@ -139,57 +194,9 @@ class ShieldDomainController extends Controller
                 return back()->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
             }
 
-            // If zone doesn't exist, create it first (or get existing)
+            // Check if zone exists
             if (!$shieldDomain->cloudflare_zone_id) {
-                // Create Cloudflare zone or get existing one
-                $zoneResult = $this->cloudflareService->addZone($shieldDomain->domain);
-                
-                if (!$zoneResult['success']) {
-                    return back()->withErrors(['error' => 'Failed to create/get Cloudflare zone: ' . ($zoneResult['error'] ?? 'Unknown error')]);
-                }
-
-                // Get nameservers
-                $nameservers = $zoneResult['nameservers'] ?? [];
-
-                // Update shield domain with zone info
-                $shieldDomain->update([
-                    'cloudflare_zone_id' => $zoneResult['zone_id'],
-                    'cloudflare_nameservers' => $nameservers,
-                ]);
-
-                // Always trigger DNS scan to import existing records
-                // This will import any existing DNS records from the domain's current nameservers
-                $scanResult = $this->cloudflareService->triggerDNSScan($zoneResult['zone_id']);
-                Log::info('DNS scan triggered for zone', [
-                    'domain' => $shieldDomain->domain,
-                    'zone_id' => $zoneResult['zone_id'],
-                    'existing_zone' => $zoneResult['existing'] ?? false,
-                ]);
-
-                // Create DNS records pointing to main SaaS server
-                $dnsResult = $this->cloudflareService->createShieldDomainDNSRecords(
-                    $shieldDomain->domain,
-                    $zoneResult['zone_id']
-                );
-                
-                if ($dnsResult['success']) {
-                    Log::info('DNS records created for shield domain', [
-                        'domain' => $shieldDomain->domain,
-                        'zone_id' => $zoneResult['zone_id'],
-                        'created' => $dnsResult['created_records'] ?? [],
-                    ]);
-                } else {
-                    Log::warning('Failed to create DNS records for shield domain', [
-                        'domain' => $shieldDomain->domain,
-                        'error' => $dnsResult['error'] ?? 'Unknown error',
-                    ]);
-                }
-
-                $message = ($zoneResult['existing'] ?? false) 
-                    ? 'Cloudflare zone already exists and has been linked! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar if not already done, then click "Check Status" again to verify.'
-                    : 'Cloudflare zone created! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar, then click "Check Status" again to verify.';
-
-                return back()->with('success', $message);
+                return back()->withErrors(['error' => 'Cloudflare zone not found. Please create the zone first by clicking "Create Zone".']);
             }
 
             // Verify DNS is configured by checking if nameservers are set at registrar
@@ -208,7 +215,7 @@ class ShieldDomainController extends Controller
                 ]);
 
                 $foundNs = implode(', ', $result['found_nameservers'] ?? []);
-                return back()->with('success', 'DNS is configured correctly! Nameservers are set at your registrar (' . $foundNs . '). Shield domain is now active.');
+                return back()->with('success', 'DNS nameservers are configured correctly! Found at registrar: ' . $foundNs . '. Shield domain is now active.');
             } else {
                 // Nameservers are not configured yet
                 $shieldDomain->update([

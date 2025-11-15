@@ -106,6 +106,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     // Shield domain management
     Route::resource('shield-domains', \App\Http\Controllers\Admin\ShieldDomainController::class);
+    Route::post('/shield-domains/{shieldDomain}/create-zone', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'createZone'])->name('shield-domains.create-zone');
     Route::post('/shield-domains/{shieldDomain}/verify-dns', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'verifyDNS'])->name('shield-domains.verify-dns');
     Route::post('/shield-domains/{shieldDomain}/sync-cloudflare', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'syncCloudflare'])->name('shield-domains.sync-cloudflare');
     Route::post('/shield-domains/{shieldDomain}/configure-dns', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'configureDNS'])->name('shield-domains.configure-dns');
