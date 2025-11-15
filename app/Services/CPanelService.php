@@ -86,6 +86,7 @@ class CPanelService
             }
 
             $protocol = $this->useSSL ? 'https' : 'http';
+            // cPanel UAPI endpoint format: /execute/Module/function
             $url = "{$protocol}://{$this->host}:{$this->port}/execute/{$module}/{$function}";
 
             Log::info('Making cPanel API request', [
@@ -190,6 +191,7 @@ class CPanelService
 
         Log::info('Adding parked domain in cPanel', $params);
 
+        // cPanel UAPI: Park::park
         return $this->makeRequest('Park', 'park', $params);
     }
 
@@ -244,6 +246,7 @@ class CPanelService
     public function getMainDomainDocumentRoot(): ?string
     {
         try {
+            // cPanel UAPI: DomainInfo::list_domains
             $result = $this->makeRequest('DomainInfo', 'list_domains');
             
             if ($result['success']) {
