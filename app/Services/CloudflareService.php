@@ -448,7 +448,28 @@ class CloudflareService
     }
 
     /**
-     * Get Cloudflare Pages project
+     * Create Cloudflare Pages project
+     */
+    public function createPagesProject(): array
+    {
+        $result = $this->makeRequest('POST', "/accounts/{$this->accountId}/pages/projects", [
+            'name' => $this->pagesProjectName,
+            'production_branch' => 'main', // Default branch
+        ]);
+
+        if ($result['success']) {
+            return [
+                'success' => true,
+                'project_id' => $result['data']['result']['id'] ?? null,
+                'project' => $result['data']['result'] ?? [],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get Cloudflare Pages project (create if doesn't exist)
      */
     public function getPagesProject(): array
     {
@@ -468,9 +489,25 @@ class CloudflareService
                 }
             }
 
+            // Project not found, try to create it
+            Log::info('Pages project not found, attempting to create', [
+                'project_name' => $this->pagesProjectName,
+            ]);
+
+            $createResult = $this->createPagesProject();
+            
+            if ($createResult['success']) {
+                Log::info('Pages project created successfully', [
+                    'project_name' => $this->pagesProjectName,
+                    'project_id' => $createResult['project_id'],
+                ]);
+                
+                return $createResult;
+            }
+
             return [
                 'success' => false,
-                'error' => "Pages project '{$this->pagesProjectName}' not found",
+                'error' => "Pages project '{$this->pagesProjectName}' not found and could not be created: " . ($createResult['error'] ?? 'Unknown error'),
             ];
         }
 
