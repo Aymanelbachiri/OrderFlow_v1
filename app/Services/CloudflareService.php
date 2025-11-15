@@ -230,7 +230,8 @@ class CloudflareService
             
             // The response might include DNS target information
             // For now, we'll check if DNS records exist and create them if needed
-            $this->createPagesDNSRecordsIfNeeded($domain, $zoneId, $projectResult['project']);
+            $dnsResult = $this->createPagesDNSRecordsIfNeeded($domain, $zoneId, $projectResult['project']);
+            Log::info('DNS records creation result', $dnsResult);
         }
 
         return $result;
@@ -241,7 +242,7 @@ class CloudflareService
      * Cloudflare Pages doesn't always create DNS records automatically via API,
      * so we need to create them manually
      */
-    private function createPagesDNSRecordsIfNeeded(string $domain, string $zoneId, array $project): void
+    public function createPagesDNSRecordsIfNeeded(string $domain, string $zoneId, array $project): array
     {
         try {
             $projectName = $project['name'] ?? $this->pagesProjectName;
@@ -330,19 +331,32 @@ class CloudflareService
                 }
             }
             
-            Log::info('DNS records setup completed for Pages domain', [
+            $result = [
+                'success' => true,
                 'domain' => $domain,
                 'zone_id' => $zoneId,
                 'pages_target' => $pagesTarget,
-                'root_record_exists' => $hasRootRecord,
-                'www_record_exists' => $hasWWWRecord,
-            ]);
+                'root_record_created' => !$hasRootRecord,
+                'www_record_created' => !$hasWWWRecord,
+                'root_record_existed' => $hasRootRecord,
+                'www_record_existed' => $hasWWWRecord,
+                'message' => 'DNS records configuration completed',
+            ];
+
+            Log::info('DNS records setup completed for Pages domain', $result);
+            
+            return $result;
         } catch (\Exception $e) {
-            Log::error('Failed to create Pages DNS records', [
+            $error = [
+                'success' => false,
                 'domain' => $domain,
                 'zone_id' => $zoneId,
                 'error' => $e->getMessage(),
-            ]);
+            ];
+            
+            Log::error('Failed to create Pages DNS records', $error);
+            
+            return $error;
         }
     }
 

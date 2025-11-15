@@ -228,6 +228,21 @@
                         @endif
                     </p>
 
+                    <!-- Configure DNS Records Button -->
+                    @if($shieldDomain->cloudflare_zone_id)
+                    <form method="POST" action="{{ route('admin.shield-domains.configure-dns', $shieldDomain) }}" class="inline" id="configure-dns-form">
+                        @csrf
+                        <button type="submit" 
+                                class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                            </svg>
+                            <span>Configure DNS Records</span>
+                        </button>
+                    </form>
+                    <p class="text-sm text-gray-600 text-center">Manually create DNS records for Cloudflare Pages</p>
+                    @endif
+
                     <!-- Sync Cloudflare Button -->
                     @if($shieldDomain->cloudflare_zone_id)
                     <form method="POST" action="{{ route('admin.shield-domains.sync-cloudflare', $shieldDomain) }}" class="inline">
@@ -379,8 +394,16 @@
 </div>
 
 <script>
+console.log('Shield Domain Management Page Loaded');
+console.log('Domain:', '{{ $shieldDomain->domain }}');
+console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id ?? "Not set" }}');
+console.log('Status:', '{{ $shieldDomain->status }}');
+console.log('DNS Configured:', {{ $shieldDomain->dns_configured ? 'true' : 'false' }});
+
 function copyToClipboard(text, button) {
+    console.log('Copying to clipboard:', text);
     navigator.clipboard.writeText(text).then(function() {
+        console.log('Successfully copied to clipboard');
         const originalText = button.textContent;
         button.textContent = 'Copied!';
         button.classList.add('bg-green-600');
@@ -394,8 +417,37 @@ function copyToClipboard(text, button) {
                 button.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
             }
         }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy to clipboard:', err);
     });
 }
+
+// Add form submission logging
+document.addEventListener('DOMContentLoaded', function() {
+    const configureDnsForm = document.getElementById('configure-dns-form');
+    if (configureDnsForm) {
+        configureDnsForm.addEventListener('submit', function(e) {
+            console.log('Configure DNS form submitted');
+            console.log('Domain:', '{{ $shieldDomain->domain }}');
+            console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id }}');
+            console.log('Starting DNS records configuration...');
+        });
+    }
+
+    // Log all form submissions
+    const forms = document.querySelectorAll('form');
+    forms.forEach(function(form, index) {
+        form.addEventListener('submit', function(e) {
+            const action = form.getAttribute('action');
+            const method = form.querySelector('input[name="_method"]')?.value || form.method;
+            console.log(`Form ${index + 1} submitted:`, {
+                action: action,
+                method: method,
+                timestamp: new Date().toISOString()
+            });
+        });
+    });
+});
 </script>
 @endsection
 
