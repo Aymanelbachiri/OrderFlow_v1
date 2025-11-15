@@ -10,6 +10,28 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ResellerCheckoutController;
 use App\Http\Controllers\PublicPaymentController;
 
+// Shield domain routes - must be before other routes to catch shield domain requests
+// This route will catch all requests to shield domains and serve the appropriate template
+Route::any('{path?}', [\App\Http\Controllers\ShieldDomainController::class, 'serve'])
+    ->where('path', '.*')
+    ->middleware(function ($request, $next) {
+        // Check if this is a shield domain request
+        $host = preg_replace('/:\d+$/', '', $request->getHost());
+        $shieldDomain = \App\Models\ShieldDomain::where('domain', $host)
+            ->where('status', 'active')
+            ->where('dns_configured', true)
+            ->first();
+        
+        if ($shieldDomain) {
+            // This is a shield domain, let ShieldDomainController handle it
+            return $next($request);
+        }
+        
+        // Not a shield domain, skip this route and continue to next routes
+        return null;
+    })
+    ->fallback();
+
 // Public routes (minimal)
 // New public website for CONTROL WEB AGENCY
 Route::view('/', 'home')->name('home');
