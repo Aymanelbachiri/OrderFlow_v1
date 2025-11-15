@@ -172,10 +172,9 @@ class ShieldDomainController extends Controller
             $cpanelService = new \App\Services\CPanelService();
             if ($cpanelService->isConfigured()) {
                 try {
-                    // Get Laravel public path (assuming it's in the same directory structure)
-                    $laravelPublicPath = public_path();
-                    
-                    $cpanelResult = $cpanelService->addShieldDomain($shieldDomain->domain, $laravelPublicPath);
+                    // Add as parked domain (uses same document root as main domain)
+                    // This works perfectly for shield domains since they all point to the same Laravel app
+                    $cpanelResult = $cpanelService->addShieldDomain($shieldDomain->domain);
                     
                     if ($cpanelResult['success']) {
                         if ($cpanelResult['exists'] ?? false) {
