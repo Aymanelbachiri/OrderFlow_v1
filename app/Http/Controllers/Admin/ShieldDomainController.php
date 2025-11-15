@@ -78,6 +78,8 @@ class ShieldDomainController extends Controller
 
     public function show(ShieldDomain $shieldDomain)
     {
+        // Refresh to ensure we have the latest data
+        $shieldDomain->refresh();
         $shieldDomain->loadCount('sources');
         $shieldDomain->load('sources');
         return view('admin.shield-domains.show', compact('shieldDomain'));
