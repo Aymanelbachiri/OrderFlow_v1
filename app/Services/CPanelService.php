@@ -274,9 +274,11 @@ class CPanelService
     }
 
     /**
-     * Add shield domain to cPanel (as parked domain pointing to Laravel public directory)
+     * Add shield domain to cPanel (as parked domain)
+     * Parked domains automatically use the same document root as the main domain,
+     * which is perfect for shield domains since they all point to the same Laravel app
      */
-    public function addShieldDomain(string $domain, string $laravelPublicPath = null): array
+    public function addShieldDomain(string $domain): array
     {
         // Check if domain already exists
         $existsResult = $this->domainExists($domain);
@@ -290,28 +292,16 @@ class CPanelService
             ];
         }
 
-        // If Laravel public path not provided, try to determine it
-        if (!$laravelPublicPath) {
-            // Try to get from main domain's document root
-            $mainRoot = $this->getMainDomainDocumentRoot();
-            if ($mainRoot) {
-                // Assume Laravel is in a subdirectory (e.g., /public_html/main/public)
-                // This might need adjustment based on your setup
-                $laravelPublicPath = $mainRoot . '/public';
-            } else {
-                // Fallback: use default path
-                $laravelPublicPath = "/home/{$this->username}/public_html/public";
-            }
-        }
-
         // Add as parked domain (uses same document root as main domain)
-        // This is simpler and works well for shield domains
+        // This is perfect for shield domains since they all point to the same Laravel app
+        // Laravel will handle routing based on the Host header
         $result = $this->addParkedDomain($domain);
 
         if ($result['success']) {
             Log::info('Shield domain added to cPanel successfully', [
                 'domain' => $domain,
-                'document_root' => $laravelPublicPath,
+                'type' => 'parked',
+                'note' => 'Parked domain uses same document root as main domain',
             ]);
         }
 
