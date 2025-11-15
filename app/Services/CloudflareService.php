@@ -611,18 +611,67 @@ class CloudflareService
      */
     public function createPagesProject(): array
     {
+        Log::info('Creating Cloudflare Pages project', [
+            'project_name' => $this->pagesProjectName,
+            'account_id' => $this->accountId,
+        ]);
+
+        // For Direct Upload projects, we need to create with production_branch or use direct upload API
+        // Cloudflare Pages Direct Upload doesn't require a Git branch, so we'll create a minimal project
         $result = $this->makeRequest('POST', "/accounts/{$this->accountId}/pages/projects", [
             'name' => $this->pagesProjectName,
-            'production_branch' => 'main', // Default branch
+            'production_branch' => 'main', // Required field, but not used for direct upload
         ]);
 
         if ($result['success']) {
+            $projectId = $result['data']['result']['id'] ?? null;
+            $project = $result['data']['result'] ?? [];
+            
+            Log::info('Cloudflare Pages project created successfully', [
+                'project_name' => $this->pagesProjectName,
+                'project_id' => $projectId,
+            ]);
+            
             return [
                 'success' => true,
-                'project_id' => $result['data']['result']['id'] ?? null,
-                'project' => $result['data']['result'] ?? [],
+                'project_id' => $projectId,
+                'project' => $project,
             ];
         }
+
+        // Check if project already exists with different name
+        $errorMessage = $result['error'] ?? 'Unknown error';
+        if (stripos($errorMessage, 'already exists') !== false || stripos($errorMessage, 'duplicate') !== false) {
+            // Try to find existing project
+            Log::info('Project might already exist, searching for it', [
+                'project_name' => $this->pagesProjectName,
+            ]);
+            
+            $listResult = $this->makeRequest('GET', "/accounts/{$this->accountId}/pages/projects");
+            if ($listResult['success']) {
+                $projects = $listResult['data']['result'] ?? [];
+                foreach ($projects as $project) {
+                    if ($project['name'] === $this->pagesProjectName) {
+                        Log::info('Found existing project', [
+                            'project_name' => $this->pagesProjectName,
+                            'project_id' => $project['id'],
+                        ]);
+                        
+                        return [
+                            'success' => true,
+                            'project_id' => $project['id'],
+                            'project' => $project,
+                        ];
+                    }
+                }
+            }
+        }
+
+        Log::error('Failed to create Cloudflare Pages project', [
+            'project_name' => $this->pagesProjectName,
+            'error' => $errorMessage,
+            'errors' => $result['errors'] ?? [],
+        ]);
 
         return $result;
     }
