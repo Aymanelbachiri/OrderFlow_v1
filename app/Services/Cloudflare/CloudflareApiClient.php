@@ -16,9 +16,21 @@ class CloudflareApiClient
 
     public function __construct()
     {
-        $this->apiToken = \App\Models\SystemSetting::get('cloudflare_api_token') 
-            ?: config('services.cloudflare.api_token', '');
+        // Get token from database settings first, then fall back to config/env
+        $dbToken = \App\Models\SystemSetting::get('cloudflare_api_token');
+        $configToken = config('services.cloudflare.api_token', '');
+        
+        $this->apiToken = !empty($dbToken) ? $dbToken : $configToken;
         $this->baseUrl = config('services.cloudflare.api_base_url', 'https://api.cloudflare.com/client/v4');
+        
+        // Log token length for debugging (first 4 chars only for security)
+        if (!empty($this->apiToken)) {
+            \Illuminate\Support\Facades\Log::debug('CloudflareApiClient initialized', [
+                'token_length' => strlen($this->apiToken),
+                'token_preview' => substr($this->apiToken, 0, 4) . '...',
+                'source' => !empty($dbToken) ? 'database' : 'config',
+            ]);
+        }
     }
 
     /**
@@ -33,8 +45,21 @@ class CloudflareApiClient
             ];
         }
 
+        // Ensure token is properly formatted (trim whitespace)
+        $token = trim($this->apiToken);
+        if (empty($token) || strlen($token) < 20) {
+            \Illuminate\Support\Facades\Log::error('Cloudflare API token appears invalid', [
+                'token_length' => strlen($token),
+                'token_preview' => substr($token, 0, 4) . '...',
+            ]);
+            return [
+                'success' => false,
+                'error' => 'Cloudflare API token is invalid or too short. Please check your settings.',
+            ];
+        }
+
         $url = $this->baseUrl . $endpoint;
-        $headers = ['Authorization' => 'Bearer ' . $this->apiToken];
+        $headers = ['Authorization' => 'Bearer ' . $token];
         
         // Only add Content-Type for requests with body
         if (in_array(strtoupper($method), ['POST', 'PUT', 'PATCH']) && !empty($data)) {
