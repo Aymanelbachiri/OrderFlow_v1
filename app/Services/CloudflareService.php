@@ -74,31 +74,93 @@ class CloudflareService
     private function makeRequest(string $method, string $endpoint, array $data = []): array
     {
         try {
+            // Validate API token is set
+            if (empty($this->apiToken)) {
+                Log::error('Cloudflare API token is empty');
+                return [
+                    'success' => false,
+                    'error' => 'Cloudflare API token is not configured. Please configure it in Settings.',
+                ];
+            }
+
             $httpOptions = $this->getHttpOptions();
+            
+            $fullUrl = $this->baseUrl . $endpoint;
+            
+            Log::debug('Making Cloudflare API request', [
+                'method' => $method,
+                'endpoint' => $endpoint,
+                'full_url' => $fullUrl,
+                'has_data' => !empty($data),
+                'token_length' => strlen($this->apiToken),
+            ]);
             
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiToken,
                 'Content-Type' => 'application/json',
             ])->withOptions($httpOptions)
-              ->{strtolower($method)}($this->baseUrl . $endpoint, $data);
+              ->{strtolower($method)}($fullUrl, $data);
+
+            $statusCode = $response->status();
+            $responseBody = $response->json();
+            
+            Log::debug('Cloudflare API response', [
+                'method' => $method,
+                'endpoint' => $endpoint,
+                'status_code' => $statusCode,
+                'success' => $response->successful(),
+                'has_errors' => isset($responseBody['errors']),
+            ]);
 
             if ($response->successful()) {
                 return [
                     'success' => true,
-                    'data' => $response->json(),
+                    'data' => $responseBody,
                 ];
             }
 
+            // Handle authentication errors specifically
+            if ($statusCode === 401 || $statusCode === 403) {
+                $errorMessage = $responseBody['errors'][0]['message'] ?? 'Authentication error';
+                
+                Log::error('Cloudflare API Authentication Error', [
+                    'method' => $method,
+                    'endpoint' => $endpoint,
+                    'status_code' => $statusCode,
+                    'error' => $errorMessage,
+                    'errors' => $responseBody['errors'] ?? [],
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => 'Authentication error: ' . $errorMessage . '. Please check your API token permissions in Cloudflare dashboard.',
+                    'errors' => $responseBody['errors'] ?? [],
+                    'status_code' => $statusCode,
+                ];
+            }
+
+            $errorMessage = $responseBody['errors'][0]['message'] ?? 'Unknown error';
+            
+            Log::warning('Cloudflare API request failed', [
+                'method' => $method,
+                'endpoint' => $endpoint,
+                'status_code' => $statusCode,
+                'error' => $errorMessage,
+                'errors' => $responseBody['errors'] ?? [],
+            ]);
+
             return [
                 'success' => false,
-                'error' => $response->json()['errors'][0]['message'] ?? 'Unknown error',
-                'errors' => $response->json()['errors'] ?? [],
+                'error' => $errorMessage,
+                'errors' => $responseBody['errors'] ?? [],
+                'status_code' => $statusCode,
             ];
         } catch (\Exception $e) {
-            Log::error('Cloudflare API Error', [
+            Log::error('Cloudflare API Exception', [
                 'method' => $method,
                 'endpoint' => $endpoint,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
