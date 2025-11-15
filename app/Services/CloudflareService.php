@@ -248,12 +248,37 @@ class CloudflareService
             $projectName = $project['name'] ?? $this->pagesProjectName;
             $pagesTarget = $projectName . '.pages.dev';
             
+            Log::info('Starting DNS records creation', [
+                'domain' => $domain,
+                'zone_id' => $zoneId,
+                'pages_target' => $pagesTarget,
+                'project_name' => $projectName,
+            ]);
+            
             // Wait a moment for any automatic records to be created
             sleep(2);
             
             // Check existing DNS records
+            Log::info('Fetching existing DNS records', ['zone_id' => $zoneId]);
             $allRecords = $this->getDNSRecords($zoneId);
-            $existingRecords = $allRecords['success'] ? ($allRecords['data']['result'] ?? []) : [];
+            
+            if (!$allRecords['success']) {
+                Log::error('Failed to fetch DNS records', [
+                    'zone_id' => $zoneId,
+                    'error' => $allRecords['error'] ?? 'Unknown error',
+                ]);
+                return [
+                    'success' => false,
+                    'error' => 'Failed to fetch existing DNS records: ' . ($allRecords['error'] ?? 'Unknown error'),
+                ];
+            }
+            
+            $existingRecords = $allRecords['data']['result'] ?? [];
+            Log::info('Found existing DNS records', [
+                'zone_id' => $zoneId,
+                'count' => count($existingRecords),
+                'records' => $existingRecords,
+            ]);
             
             // Check if root domain already has a record pointing to Pages
             $hasRootRecord = false;
@@ -263,10 +288,20 @@ class CloudflareService
                 $recordName = rtrim($record['name'], '.');
                 $recordContent = $record['content'] ?? '';
                 
+                Log::debug('Checking DNS record', [
+                    'name' => $recordName,
+                    'type' => $record['type'] ?? 'unknown',
+                    'content' => $recordContent,
+                ]);
+                
                 // Check root domain
                 if ($recordName === $domain || $recordName === '@') {
                     if (stripos($recordContent, 'pages.dev') !== false || stripos($recordContent, $pagesTarget) !== false) {
                         $hasRootRecord = true;
+                        Log::info('Root domain record already exists pointing to Pages', [
+                            'domain' => $domain,
+                            'record' => $record,
+                        ]);
                     }
                 }
                 
@@ -274,14 +309,26 @@ class CloudflareService
                 if ($recordName === 'www.' . $domain || $recordName === 'www') {
                     if (stripos($recordContent, 'pages.dev') !== false || stripos($recordContent, $pagesTarget) !== false) {
                         $hasWWWRecord = true;
+                        Log::info('WWW subdomain record already exists pointing to Pages', [
+                            'domain' => 'www.' . $domain,
+                            'record' => $record,
+                        ]);
                     }
                 }
             }
+            
+            $createdRecords = [];
+            $failedRecords = [];
             
             // Create root domain CNAME if it doesn't exist
             // Note: For root domains, Cloudflare uses a special CNAME flattening feature
             // We'll create a CNAME record and Cloudflare will handle it
             if (!$hasRootRecord) {
+                Log::info('Creating root domain CNAME record', [
+                    'domain' => $domain,
+                    'target' => $pagesTarget,
+                ]);
+                
                 $rootCnameResult = $this->createDNSRecord(
                     $zoneId,
                     'CNAME',
@@ -291,24 +338,37 @@ class CloudflareService
                     true // Proxied
                 );
                 
+                Log::info('Root CNAME creation result', [
+                    'success' => $rootCnameResult['success'] ?? false,
+                    'result' => $rootCnameResult,
+                ]);
+                
                 if ($rootCnameResult['success']) {
-                    Log::info('Created root domain CNAME for Pages', [
+                    $createdRecords[] = 'root';
+                    Log::info('Successfully created root domain CNAME for Pages', [
                         'domain' => $domain,
                         'target' => $pagesTarget,
+                        'record_id' => $rootCnameResult['data']['result']['id'] ?? null,
                     ]);
                 } else {
-                    // If CNAME fails for root (some DNS providers don't allow it),
-                    // try creating an A record pointing to Cloudflare's IPs
-                    // But actually, Cloudflare handles CNAME flattening automatically
-                    Log::warning('Failed to create root CNAME, will try alternative', [
+                    $failedRecords[] = 'root';
+                    Log::error('Failed to create root CNAME', [
                         'domain' => $domain,
                         'error' => $rootCnameResult['error'] ?? 'Unknown error',
+                        'full_response' => $rootCnameResult,
                     ]);
                 }
+            } else {
+                Log::info('Root domain record already exists, skipping creation');
             }
             
             // Create www subdomain CNAME if it doesn't exist
             if (!$hasWWWRecord) {
+                Log::info('Creating www subdomain CNAME record', [
+                    'domain' => 'www.' . $domain,
+                    'target' => $pagesTarget,
+                ]);
+                
                 $wwwCnameResult = $this->createDNSRecord(
                     $zoneId,
                     'CNAME',
@@ -318,17 +378,28 @@ class CloudflareService
                     true // Proxied
                 );
                 
+                Log::info('WWW CNAME creation result', [
+                    'success' => $wwwCnameResult['success'] ?? false,
+                    'result' => $wwwCnameResult,
+                ]);
+                
                 if ($wwwCnameResult['success']) {
-                    Log::info('Created www subdomain CNAME for Pages', [
+                    $createdRecords[] = 'www';
+                    Log::info('Successfully created www subdomain CNAME for Pages', [
                         'domain' => 'www.' . $domain,
                         'target' => $pagesTarget,
+                        'record_id' => $wwwCnameResult['data']['result']['id'] ?? null,
                     ]);
                 } else {
-                    Log::warning('Failed to create www CNAME', [
+                    $failedRecords[] = 'www';
+                    Log::error('Failed to create www CNAME', [
                         'domain' => 'www.' . $domain,
                         'error' => $wwwCnameResult['error'] ?? 'Unknown error',
+                        'full_response' => $wwwCnameResult,
                     ]);
                 }
+            } else {
+                Log::info('WWW subdomain record already exists, skipping creation');
             }
             
             $result = [
@@ -336,11 +407,15 @@ class CloudflareService
                 'domain' => $domain,
                 'zone_id' => $zoneId,
                 'pages_target' => $pagesTarget,
-                'root_record_created' => !$hasRootRecord,
-                'www_record_created' => !$hasWWWRecord,
+                'root_record_created' => !$hasRootRecord && in_array('root', $createdRecords),
+                'www_record_created' => !$hasWWWRecord && in_array('www', $createdRecords),
                 'root_record_existed' => $hasRootRecord,
                 'www_record_existed' => $hasWWWRecord,
-                'message' => 'DNS records configuration completed',
+                'created_records' => $createdRecords,
+                'failed_records' => $failedRecords,
+                'message' => count($createdRecords) > 0 
+                    ? 'Created ' . count($createdRecords) . ' DNS record(s)' 
+                    : 'No new DNS records created (all already exist)',
             ];
 
             Log::info('DNS records setup completed for Pages domain', $result);
@@ -352,6 +427,7 @@ class CloudflareService
                 'domain' => $domain,
                 'zone_id' => $zoneId,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ];
             
             Log::error('Failed to create Pages DNS records', $error);
@@ -385,15 +461,36 @@ class CloudflareService
             'type' => $type,
             'name' => $name,
             'content' => $content,
-            'ttl' => $ttl,
         ];
 
         // Only set proxied for A and CNAME records
         if (in_array($type, ['A', 'CNAME']) && $proxied) {
             $data['proxied'] = true;
+            // When proxied, TTL is automatically set to 1 (auto) by Cloudflare
+        } else {
+            // Only set TTL if not proxied
+            $data['ttl'] = $ttl;
         }
 
-        return $this->makeRequest('POST', "/zones/{$zoneId}/dns_records", $data);
+        Log::info('Creating DNS record', [
+            'zone_id' => $zoneId,
+            'type' => $type,
+            'name' => $name,
+            'content' => $content,
+            'proxied' => $proxied,
+            'data' => $data,
+        ]);
+
+        $result = $this->makeRequest('POST', "/zones/{$zoneId}/dns_records", $data);
+        
+        Log::info('DNS record creation response', [
+            'zone_id' => $zoneId,
+            'name' => $name,
+            'success' => $result['success'] ?? false,
+            'result' => $result,
+        ]);
+
+        return $result;
     }
 
     /**

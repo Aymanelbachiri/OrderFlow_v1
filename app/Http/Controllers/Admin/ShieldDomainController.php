@@ -276,6 +276,10 @@ class ShieldDomainController extends Controller
 
             if ($dnsResult['success']) {
                 $message = 'DNS records configuration completed. ';
+                
+                $createdCount = count($dnsResult['created_records'] ?? []);
+                $failedCount = count($dnsResult['failed_records'] ?? []);
+                
                 if ($dnsResult['root_record_created'] ?? false) {
                     $message .= 'Root domain CNAME created. ';
                 }
@@ -285,11 +289,32 @@ class ShieldDomainController extends Controller
                 if (($dnsResult['root_record_existed'] ?? false) && ($dnsResult['www_record_existed'] ?? false)) {
                     $message .= 'DNS records already exist. ';
                 }
-                $message .= 'Check Cloudflare dashboard to verify.';
+                
+                if ($failedCount > 0) {
+                    $message .= "Warning: {$failedCount} record(s) failed to create. Check logs for details. ";
+                }
+                
+                if ($createdCount === 0 && $failedCount === 0) {
+                    $message .= 'No new records were created (all already exist). ';
+                }
+                
+                $message .= 'Check Cloudflare dashboard to verify. Check Laravel logs for detailed information.';
+                
+                Log::info('DNS configuration completed', [
+                    'domain' => $shieldDomain->domain,
+                    'result' => $dnsResult,
+                ]);
                 
                 return back()->with('success', $message);
             } else {
-                return back()->withErrors(['error' => 'DNS configuration failed: ' . ($dnsResult['error'] ?? 'Unknown error')]);
+                $errorMsg = 'DNS configuration failed: ' . ($dnsResult['error'] ?? 'Unknown error');
+                
+                Log::error('DNS configuration failed', [
+                    'domain' => $shieldDomain->domain,
+                    'result' => $dnsResult,
+                ]);
+                
+                return back()->withErrors(['error' => $errorMsg]);
             }
         } catch (\Exception $e) {
             Log::error('DNS configuration failed', [
