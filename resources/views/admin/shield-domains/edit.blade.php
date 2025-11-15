@@ -209,9 +209,35 @@
                 </div>
             </div>
 
+            <!-- Configure DNS Records Button -->
+            @if($shieldDomain->cloudflare_zone_id)
+            <div class="mb-6">
+                <form method="POST" action="{{ route('admin.shield-domains.configure-dns', $shieldDomain) }}" class="inline" id="configure-dns-form">
+                    @csrf
+                    <button type="submit" 
+                            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition-all duration-200 flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        <span>Configure DNS Records</span>
+                    </button>
+                </form>
+                <p class="mt-2 text-sm text-gray-600">Manually create DNS records for Cloudflare Pages</p>
+            </div>
+            @endif
+
             <script>
+            console.log('Shield Domain Edit Page Loaded');
+            console.log('Domain:', '{{ $shieldDomain->domain }}');
+            console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id ?? "Not set" }}');
+            console.log('Status:', '{{ $shieldDomain->status }}');
+            console.log('DNS Configured:', {{ $shieldDomain->dns_configured ? 'true' : 'false' }});
+            console.log('Nameservers:', {{ json_encode($shieldDomain->cloudflare_nameservers) }});
+
             function copyToClipboard(text, button) {
+                console.log('Copying to clipboard:', text);
                 navigator.clipboard.writeText(text).then(function() {
+                    console.log('Successfully copied to clipboard');
                     const originalText = button.textContent;
                     button.textContent = 'Copied!';
                     button.classList.add('bg-green-600');
@@ -221,8 +247,50 @@
                         button.classList.remove('bg-green-600');
                         button.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
                     }, 2000);
+                }).catch(function(err) {
+                    console.error('Failed to copy to clipboard:', err);
                 });
             }
+
+            // Add form submission logging
+            document.addEventListener('DOMContentLoaded', function() {
+                const configureDnsForm = document.getElementById('configure-dns-form');
+                if (configureDnsForm) {
+                    configureDnsForm.addEventListener('submit', function(e) {
+                        console.log('=== Configure DNS Form Submitted ===');
+                        console.log('Domain:', '{{ $shieldDomain->domain }}');
+                        console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id }}');
+                        console.log('Timestamp:', new Date().toISOString());
+                        console.log('Starting DNS records configuration...');
+                    });
+                }
+
+                // Log Check Status form
+                const checkStatusForms = document.querySelectorAll('form[action*="verify-dns"]');
+                checkStatusForms.forEach(function(form) {
+                    form.addEventListener('submit', function(e) {
+                        console.log('=== Check Status Form Submitted ===');
+                        console.log('Domain:', '{{ $shieldDomain->domain }}');
+                        console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id ?? "Not set" }}');
+                        console.log('Timestamp:', new Date().toISOString());
+                    });
+                });
+
+                // Log all form submissions
+                const forms = document.querySelectorAll('form');
+                console.log(`Total forms found: ${forms.length}`);
+                forms.forEach(function(form, index) {
+                    form.addEventListener('submit', function(e) {
+                        const action = form.getAttribute('action');
+                        const method = form.querySelector('input[name="_method"]')?.value || form.method;
+                        console.log(`Form ${index + 1} submitted:`, {
+                            action: action,
+                            method: method,
+                            timestamp: new Date().toISOString()
+                        });
+                    });
+                });
+            });
             </script>
 
             <!-- Submit -->
