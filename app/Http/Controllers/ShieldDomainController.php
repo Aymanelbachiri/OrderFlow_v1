@@ -27,8 +27,9 @@ class ShieldDomainController extends Controller
             ->first();
         
         if (!$shieldDomain) {
-            // If not a shield domain, let Laravel handle it normally
-            abort(404);
+            // If not a shield domain, let Laravel handle it normally by returning null
+            // This allows the route to be skipped and other routes to be checked
+            return null;
         }
         
         $templateName = $shieldDomain->template_name;
@@ -89,6 +90,12 @@ class ShieldDomainController extends Controller
             if ($path === $route || str_starts_with($path, $route . '/')) {
                 return $templatePath . '/' . $file;
             }
+        }
+        
+        // Handle static assets (CSS, JS, images) - they should be in assets/ folder
+        if (str_starts_with($path, 'assets/')) {
+            $filePath = $templatePath . '/' . $path;
+            return file_exists($filePath) ? $filePath : null;
         }
         
         // Try to find the file directly
