@@ -201,12 +201,15 @@ class CPanelService
     public function domainExists(string $domain): array
     {
         // Check addon domains
+        // cPanel UAPI: AddonDomain::list_addon_domains returns array of domain objects
         $addonResult = $this->makeRequest('AddonDomain', 'list_addon_domains');
         
         if ($addonResult['success']) {
             $addonDomains = $addonResult['data'] ?? [];
+            // Handle both array of objects and array of strings
             foreach ($addonDomains as $addonDomain) {
-                if (isset($addonDomain['domain']) && $addonDomain['domain'] === $domain) {
+                $domainName = is_array($addonDomain) ? ($addonDomain['domain'] ?? $addonDomain['addondomain'] ?? null) : $addonDomain;
+                if ($domainName === $domain) {
                     return [
                         'success' => true,
                         'exists' => true,
@@ -218,12 +221,15 @@ class CPanelService
         }
 
         // Check parked domains
+        // cPanel UAPI: Park::list_parked_domains returns array of domain strings
         $parkedResult = $this->makeRequest('Park', 'list_parked_domains');
         
         if ($parkedResult['success']) {
             $parkedDomains = $parkedResult['data'] ?? [];
+            // Handle both array of strings and array of objects
             foreach ($parkedDomains as $parkedDomain) {
-                if ($parkedDomain === $domain) {
+                $domainName = is_array($parkedDomain) ? ($parkedDomain['domain'] ?? null) : $parkedDomain;
+                if ($domainName === $domain) {
                     return [
                         'success' => true,
                         'exists' => true,
