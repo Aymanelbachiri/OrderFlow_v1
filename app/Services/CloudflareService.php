@@ -628,6 +628,239 @@ class CloudflareService
     }
 
     /**
+     * Deploy files to Cloudflare Pages using Direct Upload
+     */
+    public function deployPagesProject(string $templateName = 'template-1'): array
+    {
+        try {
+            // Get project first
+            $projectResult = $this->getPagesProject();
+            if (!$projectResult['success']) {
+                return $projectResult;
+            }
+
+            $projectId = $projectResult['project_id'];
+            $templatePath = public_path("templates/{$templateName}");
+
+            if (!file_exists($templatePath)) {
+                return [
+                    'success' => false,
+                    'error' => "Template directory not found: {$templatePath}",
+                ];
+            }
+
+            // Create a zip file of the template
+            $zipPath = storage_path("app/pages-deploy-{$templateName}-" . time() . '.zip');
+            $zip = new \ZipArchive();
+            
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to create zip file',
+                ];
+            }
+
+            // Add all files from template directory to zip
+            $files = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($templatePath),
+                \RecursiveIteratorIterator::LEAVES_ONLY
+            );
+
+            foreach ($files as $file) {
+                if (!$file->isDir()) {
+                    $filePath = $file->getRealPath();
+                    $relativePath = substr($filePath, strlen($templatePath) + 1);
+                    $zip->addFile($filePath, $relativePath);
+                }
+            }
+
+            $zip->close();
+
+            // Upload to Cloudflare Pages using Direct Upload
+            // Note: Cloudflare Pages Direct Upload requires a special endpoint
+            // We'll use the deployment API
+            $deploymentResult = $this->createPagesDeployment($projectId, $zipPath);
+
+            // Clean up zip file
+            if (file_exists($zipPath)) {
+                unlink($zipPath);
+            }
+
+            return $deploymentResult;
+        } catch (\Exception $e) {
+            Log::error('Failed to deploy Pages project', [
+                'template' => $templateName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Create a Pages deployment from uploaded files
+     * Uses Cloudflare Pages Direct Upload API
+     */
+    private function createPagesDeployment(string $projectId, string $zipPath): array
+    {
+        try {
+            // Cloudflare Pages Direct Upload requires a two-step process:
+            // 1. Create an upload session
+            // 2. Upload files to that session
+            
+            // Step 1: Create upload session
+            $sessionUrl = "https://api.cloudflare.com/client/v4/accounts/{$this->accountId}/pages/projects/{$projectId}/upload-tokens";
+            
+            Log::info('Creating Pages upload session', [
+                'project_id' => $projectId,
+                'zip_size' => filesize($zipPath),
+            ]);
+
+            $sessionResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiToken,
+                'Content-Type' => 'application/json',
+            ])->withOptions($this->getHttpOptions())
+              ->post($sessionUrl);
+
+            $sessionStatusCode = $sessionResponse->status();
+            $sessionBody = $sessionResponse->json();
+
+            if (!$sessionResponse->successful()) {
+                Log::error('Failed to create upload session', [
+                    'project_id' => $projectId,
+                    'status_code' => $sessionStatusCode,
+                    'response' => $sessionBody,
+                ]);
+
+                // Fallback: Try direct deployment endpoint (might work for some accounts)
+                return $this->tryDirectDeployment($projectId, $zipPath);
+            }
+
+            $uploadToken = $sessionBody['result']['upload_token'] ?? null;
+            $uploadUrl = $sessionBody['result']['upload_url'] ?? null;
+
+            if (!$uploadToken || !$uploadUrl) {
+                Log::warning('Upload session created but missing token/URL, trying direct deployment', [
+                    'session_response' => $sessionBody,
+                ]);
+                return $this->tryDirectDeployment($projectId, $zipPath);
+            }
+
+            // Step 2: Upload the zip file
+            Log::info('Uploading files to Pages', [
+                'project_id' => $projectId,
+                'upload_url' => $uploadUrl,
+            ]);
+
+            $uploadResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $uploadToken,
+            ])->withOptions($this->getHttpOptions())
+              ->attach('file', file_get_contents($zipPath), 'site.zip', [
+                  'Content-Type' => 'application/zip',
+              ])
+              ->post($uploadUrl);
+
+            $uploadStatusCode = $uploadResponse->status();
+            $uploadBody = $uploadResponse->json();
+
+            if ($uploadResponse->successful()) {
+                Log::info('Pages deployment created successfully', [
+                    'project_id' => $projectId,
+                    'deployment' => $uploadBody,
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $uploadBody,
+                    'deployment_id' => $uploadBody['result']['id'] ?? $uploadBody['id'] ?? null,
+                ];
+            }
+
+            Log::error('Failed to upload files to Pages', [
+                'project_id' => $projectId,
+                'status_code' => $uploadStatusCode,
+                'response' => $uploadBody,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $uploadBody['errors'][0]['message'] ?? 'Failed to upload deployment',
+                'errors' => $uploadBody['errors'] ?? [],
+            ];
+        } catch (\Exception $e) {
+            Log::error('Exception creating Pages deployment', [
+                'project_id' => $projectId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Try fallback method
+            return $this->tryDirectDeployment($projectId, $zipPath);
+        }
+    }
+
+    /**
+     * Fallback: Try direct deployment endpoint
+     */
+    private function tryDirectDeployment(string $projectId, string $zipPath): array
+    {
+        try {
+            $deployUrl = "https://api.cloudflare.com/client/v4/accounts/{$this->accountId}/pages/projects/{$projectId}/deployments";
+            
+            Log::info('Trying direct deployment endpoint', [
+                'project_id' => $projectId,
+            ]);
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiToken,
+            ])->withOptions($this->getHttpOptions())
+              ->attach('file', file_get_contents($zipPath), 'site.zip', [
+                  'Content-Type' => 'application/zip',
+              ])
+              ->post($deployUrl);
+
+            $statusCode = $response->status();
+            $responseBody = $response->json();
+
+            if ($response->successful()) {
+                Log::info('Direct deployment succeeded', [
+                    'project_id' => $projectId,
+                    'deployment' => $responseBody,
+                ]);
+
+                return [
+                    'success' => true,
+                    'data' => $responseBody,
+                    'deployment_id' => $responseBody['result']['id'] ?? $responseBody['id'] ?? null,
+                ];
+            }
+
+            Log::error('Direct deployment also failed', [
+                'project_id' => $projectId,
+                'status_code' => $statusCode,
+                'response' => $responseBody,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $responseBody['errors'][0]['message'] ?? 'Failed to create deployment. Please check API token permissions and try deploying manually via Cloudflare dashboard.',
+                'errors' => $responseBody['errors'] ?? [],
+                'suggestion' => 'You may need to deploy manually via Cloudflare Dashboard > Pages > Upload files, or use Wrangler CLI.',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'suggestion' => 'Please deploy manually via Cloudflare Dashboard > Pages > Upload files.',
+            ];
+        }
+    }
+
+    /**
      * Get Cloudflare Pages project (create if doesn't exist)
      */
     public function getPagesProject(): array

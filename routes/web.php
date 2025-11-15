@@ -102,6 +102,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/shield-domains/{shieldDomain}/verify-dns', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'verifyDNS'])->name('shield-domains.verify-dns');
     Route::post('/shield-domains/{shieldDomain}/sync-cloudflare', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'syncCloudflare'])->name('shield-domains.sync-cloudflare');
     Route::post('/shield-domains/{shieldDomain}/configure-dns', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'configureDNS'])->name('shield-domains.configure-dns');
+    Route::post('/shield-domains/{shieldDomain}/deploy-template', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'deployTemplate'])->name('shield-domains.deploy-template');
 
 
     // Reseller management

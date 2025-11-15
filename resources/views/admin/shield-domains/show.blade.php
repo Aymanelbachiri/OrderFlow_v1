@@ -228,6 +228,21 @@
                         @endif
                     </p>
 
+                    <!-- Deploy Template Button -->
+                    @if($shieldDomain->cloudflare_zone_id)
+                    <form method="POST" action="{{ route('admin.shield-domains.deploy-template', $shieldDomain) }}" class="inline" id="deploy-template-form">
+                        @csrf
+                        <button type="submit" 
+                                class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <span>Deploy Template to Pages</span>
+                        </button>
+                    </form>
+                    <p class="text-sm text-gray-600 text-center">Upload static template files to Cloudflare Pages</p>
+                    @endif
+
                     <!-- Configure DNS Records Button -->
                     @if($shieldDomain->cloudflare_zone_id)
                     <form method="POST" action="{{ route('admin.shield-domains.configure-dns', $shieldDomain) }}" class="inline" id="configure-dns-form">
@@ -424,12 +439,25 @@ function copyToClipboard(text, button) {
 
 // Add form submission logging
 document.addEventListener('DOMContentLoaded', function() {
+    const deployTemplateForm = document.getElementById('deploy-template-form');
+    if (deployTemplateForm) {
+        deployTemplateForm.addEventListener('submit', function(e) {
+            console.log('=== Deploy Template Form Submitted ===');
+            console.log('Domain:', '{{ $shieldDomain->domain }}');
+            console.log('Template:', '{{ $shieldDomain->template_name }}');
+            console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id }}');
+            console.log('Timestamp:', new Date().toISOString());
+            console.log('Starting template deployment to Cloudflare Pages...');
+        });
+    }
+
     const configureDnsForm = document.getElementById('configure-dns-form');
     if (configureDnsForm) {
         configureDnsForm.addEventListener('submit', function(e) {
-            console.log('Configure DNS form submitted');
+            console.log('=== Configure DNS Form Submitted ===');
             console.log('Domain:', '{{ $shieldDomain->domain }}');
             console.log('Zone ID:', '{{ $shieldDomain->cloudflare_zone_id }}');
+            console.log('Timestamp:', new Date().toISOString());
             console.log('Starting DNS records configuration...');
         });
     }
