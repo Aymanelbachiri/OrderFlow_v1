@@ -109,10 +109,50 @@ class CloudflareService
     }
 
     /**
-     * Add a domain to Cloudflare (create zone)
+     * Get zone by domain name
+     */
+    public function getZoneByDomain(string $domain): array
+    {
+        $result = $this->makeRequest('GET', '/zones', [
+            'name' => $domain,
+        ]);
+
+        if ($result['success']) {
+            $zones = $result['data']['result'] ?? [];
+            if (!empty($zones)) {
+                $zone = $zones[0]; // Get first matching zone
+                return [
+                    'success' => true,
+                    'zone_id' => $zone['id'],
+                    'nameservers' => $zone['name_servers'] ?? [],
+                    'zone' => $zone,
+                ];
+            }
+        }
+
+        return [
+            'success' => false,
+            'error' => 'Zone not found',
+        ];
+    }
+
+    /**
+     * Add a domain to Cloudflare (create zone) or get existing zone
      */
     public function addZone(string $domain): array
     {
+        // First check if zone already exists
+        $existingZone = $this->getZoneByDomain($domain);
+        if ($existingZone['success']) {
+            return [
+                'success' => true,
+                'zone_id' => $existingZone['zone_id'],
+                'nameservers' => $existingZone['nameservers'],
+                'existing' => true,
+            ];
+        }
+
+        // Zone doesn't exist, create it
         $result = $this->makeRequest('POST', '/zones', [
             'name' => $domain,
             'account' => [
@@ -125,7 +165,23 @@ class CloudflareService
                 'success' => true,
                 'zone_id' => $result['data']['result']['id'],
                 'nameservers' => $result['data']['result']['name_servers'] ?? [],
+                'existing' => false,
             ];
+        }
+
+        // Check if error is because zone already exists
+        $errorMessage = $result['error'] ?? '';
+        if (stripos($errorMessage, 'already exists') !== false || stripos($errorMessage, 'duplicate') !== false) {
+            // Zone exists but we didn't find it, try getting it again
+            $existingZone = $this->getZoneByDomain($domain);
+            if ($existingZone['success']) {
+                return [
+                    'success' => true,
+                    'zone_id' => $existingZone['zone_id'],
+                    'nameservers' => $existingZone['nameservers'],
+                    'existing' => true,
+                ];
+            }
         }
 
         return $result;

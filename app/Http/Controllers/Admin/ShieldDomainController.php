@@ -139,13 +139,13 @@ class ShieldDomainController extends Controller
                 return back()->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
             }
 
-            // If zone doesn't exist, create it first
+            // If zone doesn't exist, create it first (or get existing)
             if (!$shieldDomain->cloudflare_zone_id) {
-                // Create Cloudflare zone
+                // Create Cloudflare zone or get existing one
                 $zoneResult = $this->cloudflareService->addZone($shieldDomain->domain);
                 
                 if (!$zoneResult['success']) {
-                    return back()->withErrors(['error' => 'Failed to create Cloudflare zone: ' . ($zoneResult['error'] ?? 'Unknown error')]);
+                    return back()->withErrors(['error' => 'Failed to create/get Cloudflare zone: ' . ($zoneResult['error'] ?? 'Unknown error')]);
                 }
 
                 // Get nameservers
@@ -162,7 +162,7 @@ class ShieldDomainController extends Controller
                     'cloudflare_nameservers' => $nameservers,
                 ]);
 
-                // Create Pages custom domain binding
+                // Create Pages custom domain binding (only if it doesn't exist)
                 if ($pagesProjectId) {
                     $pagesResult = $this->cloudflareService->createPagesCustomDomain(
                         $shieldDomain->domain,
@@ -170,14 +170,22 @@ class ShieldDomainController extends Controller
                     );
                     
                     if (!$pagesResult['success']) {
-                        Log::warning('Failed to create Pages custom domain', [
-                            'domain' => $shieldDomain->domain,
-                            'error' => $pagesResult['error'] ?? 'Unknown error',
-                        ]);
+                        // If it fails because domain already exists, that's okay
+                        $errorMsg = $pagesResult['error'] ?? '';
+                        if (stripos($errorMsg, 'already exists') === false && stripos($errorMsg, 'duplicate') === false) {
+                            Log::warning('Failed to create Pages custom domain', [
+                                'domain' => $shieldDomain->domain,
+                                'error' => $errorMsg,
+                            ]);
+                        }
                     }
                 }
 
-                return back()->with('success', 'Cloudflare zone created! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar, then click "Check Status" again to verify.');
+                $message = ($zoneResult['existing'] ?? false) 
+                    ? 'Cloudflare zone already exists and has been linked! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar if not already done, then click "Check Status" again to verify.'
+                    : 'Cloudflare zone created! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar, then click "Check Status" again to verify.';
+
+                return back()->with('success', $message);
             }
 
             // Verify DNS is configured by checking if nameservers are set at registrar
