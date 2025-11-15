@@ -616,11 +616,12 @@ class CloudflareService
             'account_id' => $this->accountId,
         ]);
 
-        // For Direct Upload projects, we need to create with production_branch or use direct upload API
-        // Cloudflare Pages Direct Upload doesn't require a Git branch, so we'll create a minimal project
+        // For Direct Upload projects, we need to create with production_branch
+        // Note: Cloudflare API requires production_branch even for Direct Upload projects
+        // The project type is determined by how you deploy, not how you create it
         $result = $this->makeRequest('POST', "/accounts/{$this->accountId}/pages/projects", [
             'name' => $this->pagesProjectName,
-            'production_branch' => 'main', // Required field, but not used for direct upload
+            'production_branch' => 'main', // Required field
         ]);
 
         if ($result['success']) {
@@ -874,62 +875,6 @@ class CloudflareService
         }
     }
 
-    /**
-     * Fallback: Try direct deployment endpoint
-     */
-    private function tryDirectDeployment(string $projectId, string $zipPath): array
-    {
-        try {
-            $deployUrl = "https://api.cloudflare.com/client/v4/accounts/{$this->accountId}/pages/projects/{$projectId}/deployments";
-            
-            Log::info('Trying direct deployment endpoint', [
-                'project_id' => $projectId,
-            ]);
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiToken,
-            ])->withOptions($this->getHttpOptions())
-              ->attach('file', file_get_contents($zipPath), 'site.zip', [
-                  'Content-Type' => 'application/zip',
-              ])
-              ->post($deployUrl);
-
-            $statusCode = $response->status();
-            $responseBody = $response->json();
-
-            if ($response->successful()) {
-                Log::info('Direct deployment succeeded', [
-                    'project_id' => $projectId,
-                    'deployment' => $responseBody,
-                ]);
-
-                return [
-                    'success' => true,
-                    'data' => $responseBody,
-                    'deployment_id' => $responseBody['result']['id'] ?? $responseBody['id'] ?? null,
-                ];
-            }
-
-            Log::error('Direct deployment also failed', [
-                'project_id' => $projectId,
-                'status_code' => $statusCode,
-                'response' => $responseBody,
-            ]);
-
-            return [
-                'success' => false,
-                'error' => $responseBody['errors'][0]['message'] ?? 'Failed to create deployment. Please check API token permissions and try deploying manually via Cloudflare dashboard.',
-                'errors' => $responseBody['errors'] ?? [],
-                'suggestion' => 'You may need to deploy manually via Cloudflare Dashboard > Pages > Upload files, or use Wrangler CLI.',
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'suggestion' => 'Please deploy manually via Cloudflare Dashboard > Pages > Upload files.',
-            ];
-        }
-    }
 
     /**
      * Get Cloudflare Pages project (create if doesn't exist)
