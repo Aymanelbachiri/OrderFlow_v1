@@ -150,15 +150,10 @@ class ShieldDomainController extends Controller
 
                 // Get nameservers
                 $nameservers = $zoneResult['nameservers'] ?? [];
-                
-                // Get Pages project
-                $projectResult = $this->cloudflareService->getPagesProject();
-                $pagesProjectId = $projectResult['success'] ? $projectResult['project_id'] : null;
 
                 // Update shield domain with zone info
                 $shieldDomain->update([
                     'cloudflare_zone_id' => $zoneResult['zone_id'],
-                    'cloudflare_pages_project_id' => $pagesProjectId,
                     'cloudflare_nameservers' => $nameservers,
                 ]);
 
@@ -171,32 +166,23 @@ class ShieldDomainController extends Controller
                     'existing_zone' => $zoneResult['existing'] ?? false,
                 ]);
 
-                // Create Pages custom domain binding (only if it doesn't exist)
-                if ($pagesProjectId) {
-                    $pagesResult = $this->cloudflareService->createPagesCustomDomain(
-                        $shieldDomain->domain,
-                        $zoneResult['zone_id']
-                    );
-                    
-                    if ($pagesResult['success']) {
-                        Log::info('Pages custom domain added successfully', [
-                            'domain' => $shieldDomain->domain,
-                            'zone_id' => $zoneResult['zone_id'],
-                        ]);
-                    } else {
-                        // If it fails because domain already exists, that's okay
-                        $errorMsg = $pagesResult['error'] ?? '';
-                        if (stripos($errorMsg, 'already exists') === false && stripos($errorMsg, 'duplicate') === false) {
-                            Log::warning('Failed to create Pages custom domain', [
-                                'domain' => $shieldDomain->domain,
-                                'error' => $errorMsg,
-                            ]);
-                        } else {
-                            Log::info('Pages custom domain already exists', [
-                                'domain' => $shieldDomain->domain,
-                            ]);
-                        }
-                    }
+                // Create DNS records pointing to main SaaS server
+                $dnsResult = $this->cloudflareService->createShieldDomainDNSRecords(
+                    $shieldDomain->domain,
+                    $zoneResult['zone_id']
+                );
+                
+                if ($dnsResult['success']) {
+                    Log::info('DNS records created for shield domain', [
+                        'domain' => $shieldDomain->domain,
+                        'zone_id' => $zoneResult['zone_id'],
+                        'created' => $dnsResult['created_records'] ?? [],
+                    ]);
+                } else {
+                    Log::warning('Failed to create DNS records for shield domain', [
+                        'domain' => $shieldDomain->domain,
+                        'error' => $dnsResult['error'] ?? 'Unknown error',
+                    ]);
                 }
 
                 $message = ($zoneResult['existing'] ?? false) 
