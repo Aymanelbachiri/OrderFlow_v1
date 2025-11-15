@@ -131,12 +131,22 @@ class ShieldDomainController extends Controller
     /**
      * Create Cloudflare zone for a shield domain
      */
-    public function createZone(ShieldDomain $shieldDomain)
+    public function createZone(Request $request, ShieldDomain $shieldDomain)
     {
+        Log::info('createZone method called', [
+            'domain' => $shieldDomain->domain,
+            'shield_domain_id' => $shieldDomain->id,
+            'request_method' => $request->method(),
+            'request_url' => $request->fullUrl(),
+        ]);
+
         try {
             // Check if Cloudflare is configured
             if (!$this->cloudflareService->isConfigured()) {
-                return back()->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
+                Log::warning('Cloudflare not configured', [
+                    'domain' => $shieldDomain->domain,
+                ]);
+                return back()->with('error', 'Cloudflare is not configured. Please configure it in Settings.')->withErrors(['error' => 'Cloudflare is not configured. Please configure it in Settings.']);
             }
 
             // Check if zone already exists
@@ -225,7 +235,16 @@ class ShieldDomainController extends Controller
                 ? 'Cloudflare zone already exists and has been linked! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar.'
                 : 'Cloudflare zone created successfully! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar.';
 
-            return back()->with('success', $message);
+            Log::info('Zone creation completed successfully', [
+                'domain' => $shieldDomain->domain,
+                'zone_id' => $shieldDomain->cloudflare_zone_id,
+                'nameservers' => $nameservers,
+            ]);
+
+            // Refresh the model to ensure we have the latest data
+            $shieldDomain->refresh();
+
+            return redirect()->route('admin.shield-domains.show', $shieldDomain)->with('success', $message);
         } catch (\Exception $e) {
             Log::error('Zone creation failed', [
                 'domain' => $shieldDomain->domain,
