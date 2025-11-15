@@ -42,4 +42,12 @@ return [
         'api_base_url' => 'https://api.cloudflare.com/client/v4',
     ],
 
+    'cpanel' => [
+        'host' => env('CPANEL_HOST'),
+        'username' => env('CPANEL_USERNAME'),
+        'password' => env('CPANEL_PASSWORD'),
+        'port' => env('CPANEL_PORT', '2083'),
+        'use_ssl' => env('CPANEL_USE_SSL', true),
+    ],
+
 ];

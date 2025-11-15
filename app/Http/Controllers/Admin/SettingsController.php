@@ -30,6 +30,12 @@ class SettingsController extends Controller
             'cloudflare_api_token' => SystemSetting::get('cloudflare_api_token', ''),
             'cloudflare_account_id' => SystemSetting::get('cloudflare_account_id', ''),
             'cloudflare_pages_project_name' => SystemSetting::get('cloudflare_pages_project_name', 'shield-domains'),
+            // cPanel settings
+            'cpanel_host' => SystemSetting::get('cpanel_host', ''),
+            'cpanel_username' => SystemSetting::get('cpanel_username', ''),
+            'cpanel_password' => SystemSetting::get('cpanel_password', ''),
+            'cpanel_port' => SystemSetting::get('cpanel_port', '2083'),
+            'cpanel_use_ssl' => SystemSetting::get('cpanel_use_ssl', true),
         ];
 
         return view('admin.settings.index', compact('settings'));
@@ -51,16 +57,23 @@ class SettingsController extends Controller
             'cloudflare_api_token' => 'nullable|string|max:255',
             'cloudflare_account_id' => 'nullable|string|max:255',
             'cloudflare_pages_project_name' => 'nullable|string|max:255',
+            // cPanel settings
+            'cpanel_host' => 'nullable|string|max:255',
+            'cpanel_username' => 'nullable|string|max:255',
+            'cpanel_password' => 'nullable|string|max:255',
+            'cpanel_port' => 'nullable|string|max:10',
+            'cpanel_use_ssl' => 'nullable|boolean',
         ]);
 
         foreach ($validated as $key => $value) {
-            if ($key === 'cloudflare_api_token') {
-                // Only update if a new token is provided (not empty)
+            if ($key === 'cloudflare_api_token' || $key === 'cpanel_password') {
+                // Only update if a new token/password is provided (not empty)
                 if (empty($value)) {
-                    continue; // Preserve existing token
+                    continue; // Preserve existing token/password
                 }
             }
-            SystemSetting::set($key, $value, is_bool($value) ? 'boolean' : 'string');
+            $type = is_bool($value) ? 'boolean' : (is_numeric($value) && strpos($value, '.') === false ? 'integer' : 'string');
+            SystemSetting::set($key, $value, $type);
         }
 
         return redirect()->route('admin.settings.index')

@@ -168,6 +168,42 @@ class ShieldDomainController extends Controller
                 'existing_zone' => $zoneResult['existing'] ?? false,
             ]);
 
+            // Automatically add domain to cPanel if configured
+            $cpanelService = new \App\Services\CPanelService();
+            if ($cpanelService->isConfigured()) {
+                try {
+                    // Get Laravel public path (assuming it's in the same directory structure)
+                    $laravelPublicPath = public_path();
+                    
+                    $cpanelResult = $cpanelService->addShieldDomain($shieldDomain->domain, $laravelPublicPath);
+                    
+                    if ($cpanelResult['success']) {
+                        if ($cpanelResult['exists'] ?? false) {
+                            Log::info('Domain already exists in cPanel', [
+                                'domain' => $shieldDomain->domain,
+                                'type' => $cpanelResult['type'] ?? 'unknown',
+                            ]);
+                        } else {
+                            Log::info('Domain added to cPanel successfully', [
+                                'domain' => $shieldDomain->domain,
+                            ]);
+                        }
+                    } else {
+                        Log::warning('Failed to add domain to cPanel', [
+                            'domain' => $shieldDomain->domain,
+                            'error' => $cpanelResult['error'] ?? 'Unknown error',
+                        ]);
+                        // Don't fail the whole process if cPanel fails
+                    }
+                } catch (\Exception $e) {
+                    Log::error('cPanel automation failed', [
+                        'domain' => $shieldDomain->domain,
+                        'error' => $e->getMessage(),
+                    ]);
+                    // Don't fail the whole process if cPanel fails
+                }
+            }
+
             $message = ($zoneResult['existing'] ?? false) 
                 ? 'Cloudflare zone already exists and has been linked! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar.'
                 : 'Cloudflare zone created successfully! Nameservers: ' . implode(', ', $nameservers) . '. Please configure these at your registrar.';
