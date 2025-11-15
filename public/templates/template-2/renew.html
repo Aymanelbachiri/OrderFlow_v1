@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renew Subscription - IPTV Services</title>
+    <link rel="stylesheet" href="/templates/template-2/assets/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo" id="logo">IPTV</div>
+            <nav>
+                <a href="/templates/template-2/index.html">Home</a>
+                <a href="/templates/template-2/checkout.html">Checkout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="form-container">
+            <h1>Renew Your Subscription</h1>
+            <p>Enter your order number and email to find your subscription</p>
+            
+            <div id="error-message" class="error" style="display: none;"></div>
+            <div id="success-message" class="success" style="display: none;"></div>
+            
+            <form id="renewal-lookup-form">
+                <div class="form-group">
+                    <label for="order_number">Order Number *</label>
+                    <input type="text" id="order_number" name="order_number" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Find Subscription</button>
+            </form>
+
+            <div id="renewal-form-container" style="display: none;">
+                <h2>Renew Your Subscription</h2>
+                <form id="renewal-form">
+                    <div class="form-group">
+                        <label for="renewal_plan_id">Select Plan *</label>
+                        <select id="renewal_plan_id" name="pricing_plan_id" required>
+                            <option value="">Loading plans...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="renewal_payment_method">Payment Method *</label>
+                        <select id="renewal_payment_method" name="payment_method" required>
+                            <option value="">Loading payment methods...</option>
+                        </select>
+                    </div>
+
+                    <input type="hidden" id="renewal_order_number" name="order_number">
+                    <input type="hidden" id="renewal_email" name="email">
+                    <input type="hidden" id="renewal_domain" name="domain">
+
+                    <button type="submit" class="btn btn-primary btn-block">Proceed to Payment</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p id="footer-text">&copy; 2024 IPTV Services. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/templates/template-2/assets/js/config-loader.js"></script>
+    <script src="/templates/template-2/assets/js/renewal.js"></script>
+</body>
+</html>
+

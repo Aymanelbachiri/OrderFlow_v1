@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'cloudflare' => [
+        'api_token' => env('CLOUDFLARE_API_TOKEN'),
+        'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+        'pages_project_name' => env('CLOUDFLARE_PAGES_PROJECT_NAME', 'shield-domains'),
+        'api_base_url' => 'https://api.cloudflare.com/client/v4',
+    ],
+
 ];

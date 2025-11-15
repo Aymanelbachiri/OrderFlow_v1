@@ -26,6 +26,10 @@ class SettingsController extends Controller
             'support_phone' => SystemSetting::get('support_phone', ''),
             'renewal_reminder_days' => SystemSetting::get('renewal_reminder_days', '7,3,0'),
             'renewal_link_url' => SystemSetting::get('renewal_link_url', ''),
+            // Cloudflare settings
+            'cloudflare_api_token' => SystemSetting::get('cloudflare_api_token', ''),
+            'cloudflare_account_id' => SystemSetting::get('cloudflare_account_id', ''),
+            'cloudflare_pages_project_name' => SystemSetting::get('cloudflare_pages_project_name', 'shield-domains'),
         ];
 
         return view('admin.settings.index', compact('settings'));
@@ -43,9 +47,19 @@ class SettingsController extends Controller
             'support_phone' => 'nullable|string|max:20',
             'renewal_reminder_days' => 'required|string',
             'renewal_link_url' => 'nullable|url',
+            // Cloudflare settings
+            'cloudflare_api_token' => 'nullable|string|max:255',
+            'cloudflare_account_id' => 'nullable|string|max:255',
+            'cloudflare_pages_project_name' => 'nullable|string|max:255',
         ]);
 
         foreach ($validated as $key => $value) {
+            if ($key === 'cloudflare_api_token') {
+                // Only update if a new token is provided (not empty)
+                if (empty($value)) {
+                    continue; // Preserve existing token
+                }
+            }
             SystemSetting::set($key, $value, is_bool($value) ? 'boolean' : 'string');
         }
 

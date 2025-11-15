@@ -50,6 +50,7 @@ Route::match(['get','post'],'/payment-intents/{paymentIntent}/payment/success', 
 Route::get('/thank-you/{order}', [PublicPaymentController::class, 'thankYou'])->name('public.thank-you');
 
 // Public checkout (no auth)
+// Note: ShieldDomainRedirectMiddleware can be added here to auto-redirect sources with shield domains
 Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
 Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
 
@@ -95,6 +96,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     // Source management
     Route::resource('sources', \App\Http\Controllers\Admin\SourceController::class);
+
+    // Shield domain management
+    Route::resource('shield-domains', \App\Http\Controllers\Admin\ShieldDomainController::class);
+    Route::post('/shield-domains/{shieldDomain}/verify-dns', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'verifyDNS'])->name('shield-domains.verify-dns');
+    Route::post('/shield-domains/{shieldDomain}/sync-cloudflare', [\App\Http\Controllers\Admin\ShieldDomainController::class, 'syncCloudflare'])->name('shield-domains.sync-cloudflare');
 
 
     // Reseller management

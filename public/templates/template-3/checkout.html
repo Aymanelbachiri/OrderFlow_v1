@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - IPTV Services</title>
+    <link rel="stylesheet" href="/templates/template-3/assets/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo" id="logo">IPTV</div>
+            <nav>
+                <a href="/templates/template-3/index.html">Home</a>
+                <a href="/templates/template-3/renew.html">Renew</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="form-container">
+            <h1>Complete Your Order</h1>
+            <div id="error-message" class="error" style="display: none;"></div>
+            
+            <form id="checkout-form">
+                <div class="form-group">
+                    <label for="full_name">Full Name *</label>
+                    <input type="text" id="full_name" name="full_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone *</label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pricing_plan_id">Select Plan *</label>
+                    <select id="pricing_plan_id" name="pricing_plan_id" required>
+                        <option value="">Loading plans...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="subscription_type">Subscription Type *</label>
+                    <select id="subscription_type" name="subscription_type" required>
+                        <option value="new">New Subscription</option>
+                        <option value="renewal">Renewal</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="payment_method">Payment Method *</label>
+                    <select id="payment_method" name="payment_method" required>
+                        <option value="">Loading payment methods...</option>
+                    </select>
+                </div>
+
+                <input type="hidden" id="domain" name="domain">
+
+                <button type="submit" class="btn btn-primary btn-block">Proceed to Payment</button>
+            </form>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p id="footer-text">&copy; 2024 IPTV Services. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/templates/template-3/assets/js/config-loader.js"></script>
+    <script src="/templates/template-3/assets/js/checkout.js"></script>
+</body>
+</html>
+

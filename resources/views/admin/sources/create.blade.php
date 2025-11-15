@@ -38,6 +38,31 @@
                 </div>
             </div>
 
+            <!-- Shield Domain Configuration -->
+            <div class="border-b pb-4">
+                <h2 class="text-lg font-semibold mb-4">Shield Domain</h2>
+                <p class="text-sm text-gray-600 mb-4">Use a shield domain to mask your main app domain with a white-label frontend.</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Shield Domain</label>
+                        <select name="shield_domain_id" class="w-full px-3 py-2 border rounded">
+                            <option value="">None (Use main app domain)</option>
+                            @foreach($shieldDomains as $shieldDomain)
+                                <option value="{{ $shieldDomain->id }}" {{ old('shield_domain_id') == $shieldDomain->id ? 'selected' : '' }}>
+                                    {{ $shieldDomain->domain }} ({{ $shieldDomain->template_name }}) - {{ ucfirst($shieldDomain->status) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Select a shield domain to use for this source's checkout flow</p>
+                        @error('shield_domain_id')<div class="text-sm text-red-600 mt-1">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input id="use_shield_domain" type="checkbox" name="use_shield_domain" value="1" class="rounded" {{ old('use_shield_domain') ? 'checked' : '' }}>
+                        <label for="use_shield_domain" class="text-sm">Enable Shield Domain</label>
+                    </div>
+                </div>
+            </div>
+
             <!-- SMTP Configuration -->
             <div class="border-b pb-4">
                 <h2 class="text-lg font-semibold mb-4">SMTP Configuration</h2>

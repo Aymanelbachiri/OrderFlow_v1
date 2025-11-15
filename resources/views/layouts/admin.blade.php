@@ -521,6 +521,15 @@
                             </a>
                         </li>
 
+                        <!-- Shield Domains -->
+                        <li>
+                            <a href="{{ route('admin.shield-domains.index') }}"
+                                class="nav-link flex items-center px-4 py-3 text-white hover:bg-[#DC4822]/10 hover:text-[#DC4822] rounded-lg transition-all duration-200 font-medium group {{ request()->routeIs('admin.shield-domains.*') ? 'bg-[#DC4822]/10 text-[#DC4822] border-r-4 border-[#DC4822]' : '' }}"
+                                title="Shield Domains">
+                                <i class="fas fa-shield-alt mr-3 group-hover:scale-110 transition-transform duration-200"></i>
+                                <span class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Shield Domains</span>
+                            </a>
+                        </li>
 
                         <!-- Payment Config -->
                         <li>

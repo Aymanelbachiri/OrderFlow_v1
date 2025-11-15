@@ -35,7 +35,8 @@ class SourceController extends Controller
 
     public function create()
     {
-        return view('admin.sources.create');
+        $shieldDomains = \App\Models\ShieldDomain::where('status', 'active')->orWhere('status', 'pending')->orderBy('domain')->get();
+        return view('admin.sources.create', compact('shieldDomains'));
     }
 
     public function store(Request $request)
@@ -45,6 +46,8 @@ class SourceController extends Controller
             'return_url' => 'required|url|max:2048',
             'renewal_url' => 'nullable|url|max:2048',
             'is_active' => 'sometimes|boolean',
+            'shield_domain_id' => 'nullable|exists:shield_domains,id',
+            'use_shield_domain' => 'sometimes|boolean',
             // SMTP Configuration
             'smtp_mailer' => 'nullable|string|max:255',
             'smtp_host' => 'nullable|string|max:255',
@@ -63,6 +66,7 @@ class SourceController extends Controller
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+        $validated['use_shield_domain'] = (bool) ($validated['use_shield_domain'] ?? false);
         $validated['smtp_mailer'] = $validated['smtp_mailer'] ?? 'smtp';
 
         Source::create($validated);
@@ -76,7 +80,8 @@ class SourceController extends Controller
 
     public function edit(Source $source)
     {
-        return view('admin.sources.edit', compact('source'));
+        $shieldDomains = \App\Models\ShieldDomain::where('status', 'active')->orWhere('status', 'pending')->orderBy('domain')->get();
+        return view('admin.sources.edit', compact('source', 'shieldDomains'));
     }
 
     public function update(Request $request, Source $source)
@@ -86,6 +91,8 @@ class SourceController extends Controller
             'return_url' => 'required|url|max:2048',
             'renewal_url' => 'nullable|url|max:2048',
             'is_active' => 'sometimes|boolean',
+            'shield_domain_id' => 'nullable|exists:shield_domains,id',
+            'use_shield_domain' => 'sometimes|boolean',
             // SMTP Configuration
             'smtp_mailer' => 'nullable|string|max:255',
             'smtp_host' => 'nullable|string|max:255',
@@ -104,6 +111,7 @@ class SourceController extends Controller
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? $source->is_active);
+        $validated['use_shield_domain'] = (bool) ($validated['use_shield_domain'] ?? $source->use_shield_domain);
         $validated['smtp_mailer'] = $validated['smtp_mailer'] ?? 'smtp';
 
         // Don't update password if it's empty (to preserve existing password)
