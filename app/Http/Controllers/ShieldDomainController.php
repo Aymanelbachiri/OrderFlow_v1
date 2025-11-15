@@ -27,9 +27,9 @@ class ShieldDomainController extends Controller
             ->first();
         
         if (!$shieldDomain) {
-            // If not a shield domain, let Laravel handle it normally by returning null
-            // This allows the route to be skipped and other routes to be checked
-            return null;
+            // If not a shield domain, return 404
+            // This is a fallback route, so if we reach here and it's not a shield domain, it's a 404
+            abort(404);
         }
         
         $templateName = $shieldDomain->template_name;
