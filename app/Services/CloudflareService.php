@@ -284,18 +284,8 @@ class CloudflareService
             'domain' => $domain,
         ]);
 
-        // If successful, Cloudflare Pages should automatically create DNS records
-        // But we'll verify and create them if needed
-        if ($result['success']) {
-            // Wait a moment for Cloudflare to process
-            sleep(2);
-            
-            // The response might include DNS target information
-            // For now, we'll check if DNS records exist and create them if needed
-            $dnsResult = $this->createPagesDNSRecordsIfNeeded($domain, $zoneId, $projectResult['project']);
-            Log::info('DNS records creation result', $dnsResult);
-        }
-
+        // Note: This method is kept for backward compatibility but is no longer used
+        // Shield domains now point directly to the main SaaS server via DNS
         return $result;
     }
 

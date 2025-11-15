@@ -237,52 +237,6 @@ class ShieldDomainController extends Controller
     }
 
     /**
-     * Deploy template to Cloudflare Pages
-     */
-    public function deployTemplate(ShieldDomain $shieldDomain)
-    {
-        try {
-            if (!$shieldDomain->cloudflare_zone_id) {
-                return back()->withErrors(['error' => 'No Cloudflare zone ID found. Please create the zone first by clicking "Check Status".']);
-            }
-
-            // Deploy the template to Cloudflare Pages
-            $deployResult = $this->cloudflareService->deployPagesProject($shieldDomain->template_name);
-
-            if ($deployResult['success']) {
-                $message = 'Template deployed successfully to Cloudflare Pages! ';
-                $message .= 'Deployment ID: ' . ($deployResult['deployment_id'] ?? 'N/A') . '. ';
-                $message .= 'Your static site should be live shortly.';
-                
-                Log::info('Template deployed successfully', [
-                    'domain' => $shieldDomain->domain,
-                    'template' => $shieldDomain->template_name,
-                    'deployment_id' => $deployResult['deployment_id'] ?? null,
-                ]);
-                
-                return back()->with('success', $message);
-            } else {
-                $errorMsg = 'Deployment failed: ' . ($deployResult['error'] ?? 'Unknown error');
-                
-                Log::error('Template deployment failed', [
-                    'domain' => $shieldDomain->domain,
-                    'template' => $shieldDomain->template_name,
-                    'error' => $deployResult['error'] ?? 'Unknown error',
-                ]);
-                
-                return back()->withErrors(['error' => $errorMsg]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Template deployment exception', [
-                'domain' => $shieldDomain->domain,
-                'error' => $e->getMessage(),
-            ]);
-
-            return back()->withErrors(['error' => 'Deployment failed: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
      * Manually configure DNS records for shield domain
      */
     public function configureDNS(ShieldDomain $shieldDomain)
