@@ -254,9 +254,18 @@
                                     @if($settings['cloudflare_api_token'])
                                         Token is configured. Enter a new token to update it, or leave empty to keep the current token.
                                     @else
-                                        Create a token with Zone and Account permissions in Cloudflare dashboard.
+                                        Create a token with the required permissions in Cloudflare dashboard.
                                     @endif
                                 </p>
+                                <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+                                    <p class="font-semibold text-blue-900 mb-1">Required API Token Permissions:</p>
+                                    <ul class="list-disc list-inside text-blue-800 space-y-1">
+                                        <li><strong>Zone</strong> → <strong>Zone</strong> → Read, Edit</li>
+                                        <li><strong>Zone</strong> → <strong>DNS</strong> → Read, Edit</li>
+                                        <li><strong>Account</strong> → <strong>Cloudflare Pages</strong> → Read, Edit</li>
+                                    </ul>
+                                    <p class="mt-2 text-blue-700">Create token at: <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" class="underline font-semibold">Cloudflare API Tokens</a></p>
+                                </div>
                                 @error('cloudflare_api_token')
                                     <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
