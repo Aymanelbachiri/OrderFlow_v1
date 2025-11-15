@@ -633,13 +633,35 @@ class CloudflareService
     public function deployPagesProject(string $templateName = 'template-1'): array
     {
         try {
-            // Get project first
+            // Get project first - ensure it exists
             $projectResult = $this->getPagesProject();
             if (!$projectResult['success']) {
-                return $projectResult;
+                Log::error('Failed to get Pages project before deployment', [
+                    'error' => $projectResult['error'] ?? 'Unknown error',
+                    'project_name' => $this->pagesProjectName,
+                ]);
+                
+                // Try to create the project explicitly
+                $createResult = $this->createPagesProject();
+                if ($createResult['success']) {
+                    $projectResult = $createResult;
+                } else {
+                    return [
+                        'success' => false,
+                        'error' => 'Failed to get or create Pages project: ' . ($projectResult['error'] ?? 'Unknown error') . '. ' . ($createResult['error'] ?? ''),
+                    ];
+                }
             }
 
-            $projectId = $projectResult['project_id'];
+            $projectId = $projectResult['project_id'] ?? null;
+            
+            if (!$projectId) {
+                return [
+                    'success' => false,
+                    'error' => 'Project ID not found in project result. Please check Cloudflare Pages project exists.',
+                ];
+            }
+            
             $templatePath = public_path("templates/{$templateName}");
 
             if (!file_exists($templatePath)) {
