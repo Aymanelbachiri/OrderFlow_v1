@@ -238,30 +238,107 @@ class CloudflareService
 
     /**
      * Create DNS records for Pages custom domain if they don't exist
-     * Cloudflare Pages should automatically create DNS records when custom domain is added,
-     * but we'll check and log the status
+     * Cloudflare Pages doesn't always create DNS records automatically via API,
+     * so we need to create them manually
      */
     private function createPagesDNSRecordsIfNeeded(string $domain, string $zoneId, array $project): void
     {
         try {
-            // Wait a moment for Cloudflare to create DNS records
-            sleep(3);
+            $projectName = $project['name'] ?? $this->pagesProjectName;
+            $pagesTarget = $projectName . '.pages.dev';
             
-            // Get all DNS records for the domain
+            // Wait a moment for any automatic records to be created
+            sleep(2);
+            
+            // Check existing DNS records
             $allRecords = $this->getDNSRecords($zoneId);
+            $existingRecords = $allRecords['success'] ? ($allRecords['data']['result'] ?? []) : [];
             
-            Log::info('DNS records after Pages domain addition', [
+            // Check if root domain already has a record pointing to Pages
+            $hasRootRecord = false;
+            $hasWWWRecord = false;
+            
+            foreach ($existingRecords as $record) {
+                $recordName = rtrim($record['name'], '.');
+                $recordContent = $record['content'] ?? '';
+                
+                // Check root domain
+                if ($recordName === $domain || $recordName === '@') {
+                    if (stripos($recordContent, 'pages.dev') !== false || stripos($recordContent, $pagesTarget) !== false) {
+                        $hasRootRecord = true;
+                    }
+                }
+                
+                // Check www subdomain
+                if ($recordName === 'www.' . $domain || $recordName === 'www') {
+                    if (stripos($recordContent, 'pages.dev') !== false || stripos($recordContent, $pagesTarget) !== false) {
+                        $hasWWWRecord = true;
+                    }
+                }
+            }
+            
+            // Create root domain CNAME if it doesn't exist
+            // Note: For root domains, Cloudflare uses a special CNAME flattening feature
+            // We'll create a CNAME record and Cloudflare will handle it
+            if (!$hasRootRecord) {
+                $rootCnameResult = $this->createDNSRecord(
+                    $zoneId,
+                    'CNAME',
+                    $domain, // Root domain
+                    $pagesTarget,
+                    3600,
+                    true // Proxied
+                );
+                
+                if ($rootCnameResult['success']) {
+                    Log::info('Created root domain CNAME for Pages', [
+                        'domain' => $domain,
+                        'target' => $pagesTarget,
+                    ]);
+                } else {
+                    // If CNAME fails for root (some DNS providers don't allow it),
+                    // try creating an A record pointing to Cloudflare's IPs
+                    // But actually, Cloudflare handles CNAME flattening automatically
+                    Log::warning('Failed to create root CNAME, will try alternative', [
+                        'domain' => $domain,
+                        'error' => $rootCnameResult['error'] ?? 'Unknown error',
+                    ]);
+                }
+            }
+            
+            // Create www subdomain CNAME if it doesn't exist
+            if (!$hasWWWRecord) {
+                $wwwCnameResult = $this->createDNSRecord(
+                    $zoneId,
+                    'CNAME',
+                    'www.' . $domain,
+                    $pagesTarget,
+                    3600,
+                    true // Proxied
+                );
+                
+                if ($wwwCnameResult['success']) {
+                    Log::info('Created www subdomain CNAME for Pages', [
+                        'domain' => 'www.' . $domain,
+                        'target' => $pagesTarget,
+                    ]);
+                } else {
+                    Log::warning('Failed to create www CNAME', [
+                        'domain' => 'www.' . $domain,
+                        'error' => $wwwCnameResult['error'] ?? 'Unknown error',
+                    ]);
+                }
+            }
+            
+            Log::info('DNS records setup completed for Pages domain', [
                 'domain' => $domain,
                 'zone_id' => $zoneId,
-                'records_count' => $allRecords['success'] ? count($allRecords['data']['result'] ?? []) : 0,
-                'records' => $allRecords['success'] ? $allRecords['data']['result'] : [],
+                'pages_target' => $pagesTarget,
+                'root_record_exists' => $hasRootRecord,
+                'www_record_exists' => $hasWWWRecord,
             ]);
-            
-            // Note: Cloudflare Pages should automatically create the necessary DNS records
-            // when you add a custom domain via the API. If records are missing, they will
-            // be created automatically by Cloudflare within a few minutes.
         } catch (\Exception $e) {
-            Log::error('Failed to check Pages DNS records', [
+            Log::error('Failed to create Pages DNS records', [
                 'domain' => $domain,
                 'zone_id' => $zoneId,
                 'error' => $e->getMessage(),
