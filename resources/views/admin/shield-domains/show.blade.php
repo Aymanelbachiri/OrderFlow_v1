@@ -269,6 +269,33 @@
                     <p class="text-sm text-gray-600 text-center">Manually create DNS records pointing to main SaaS server</p>
                     @endif
 
+                    <!-- Add to cPanel Button -->
+                    @php
+                        $cpanelService = new \App\Services\CPanelService();
+                        $cpanelConfigured = $cpanelService->isConfigured();
+                    @endphp
+                    @if($cpanelConfigured)
+                    <form method="POST" action="{{ route('admin.shield-domains.add-to-cpanel', $shieldDomain) }}" class="inline">
+                        @csrf
+                        <button type="submit" 
+                                class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                            </svg>
+                            <span>Add to cPanel</span>
+                        </button>
+                    </form>
+                    <p class="text-sm text-gray-600 text-center">Manually add this domain to cPanel as a parked domain</p>
+                    @else
+                    <div class="w-full px-6 py-3 bg-gray-300 text-gray-600 rounded-lg font-semibold flex items-center justify-center space-x-2 cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                        </svg>
+                        <span>Add to cPanel (Not Configured)</span>
+                    </div>
+                    <p class="text-sm text-gray-500 text-center">Configure cPanel credentials in Settings to enable this feature</p>
+                    @endif
+
                     <!-- Sync Cloudflare Button -->
                     @if($shieldDomain->cloudflare_zone_id)
                     <form method="POST" action="{{ route('admin.shield-domains.sync-cloudflare', $shieldDomain) }}" class="inline">
