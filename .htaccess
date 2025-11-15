@@ -7,6 +7,9 @@
     
     # Redirect to public directory (standard Laravel setup)
     # This allows requests from any domain (shield domains) to reach Laravel
+    # Note: This only works if the domain is configured in cPanel/Apache
+    # If you see cPanel default page, add the domain in cPanel first
     RewriteCond %{REQUEST_URI} !^/public
+    RewriteCond %{REQUEST_URI} !^/cgi-sys
     RewriteRule ^(.*)$ /public/$1 [L,QSA]
 </IfModule>
