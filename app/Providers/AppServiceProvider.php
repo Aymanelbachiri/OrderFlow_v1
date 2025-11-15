@@ -15,8 +15,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Cloudflare\CloudflareApiClient::class);
         $this->app->singleton(\App\Services\Cloudflare\ZoneService::class, function ($app) {
             return new \App\Services\Cloudflare\ZoneService(
-                $app->make(\App\Services\Cloudflare\CloudflareApiClient::class),
-                ''
+                $app->make(\App\Services\Cloudflare\CloudflareApiClient::class)
             );
         });
         $this->app->singleton(\App\Services\Cloudflare\DNSService::class, function ($app) {

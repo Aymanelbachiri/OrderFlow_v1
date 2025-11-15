@@ -10,10 +10,15 @@ use Illuminate\Support\Facades\Log;
 class ZoneService
 {
     public function __construct(
-        private CloudflareApiClient $client,
-        private string $accountId
-    ) {
-        $this->accountId = \App\Models\SystemSetting::get('cloudflare_account_id') 
+        private CloudflareApiClient $client
+    ) {}
+
+    /**
+     * Get account ID from settings
+     */
+    private function getAccountId(): string
+    {
+        return \App\Models\SystemSetting::get('cloudflare_account_id') 
             ?: config('services.cloudflare.account_id', '');
     }
 
@@ -64,7 +69,7 @@ class ZoneService
         // Create new zone
         $result = $this->client->request('POST', '/zones', [
             'name' => $domain,
-            'account' => ['id' => $this->accountId],
+            'account' => ['id' => $this->getAccountId()],
         ]);
 
         if ($result['success']) {
