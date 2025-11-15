@@ -808,8 +808,8 @@ class CloudflareService
                     'response' => $sessionBody,
                 ]);
 
-                // Fallback: Try direct deployment endpoint (might work for some accounts)
-                return $this->tryDirectDeployment($projectId, $zipPath);
+                // Fallback: Try direct deployment endpoint
+                return $this->createDirectDeployment($projectId, $zipPath);
             }
 
             $uploadToken = $sessionBody['result']['upload_token'] ?? null;
@@ -819,7 +819,7 @@ class CloudflareService
                 Log::warning('Upload session created but missing token/URL, trying direct deployment', [
                     'session_response' => $sessionBody,
                 ]);
-                return $this->tryDirectDeployment($projectId, $zipPath);
+                return $this->createDirectDeployment($projectId, $zipPath);
             }
 
             // Step 2: Upload the zip file
@@ -871,7 +871,7 @@ class CloudflareService
             ]);
 
             // Try fallback method
-            return $this->tryDirectDeployment($projectId, $zipPath);
+            return $this->createDirectDeployment($projectId, $zipPath);
         }
     }
 
