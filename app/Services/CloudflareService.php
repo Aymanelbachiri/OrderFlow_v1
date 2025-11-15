@@ -841,11 +841,26 @@ class CloudflareService
 
             // If project not found, it might be a Git-based project, not Direct Upload
             if ($statusCode === 404 || $errorCode === 8000007) {
+                // Try to get project details to check its type
+                $projectDetails = $this->getPagesProject();
+                $projectType = 'unknown';
+                if ($projectDetails['success'] && isset($projectDetails['project'])) {
+                    $project = $projectDetails['project'];
+                    $projectType = $project['source']['type'] ?? 'unknown';
+                }
+                
+                Log::warning('Pages deployment failed - project may be Git-based', [
+                    'project_id' => $projectId,
+                    'project_type' => $projectType,
+                    'error_code' => $errorCode,
+                ]);
+                
                 return [
                     'success' => false,
-                    'error' => 'Project not found or is not a Direct Upload project. Please ensure the project is created as a "Direct Upload" project in Cloudflare Pages dashboard.',
+                    'error' => 'Project not found or is not a Direct Upload project. The project exists but cannot accept direct file uploads.',
                     'errors' => $responseBody['errors'] ?? [],
-                    'suggestion' => 'Go to Cloudflare Dashboard > Pages > Create a project > Choose "Direct Upload" > Name it: ' . $this->pagesProjectName,
+                    'suggestion' => 'Please create a new "Direct Upload" project manually: Go to Cloudflare Dashboard > Pages > Create a project > Choose "Direct Upload" > Name it: ' . $this->pagesProjectName . '. Then delete the old project if needed.',
+                    'project_type' => $projectType,
                 ];
             }
 
@@ -884,6 +899,15 @@ class CloudflareService
             // Find project by name
             foreach ($projects as $project) {
                 if ($project['name'] === $this->pagesProjectName) {
+                    // Log project details for debugging
+                    Log::info('Found Pages project', [
+                        'project_id' => $project['id'],
+                        'project_name' => $project['name'],
+                        'project_keys' => array_keys($project),
+                        'has_source' => isset($project['source']),
+                        'source_type' => $project['source']['type'] ?? 'unknown',
+                    ]);
+                    
                     return [
                         'success' => true,
                         'project_id' => $project['id'],
