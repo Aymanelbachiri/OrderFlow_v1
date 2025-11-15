@@ -209,12 +209,12 @@
                         @if(!$shieldDomain->cloudflare_zone_id)
                             <div class="mt-4 p-3 bg-blue-100 border border-blue-300 rounded">
                                 <p class="text-xs font-semibold text-blue-900">ℹ️ Setup Required</p>
-                                <p class="text-xs text-blue-800 mt-1">Click "Check Status" above to create the Cloudflare zone and get your nameservers.</p>
+                                <p class="text-xs text-blue-800 mt-1">Click "Create Cloudflare Zone" above to create the zone and get your nameservers.</p>
                             </div>
                         @elseif(!$shieldDomain->dns_configured)
                             <div class="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
                                 <p class="text-xs font-semibold text-yellow-900">⚠️ DNS Status: Not Configured</p>
-                                <p class="text-xs text-yellow-800 mt-1">Once you've updated the nameservers at your registrar, click "Check Status" to verify they're active.</p>
+                                <p class="text-xs text-yellow-800 mt-1">Once you've updated the nameservers at your registrar, click "Check Nameserver Status" to verify they're active.</p>
                             </div>
                         @else
                             <div class="mt-4 p-3 bg-green-100 border border-green-300 rounded">
