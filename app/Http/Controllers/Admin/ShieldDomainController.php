@@ -145,10 +145,28 @@ class ShieldDomainController extends Controller
             }
 
             // Create Cloudflare zone or get existing one
+            Log::info('Creating Cloudflare zone', [
+                'domain' => $shieldDomain->domain,
+                'cloudflare_configured' => $this->cloudflareService->isConfigured(),
+            ]);
+            
             $zoneResult = $this->cloudflareService->addZone($shieldDomain->domain);
             
+            Log::info('Cloudflare zone creation result', [
+                'domain' => $shieldDomain->domain,
+                'success' => $zoneResult['success'] ?? false,
+                'error' => $zoneResult['error'] ?? null,
+                'zone_id' => $zoneResult['zone_id'] ?? null,
+            ]);
+            
             if (!$zoneResult['success']) {
-                return back()->withErrors(['error' => 'Failed to create/get Cloudflare zone: ' . ($zoneResult['error'] ?? 'Unknown error')]);
+                $errorMsg = 'Failed to create/get Cloudflare zone: ' . ($zoneResult['error'] ?? 'Unknown error');
+                Log::error('Zone creation failed', [
+                    'domain' => $shieldDomain->domain,
+                    'error' => $errorMsg,
+                    'full_result' => $zoneResult,
+                ]);
+                return back()->with('error', $errorMsg)->withErrors(['error' => $errorMsg]);
             }
 
             // Get nameservers

@@ -108,13 +108,17 @@ class CloudflareService
             $httpClient = Http::withHeaders($headers)->withOptions($httpOptions);
             
             // Handle different HTTP methods
+            // For GET requests, $data should be query parameters
+            // For POST/PUT/PATCH, $data should be JSON body
             if (strtoupper($method) === 'GET') {
+                // GET requests use query parameters, not JSON body
                 $response = $httpClient->get($fullUrl, $data);
             } elseif (strtoupper($method) === 'POST') {
                 $response = $httpClient->post($fullUrl, $data);
             } elseif (strtoupper($method) === 'PUT') {
                 $response = $httpClient->put($fullUrl, $data);
             } elseif (strtoupper($method) === 'DELETE') {
+                // DELETE can have query parameters or body depending on API
                 $response = $httpClient->delete($fullUrl, $data);
             } else {
                 $response = $httpClient->{strtolower($method)}($fullUrl, $data);
