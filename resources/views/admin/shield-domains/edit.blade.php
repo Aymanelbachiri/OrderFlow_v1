@@ -239,7 +239,56 @@
                         <span>Configure DNS Records</span>
                     </button>
                 </form>
-                <p class="mt-2 text-sm text-gray-600">Manually create DNS records pointing to main SaaS server</p>
+                <p class="mt-2 text-sm text-gray-600">Create DNS records (CNAME) pointing to main SaaS server</p>
+            </div>
+            @endif
+
+            <!-- Danger Zone -->
+            @if($shieldDomain->cloudflare_zone_id)
+            <div class="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-red-900">Danger Zone</h3>
+                            <p class="text-sm text-red-700">These actions are irreversible. Please be certain before proceeding.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Delete DNS Records Button -->
+                    <form method="POST" action="{{ route('admin.shield-domains.delete-dns-records', $shieldDomain) }}" 
+                          onsubmit="return confirm('Are you sure you want to delete the DNS records pointing to the main server? This will break the domain connection.');">
+                        @csrf
+                        <button type="submit" 
+                                class="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            <span>Delete DNS Records</span>
+                        </button>
+                    </form>
+                    <p class="text-sm text-red-600 text-center">Delete CNAME records pointing to main SaaS server</p>
+
+                    <!-- Delete Zone Button -->
+                    <form method="POST" action="{{ route('admin.shield-domains.delete-zone', $shieldDomain) }}" 
+                          onsubmit="return confirm('Are you sure you want to delete the Cloudflare zone? This will remove the domain from Cloudflare and cannot be undone.');">
+                        @csrf
+                        <button type="submit" 
+                                class="w-full px-6 py-3 bg-red-700 text-white rounded-lg hover:bg-red-800 font-semibold transition-all duration-200 flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                            <span>Delete Cloudflare Zone</span>
+                        </button>
+                    </form>
+                    <p class="text-sm text-red-600 text-center">Permanently delete the Cloudflare zone for this domain</p>
+                </div>
             </div>
             @endif
 
