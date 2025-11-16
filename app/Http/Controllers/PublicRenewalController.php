@@ -29,7 +29,7 @@ class PublicRenewalController extends Controller
             
             if ($email) {
                 $query->whereHas('user', function($q) use ($email) {
-                    $q->where('email', $email);
+                    $q->whereRaw('LOWER(email) = ?', [strtolower($email)]);
                 });
             }
             
@@ -60,7 +60,7 @@ class PublicRenewalController extends Controller
         $order = Order::where('order_number', $orderNumber)
             ->where('order_type', 'subscription')
             ->whereHas('user', function($q) use ($email) {
-                $q->where('email', $email);
+                $q->whereRaw('LOWER(email) = ?', [strtolower($email)]);
             })
             ->with(['user', 'pricingPlan'])
             ->first();
@@ -152,7 +152,7 @@ class PublicRenewalController extends Controller
         $originalOrder = Order::where('order_number', $orderNumber)
             ->where('order_type', 'subscription')
             ->whereHas('user', function($q) use ($email) {
-                $q->where('email', $email);
+                $q->whereRaw('LOWER(email) = ?', [strtolower($email)]);
             })
             ->with(['user', 'pricingPlan'])
             ->first();
@@ -300,7 +300,7 @@ class PublicRenewalController extends Controller
         $order = Order::where('order_number', $orderNumber)
             ->where('order_type', 'subscription')
             ->whereHas('user', function($q) use ($email) {
-                $q->where('email', $email);
+                $q->whereRaw('LOWER(email) = ?', [strtolower($email)]);
             })
             ->with(['user', 'pricingPlan'])
             ->first();

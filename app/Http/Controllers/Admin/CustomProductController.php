@@ -66,6 +66,13 @@ class CustomProductController extends Controller
             'product_type' => 'required|in:service,digital,other',
             'is_active' => 'boolean',
             'stock_quantity' => 'nullable|integer|min:0',
+            'custom_fields' => 'nullable|array',
+            'custom_fields.*.label' => 'required|string|max:255',
+            'custom_fields.*.type' => 'required|in:text,textarea,email,number,select,radio,checkbox',
+            'custom_fields.*.required' => 'nullable|boolean',
+            'custom_fields.*.options' => 'nullable|string',
+            'custom_fields.*.width' => 'nullable|in:full,half,third,quarter',
+            'custom_fields.*.layout' => 'nullable|in:vertical,horizontal',
         ]);
 
         // Generate slug if not provided
@@ -74,6 +81,35 @@ class CustomProductController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+
+        // Process custom fields
+        if ($request->has('custom_fields') && is_array($request->custom_fields)) {
+            $customFields = [];
+            foreach ($request->custom_fields as $field) {
+                if (!empty($field['label'])) {
+                    $fieldData = [
+                        'label' => $field['label'],
+                        'type' => $field['type'] ?? 'text',
+                        'required' => isset($field['required']) && $field['required'] == '1',
+                        'width' => $field['width'] ?? 'full',
+                        'layout' => $field['layout'] ?? 'vertical',
+                    ];
+                    
+                    // Process options for select/radio/checkbox fields
+                    if (in_array($fieldData['type'], ['select', 'radio', 'checkbox']) && !empty($field['options'])) {
+                        $options = array_filter(array_map('trim', explode("\n", $field['options'])));
+                        if (!empty($options)) {
+                            $fieldData['options'] = array_values($options);
+                        }
+                    }
+                    
+                    $customFields[] = $fieldData;
+                }
+            }
+            $validated['custom_fields'] = !empty($customFields) ? $customFields : null;
+        } else {
+            $validated['custom_fields'] = null;
+        }
 
         $product = CustomProduct::create($validated);
 
@@ -103,9 +139,45 @@ class CustomProductController extends Controller
             'product_type' => 'required|in:service,digital,other',
             'is_active' => 'boolean',
             'stock_quantity' => 'nullable|integer|min:0',
+            'custom_fields' => 'nullable|array',
+            'custom_fields.*.label' => 'required|string|max:255',
+            'custom_fields.*.type' => 'required|in:text,textarea,email,number,select,radio,checkbox',
+            'custom_fields.*.required' => 'nullable|boolean',
+            'custom_fields.*.options' => 'nullable|string',
+            'custom_fields.*.width' => 'nullable|in:full,half,third,quarter',
+            'custom_fields.*.layout' => 'nullable|in:vertical,horizontal',
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+
+        // Process custom fields
+        if ($request->has('custom_fields') && is_array($request->custom_fields)) {
+            $customFields = [];
+            foreach ($request->custom_fields as $field) {
+                if (!empty($field['label'])) {
+                    $fieldData = [
+                        'label' => $field['label'],
+                        'type' => $field['type'] ?? 'text',
+                        'required' => isset($field['required']) && $field['required'] == '1',
+                        'width' => $field['width'] ?? 'full',
+                        'layout' => $field['layout'] ?? 'vertical',
+                    ];
+                    
+                    // Process options for select/radio/checkbox fields
+                    if (in_array($fieldData['type'], ['select', 'radio', 'checkbox']) && !empty($field['options'])) {
+                        $options = array_filter(array_map('trim', explode("\n", $field['options'])));
+                        if (!empty($options)) {
+                            $fieldData['options'] = array_values($options);
+                        }
+                    }
+                    
+                    $customFields[] = $fieldData;
+                }
+            }
+            $validated['custom_fields'] = !empty($customFields) ? $customFields : null;
+        } else {
+            $validated['custom_fields'] = null;
+        }
 
         $customProduct->update($validated);
 

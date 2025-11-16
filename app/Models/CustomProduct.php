@@ -30,6 +30,7 @@ class CustomProduct extends Model
         'is_active',
         'stock_quantity',
         'metadata',
+        'custom_fields',
     ];
 
     protected function casts(): array
@@ -39,6 +40,7 @@ class CustomProduct extends Model
             'is_active' => 'boolean',
             'stock_quantity' => 'integer',
             'metadata' => 'array',
+            'custom_fields' => 'array',
         ];
     }
 

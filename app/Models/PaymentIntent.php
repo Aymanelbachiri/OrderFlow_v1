@@ -107,6 +107,15 @@ class PaymentIntent extends Model
         $orderData['payment_method'] = $this->payment_method;
         $orderData['amount'] = $this->amount;
         $orderData['payment_id'] = $this->payment_intent_id; // Store transaction ID
+        
+        // Store custom fields in payment_details for easy access
+        $paymentDetails = [];
+        if (isset($this->order_data['custom_fields']) && !empty($this->order_data['custom_fields'])) {
+            $paymentDetails['custom_fields'] = $this->order_data['custom_fields'];
+        }
+        if (!empty($paymentDetails)) {
+            $orderData['payment_details'] = $paymentDetails;
+        }
 
         // Ensure correct type and expiry handling for credit pack orders
         $orderData['order_type'] = $orderData['order_type'] ?? $this->order_type;

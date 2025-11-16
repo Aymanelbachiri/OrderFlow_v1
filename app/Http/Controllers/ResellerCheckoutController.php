@@ -54,10 +54,13 @@ class ResellerCheckoutController extends Controller
                 ->withErrors(['reseller_credit_pack_id' => 'Selected reseller pack is not available. Please choose a valid reseller pack.']);
         }
 
-        // Find or create reseller user by email
-        $user = User::firstOrCreate(
-            ['email' => $validated['email']],
-            [
+        // Find or create reseller user by email (case-insensitive)
+        $email = strtolower($validated['email']);
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+        
+        if (!$user) {
+            $user = User::create([
+                'email' => $email,
                 'name' => $validated['full_name'],
                 'password' => bcrypt(str()->random(16)),
                 'role' => 'reseller',
@@ -65,8 +68,8 @@ class ResellerCheckoutController extends Controller
                 'reseller_panel_username' => $validated['panel_username'],
                 'reseller_panel_password' => null,
                 'source' => $sourceFromRequest,
-            ]
-        );
+            ]);
+        }
         // Ensure role/fields are updated if user exists
         $user->update([
             'role' => 'reseller',

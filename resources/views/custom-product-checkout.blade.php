@@ -128,6 +128,140 @@
                                 </div>
                             </section>
 
+                            <!-- Custom Fields -->
+                            @if($product->custom_fields && count($product->custom_fields) > 0)
+                            <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
+                                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h2>
+                                <style>
+                                    .custom-fields-grid {
+                                        display: grid;
+                                        grid-template-columns: repeat(1, minmax(0, 1fr));
+                                        gap: 1rem;
+                                    }
+                                    @media (min-width: 768px) {
+                                        .custom-fields-grid {
+                                            grid-template-columns: repeat(12, minmax(0, 1fr));
+                                        }
+                                    }
+                                    .custom-field-half { grid-column: span 12; }
+                                    .custom-field-third { grid-column: span 12; }
+                                    .custom-field-quarter { grid-column: span 12; }
+                                    .custom-field-full { grid-column: span 12; }
+                                    @media (min-width: 768px) {
+                                        .custom-field-half { grid-column: span 6; }
+                                        .custom-field-third { grid-column: span 4; }
+                                        .custom-field-quarter { grid-column: span 3; }
+                                        .custom-field-full { grid-column: span 12; }
+                                    }
+                                </style>
+                                <div class="custom-fields-grid">
+                                    @foreach($product->custom_fields as $index => $field)
+                                    @php
+                                        $fieldType = $field['type'] ?? 'text';
+                                        $fieldName = "custom_fields[{$index}]";
+                                        $oldValue = old('custom_fields.' . $index);
+                                        $isRequired = $field['required'] ?? false;
+                                        $options = $field['options'] ?? [];
+                                        $width = $field['width'] ?? 'full';
+                                        $layout = $field['layout'] ?? 'vertical';
+                                        
+                                        // Width classes using custom CSS classes for reliable grid
+                                        $widthClass = match($width) {
+                                            'half' => 'custom-field-half',
+                                            'third' => 'custom-field-third',
+                                            'quarter' => 'custom-field-quarter',
+                                            default => 'custom-field-full',
+                                        };
+                                        
+                                        // Layout classes for radio/checkbox
+                                        $layoutClass = ($layout === 'horizontal' && in_array($fieldType, ['radio', 'checkbox'])) 
+                                            ? 'flex flex-wrap gap-4' 
+                                            : 'space-y-2';
+                                    @endphp
+                                    <div class="{{ $widthClass }}">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            {{ $field['label'] }} @if($isRequired)<span class="text-red-500">*</span>@endif
+                                        </label>
+
+                                        @if($fieldType === 'textarea')
+                                            <textarea name="{{ $fieldName }}" 
+                                                      @if($isRequired) required @endif
+                                                      rows="4"
+                                                      class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ $oldValue }}</textarea>
+                                        
+                                        @elseif($fieldType === 'select' && !empty($options))
+                                            <select name="{{ $fieldName }}" 
+                                                    @if($isRequired) required @endif
+                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                <option value="">Select an option</option>
+                                                @foreach($options as $option)
+                                                    <option value="{{ $option }}" {{ $oldValue === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                                @endforeach
+                                            </select>
+                                        
+                                        @elseif($fieldType === 'radio' && !empty($options))
+                                            <div class="{{ $layoutClass }}">
+                                                @foreach($options as $option)
+                                                    <label class="flex items-center {{ $layout === 'horizontal' ? 'mr-4' : '' }}">
+                                                        <input type="radio" 
+                                                               name="{{ $fieldName }}" 
+                                                               value="{{ $option }}"
+                                                               {{ $oldValue === $option ? 'checked' : '' }}
+                                                               @if($isRequired) required @endif
+                                                               class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ $option }}</span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        
+                                        @elseif($fieldType === 'checkbox')
+                                            @if(!empty($options))
+                                                {{-- Multiple checkboxes with options --}}
+                                                <div class="{{ $layoutClass }}">
+                                                    @foreach($options as $option)
+                                                        @php
+                                                            $checkboxName = "custom_fields[{$index}][]";
+                                                            $checkboxValue = $oldValue;
+                                                            $isChecked = is_array($oldValue) ? in_array($option, $oldValue) : ($oldValue === $option);
+                                                        @endphp
+                                                        <label class="flex items-center {{ $layout === 'horizontal' ? 'mr-4' : '' }}">
+                                                            <input type="checkbox" 
+                                                                   name="{{ $checkboxName }}" 
+                                                                   value="{{ $option }}"
+                                                                   {{ $isChecked ? 'checked' : '' }}
+                                                                   @if($isRequired && $loop->first) required @endif
+                                                                   class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                                            <span class="ml-2 text-gray-700 dark:text-gray-300">{{ $option }}</span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                {{-- Single checkbox --}}
+                                                <label class="flex items-center">
+                                                    <input type="checkbox" 
+                                                           name="{{ $fieldName }}" 
+                                                           value="1"
+                                                           {{ $oldValue ? 'checked' : '' }}
+                                                           @if($isRequired) required @endif
+                                                           class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                                    <span class="ml-2 text-gray-700 dark:text-gray-300">Yes</span>
+                                                </label>
+                                            @endif
+                                        
+                                        @else
+                                            <input type="{{ $fieldType === 'email' ? 'email' : ($fieldType === 'number' ? 'number' : 'text') }}" 
+                                                   name="{{ $fieldName }}" 
+                                                   value="{{ $oldValue }}" 
+                                                   @if($isRequired) required @endif
+                                                   @if($fieldType === 'number') step="any" @endif
+                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </section>
+                            @endif
+
                             <!-- Payment Method -->
                             <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
                                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Payment Method</h2>

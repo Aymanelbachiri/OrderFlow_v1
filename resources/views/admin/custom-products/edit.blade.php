@@ -141,6 +141,27 @@
             </div>
         </div>
 
+        <!-- Custom Fields Section -->
+        <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-[#201E1F]">Custom Input Fields</h2>
+                    <p class="text-sm text-[#201E1F]/60 mt-1">Add custom fields that will appear in the checkout form</p>
+                </div>
+                <button type="button" id="add-custom-field" 
+                        class="px-4 py-2 bg-[#D63613] text-white rounded-lg hover:bg-[#D63613]/90 transition-colors text-sm font-medium">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Add Field
+                </button>
+            </div>
+            
+            <div id="custom-fields-container" class="space-y-4">
+                <!-- Custom fields will be added here dynamically -->
+            </div>
+        </div>
+
         <!-- Order Statistics -->
         @if($customProduct->orders->count() > 0)
         <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md p-6">
@@ -196,5 +217,135 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('custom-fields-container');
+    const addButton = document.getElementById('add-custom-field');
+    let fieldIndex = 0;
+
+    // Load existing fields from product or old input
+    const existingFields = @json(old('custom_fields', $customProduct->custom_fields ?? []));
+    if (existingFields && existingFields.length > 0) {
+        existingFields.forEach(field => {
+            const options = field.options ? (Array.isArray(field.options) ? field.options.join('\n') : field.options) : '';
+            const width = field.width || 'full';
+            const layout = field.layout || 'vertical';
+            addCustomField(field.label || '', field.type || 'text', field.required || false, options, width, layout);
+        });
+    }
+
+    addButton.addEventListener('click', function() {
+        addCustomField('', 'text', false, '', 'full', 'vertical');
+    });
+
+    function addCustomField(label = '', type = 'text', required = false, options = '', width = 'full', layout = 'vertical') {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'bg-white p-4 rounded-lg border border-gray-200';
+        fieldDiv.dataset.index = fieldIndex;
+
+        const showOptions = (type === 'select' || type === 'radio' || type === 'checkbox');
+        const showLayout = (type === 'radio' || type === 'checkbox');
+        
+        fieldDiv.innerHTML = `
+            <div class="flex items-start gap-4">
+                <div class="flex-1 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[#201E1F] mb-2">Field Label *</label>
+                            <input type="text" name="custom_fields[${fieldIndex}][label]" value="${label}" required
+                                   class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613]"
+                                   placeholder="e.g., Device Model, Serial Number">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#201E1F] mb-2">Field Type *</label>
+                            <select name="custom_fields[${fieldIndex}][type]" required
+                                    class="field-type-select w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613]"
+                                    data-index="${fieldIndex}">
+                                <option value="text" ${type === 'text' ? 'selected' : ''}>Text</option>
+                                <option value="textarea" ${type === 'textarea' ? 'selected' : ''}>Textarea</option>
+                                <option value="email" ${type === 'email' ? 'selected' : ''}>Email</option>
+                                <option value="number" ${type === 'number' ? 'selected' : ''}>Number</option>
+                                <option value="select" ${type === 'select' ? 'selected' : ''}>Select (Dropdown)</option>
+                                <option value="radio" ${type === 'radio' ? 'selected' : ''}>Radio Buttons</option>
+                                <option value="checkbox" ${type === 'checkbox' ? 'selected' : ''}>Checkbox</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" name="custom_fields[${fieldIndex}][required]" value="1" ${required ? 'checked' : ''}
+                                       class="w-4 h-4 text-[#D63613] border-gray-300 rounded focus:ring-[#D63613]">
+                                <span class="ml-2 text-sm text-[#201E1F]">Required field</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[#201E1F] mb-2">Field Width</label>
+                            <select name="custom_fields[${fieldIndex}][width]"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613]">
+                                <option value="full" ${width === 'full' ? 'selected' : ''}>Full Width</option>
+                                <option value="half" ${width === 'half' ? 'selected' : ''}>Half Width</option>
+                                <option value="third" ${width === 'third' ? 'selected' : ''}>One Third</option>
+                                <option value="quarter" ${width === 'quarter' ? 'selected' : ''}>Quarter Width</option>
+                            </select>
+                        </div>
+                        <div class="field-layout-container" style="display: ${showLayout ? 'block' : 'none'};">
+                            <label class="block text-sm font-medium text-[#201E1F] mb-2">Layout</label>
+                            <select name="custom_fields[${fieldIndex}][layout]"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613]">
+                                <option value="vertical" ${layout === 'vertical' ? 'selected' : ''}>Vertical</option>
+                                <option value="horizontal" ${layout === 'horizontal' ? 'selected' : ''}>Horizontal</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field-options-container" style="display: ${showOptions ? 'block' : 'none'};">
+                        <label class="block text-sm font-medium text-[#201E1F] mb-2">Options (one per line) *</label>
+                        <textarea name="custom_fields[${fieldIndex}][options]" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613]"
+                                  placeholder="Option 1&#10;Option 2&#10;Option 3">${options}</textarea>
+                        <p class="text-xs text-[#201E1F]/60 mt-1">Enter each option on a new line</p>
+                    </div>
+                </div>
+                <button type="button" class="remove-field px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        container.appendChild(fieldDiv);
+
+        // Add remove functionality
+        fieldDiv.querySelector('.remove-field').addEventListener('click', function() {
+            fieldDiv.remove();
+        });
+
+        // Add type change handler
+        const typeSelect = fieldDiv.querySelector('.field-type-select');
+        const optionsContainer = fieldDiv.querySelector('.field-options-container');
+        const layoutContainer = fieldDiv.querySelector('.field-layout-container');
+        typeSelect.addEventListener('change', function() {
+            const showOptions = (this.value === 'select' || this.value === 'radio' || this.value === 'checkbox');
+            const showLayout = (this.value === 'radio' || this.value === 'checkbox');
+            
+            optionsContainer.style.display = showOptions ? 'block' : 'none';
+            layoutContainer.style.display = showLayout ? 'block' : 'none';
+            
+            const optionsTextarea = optionsContainer.querySelector('textarea');
+            if (showOptions && !optionsTextarea.hasAttribute('required')) {
+                optionsTextarea.setAttribute('required', 'required');
+            } else if (!showOptions) {
+                optionsTextarea.removeAttribute('required');
+            }
+        });
+
+        fieldIndex++;
+    }
+});
+</script>
+@endpush
 @endsection
 

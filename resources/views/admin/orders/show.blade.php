@@ -292,6 +292,46 @@
                         </p>
                     </div>
                 </div>
+
+                @php
+                    // Get custom fields from payment_details or order_data
+                    $customFieldsData = [];
+                    if ($order->payment_details && isset($order->payment_details['custom_fields'])) {
+                        $customFieldsData = $order->payment_details['custom_fields'];
+                    } elseif ($order->customProduct && $order->customProduct->custom_fields) {
+                        // Try to get values from payment intent if available
+                        $paymentIntent = \App\Models\PaymentIntent::where('payment_intent_id', $order->payment_id)->first();
+                        if ($paymentIntent && isset($paymentIntent->order_data['custom_fields'])) {
+                            $customFieldsData = $paymentIntent->order_data['custom_fields'];
+                        }
+                    }
+                @endphp
+
+                @if($order->customProduct->custom_fields && count($order->customProduct->custom_fields) > 0 && !empty($customFieldsData))
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-semibold text-[#201E1F] mb-4">Custom Field Responses</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @foreach($order->customProduct->custom_fields as $index => $field)
+                            @if(isset($customFieldsData[$index]) && !empty($customFieldsData[$index]))
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-[#201E1F]/60">{{ $field['label'] }}</label>
+                                @php
+                                    $fieldValue = $customFieldsData[$index];
+                                    $fieldType = $field['type'] ?? 'text';
+                                @endphp
+                                @if($fieldType === 'checkbox' && is_array($fieldValue))
+                                    <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200">
+                                        {{ implode(', ', $fieldValue) }}
+                                    </p>
+                                @else
+                                    <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200">{{ $fieldValue }}</p>
+                                @endif
+                            </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
             @elseif($order->devices && count($order->devices) > 0 || $order->subscription_username || $order->subscription_password || $order->subscription_url)
             <div class="bg-[#F5F5F5] rounded-xl border border-[#D63613]/10 shadow-md p-6 animate-fade-in-up" style="animation-delay: 0.3s;">

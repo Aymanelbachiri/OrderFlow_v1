@@ -42,27 +42,82 @@ class CustomProductCheckoutController extends Controller
             $sourceRule = 'nullable|string|max:255|exists:sources,name';
         }
 
-        $validated = $request->validate([
+        // Build validation rules dynamically based on custom fields
+        $validationRules = [
             'full_name' => 'required|string|max:255',
             'email' => 'required|email',
             'phone' => 'required|string|max:50',
             'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),
             'source' => $sourceRule,
-        ]);
+        ];
+
+        // Add validation for custom fields
+        if ($product->custom_fields && is_array($product->custom_fields)) {
+            foreach ($product->custom_fields as $index => $field) {
+                $fieldKey = "custom_fields.{$index}";
+                $fieldType = $field['type'] ?? 'text';
+                $isRequired = $field['required'] ?? false;
+                
+                $baseRule = $isRequired ? 'required' : 'nullable';
+                
+                // Add type-specific validation
+                switch ($fieldType) {
+                    case 'email':
+                        $validationRules[$fieldKey] = "{$baseRule}|email|max:255";
+                        break;
+                    case 'number':
+                        $validationRules[$fieldKey] = "{$baseRule}|numeric";
+                        break;
+                    case 'checkbox':
+                        $options = $field['options'] ?? [];
+                        if (!empty($options)) {
+                            // Multiple checkboxes - validate as array
+                            $validationRules[$fieldKey] = $isRequired 
+                                ? "required|array|min:1"
+                                : "nullable|array";
+                            $validationRules["{$fieldKey}.*"] = "in:" . implode(',', array_map('addslashes', $options));
+                        } else {
+                            // Single checkbox
+                            $validationRules[$fieldKey] = $isRequired ? 'required|accepted' : 'nullable|boolean';
+                        }
+                        break;
+                    case 'select':
+                    case 'radio':
+                        // Validate against available options
+                        $options = $field['options'] ?? [];
+                        if (!empty($options)) {
+                            $validationRules[$fieldKey] = $isRequired 
+                                ? "required|in:" . implode(',', array_map('addslashes', $options))
+                                : "nullable|in:" . implode(',', array_map('addslashes', $options));
+                        } else {
+                            $validationRules[$fieldKey] = "{$baseRule}|string|max:500";
+                        }
+                        break;
+                    default:
+                        $validationRules[$fieldKey] = "{$baseRule}|string|max:500";
+                        break;
+                }
+            }
+        }
+
+        $validated = $request->validate($validationRules);
 
         $sourceFromRequest = $request->query('source') ?? ($validated['source'] ?? 'custom_product');
 
-        // Find or create client user by email
-        $user = User::firstOrCreate(
-            ['email' => $validated['email']],
-            [
+        // Find or create client user by email (case-insensitive)
+        $email = strtolower($validated['email']);
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+        
+        if (!$user) {
+            $user = User::create([
+                'email' => $email,
                 'name' => $validated['full_name'],
                 'phone' => $validated['phone'],
                 'password' => bcrypt(str()->random(16)),
                 'role' => 'client',
                 'source' => $sourceFromRequest,
-            ]
-        );
+            ]);
+        }
 
         // Update user information if needed (name, phone)
         $updateData = [];
@@ -100,6 +155,7 @@ class CustomProductCheckoutController extends Controller
                     'email' => $validated['email'],
                     'phone' => $validated['phone'],
                 ],
+                'custom_fields' => $request->has('custom_fields') ? $request->custom_fields : [],
             ],
             'expires_at' => now()->addHour(),
         ]);

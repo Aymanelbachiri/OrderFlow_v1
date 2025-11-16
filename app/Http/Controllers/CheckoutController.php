@@ -106,17 +106,20 @@ class CheckoutController extends Controller
         // Determine source from request query or payload (default to 'main')
         $sourceFromRequest = $request->query('source') ?? ($validated['source'] ?? 'main');
 
-        // Find or create client user by email
-        $user = User::firstOrCreate(
-            ['email' => $validated['email']],
-            [
+        // Find or create client user by email (case-insensitive)
+        $email = strtolower($validated['email']);
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+        
+        if (!$user) {
+            $user = User::create([
+                'email' => $email,
                 'name' => $validated['full_name'],
                 'phone' => $validated['phone'],
                 'password' => bcrypt(str()->random(16)),
                 'role' => 'client',
                 'source' => $sourceFromRequest,
-            ]
-        );
+            ]);
+        }
 
         // Update user information if needed (name, phone, source)
         $updateData = [];

@@ -63,7 +63,12 @@ class ClientController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => ['required', 'string', 'email', 'max:255', function ($attribute, $value, $fail) {
+                $exists = User::whereRaw('LOWER(email) = ?', [strtolower($value)])->exists();
+                if ($exists) {
+                    $fail('The email has already been taken.');
+                }
+            }],
             'phone' => 'nullable|string|max:20',
             'source' => 'nullable|string|max:255',
         ]);
@@ -110,7 +115,14 @@ class ClientController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $client->id,
+            'email' => ['required', 'string', 'email', 'max:255', function ($attribute, $value, $fail) use ($client) {
+                $exists = User::whereRaw('LOWER(email) = ?', [strtolower($value)])
+                    ->where('id', '!=', $client->id)
+                    ->exists();
+                if ($exists) {
+                    $fail('The email has already been taken.');
+                }
+            }],
             'phone' => 'nullable|string|max:20',
             'source' => 'nullable|string|max:255',
             'role' => 'required|in:client,reseller',
