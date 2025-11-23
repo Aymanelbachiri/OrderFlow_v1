@@ -100,7 +100,7 @@
                 </div>
 
                 <!-- Reseller Credit Pack (for resellers) -->
-                <div class="md:col-span-2 hidden" id="reseller_credit_pack_container">
+                <div class="md:col-span-2" id="reseller_credit_pack_container">
                     <label for="reseller_credit_pack_id" class="block text-sm font-semibold text-[#201E1F] mb-2">Reseller Credit Pack</label>
                     <select id="reseller_credit_pack_id" 
                             name="reseller_credit_pack_id" 
@@ -118,6 +118,27 @@
                     @error('reseller_credit_pack_id')
                         <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
                     @enderror
+                </div>
+
+                <!-- Custom Product -->
+                <div class="md:col-span-2" id="custom_product_container">
+                    <label for="custom_product_id" class="block text-sm font-semibold text-[#201E1F] mb-2">Custom Product</label>
+                    <select id="custom_product_id" 
+                            name="custom_product_id" 
+                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D63613] focus:border-transparent text-[#201E1F] transition-all duration-200 @error('custom_product_id') border-red-500 @enderror">
+                        <option value="">Select Custom Product</option>
+                        @foreach($customProducts as $product)
+                        <option value="{{ $product->id }}" 
+                                data-price="{{ $product->price }}"
+                                {{ old('custom_product_id') == $product->id ? 'selected' : '' }}>
+                            {{ $product->name }} - ${{ number_format($product->price, 2) }}
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('custom_product_id')
+                        <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-2 text-sm text-[#201E1F]/50">Select a custom product for this order</p>
                 </div>
 
                 <!-- Payment Method -->
@@ -150,6 +171,7 @@
                         <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Active</option>
                         <option value="expired" {{ old('status') == 'expired' ? 'selected' : '' }}>Expired</option>
                         <option value="cancelled" {{ old('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Completed</option>
                     </select>
                     @error('status')
                         <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
@@ -451,12 +473,21 @@ function getUserRole(userSelect) {
     return null;
 }
 
-// Toggle credentials sections based on user role
+// Toggle credentials sections based on user role and product type
 function toggleCredentialsSections() {
     const userSelect = document.getElementById('user_id');
     const userRole = getUserRole(userSelect);
+    const customProductSelect = document.getElementById('custom_product_id');
+    const isCustomProduct = customProductSelect && customProductSelect.value;
     const clientCredentialsContainer = document.getElementById('clientCredentialsContainer');
     const resellerCredentialsContainer = document.getElementById('resellerCredentialsContainer');
+    
+    // Hide credentials for custom products
+    if (isCustomProduct) {
+        if (clientCredentialsContainer) clientCredentialsContainer.classList.add('hidden');
+        if (resellerCredentialsContainer) resellerCredentialsContainer.classList.add('hidden');
+        return;
+    }
     
     if (userRole === 'reseller') {
         // Show reseller credentials, hide client credentials
@@ -614,30 +645,26 @@ function updateDeviceFields() {
     }
 }
 
-// Toggle between pricing plans and reseller credit packs based on user role
+// Toggle between pricing plans, reseller credit packs, and custom products
 function togglePlanSelection() {
     const userSelect = document.getElementById('user_id');
     const userRole = getUserRole(userSelect);
     const pricingPlanContainer = document.getElementById('pricing_plan_container');
     const resellerCreditPackContainer = document.getElementById('reseller_credit_pack_container');
+    const customProductContainer = document.getElementById('custom_product_container');
     const pricingPlanSelect = document.getElementById('pricing_plan_id');
     const resellerCreditPackSelect = document.getElementById('reseller_credit_pack_id');
+    const customProductSelect = document.getElementById('custom_product_id');
     
-    if (userRole === 'reseller') {
-        // Show reseller credit packs, hide pricing plans
-        pricingPlanContainer.classList.add('hidden');
-        resellerCreditPackContainer.classList.remove('hidden');
-        pricingPlanSelect.removeAttribute('required');
-        resellerCreditPackSelect.setAttribute('required', 'required');
-        pricingPlanSelect.value = '';
-    } else {
-        // Show pricing plans, hide reseller credit packs
-        pricingPlanContainer.classList.remove('hidden');
-        resellerCreditPackContainer.classList.add('hidden');
-        pricingPlanSelect.setAttribute('required', 'required');
-        resellerCreditPackSelect.removeAttribute('required');
-        resellerCreditPackSelect.value = '';
-    }
+    // Show all options - user can choose any product type
+    pricingPlanContainer.classList.remove('hidden');
+    resellerCreditPackContainer.classList.remove('hidden');
+    customProductContainer.classList.remove('hidden');
+    
+    // Remove required from all, user can select any one
+    pricingPlanSelect.removeAttribute('required');
+    resellerCreditPackSelect.removeAttribute('required');
+    customProductSelect.removeAttribute('required');
     
     // Update credentials sections
     toggleCredentialsSections();
@@ -649,6 +676,7 @@ function updatePreview() {
     const userSelect = document.getElementById('user_id');
     const planSelect = document.getElementById('pricing_plan_id');
     const creditPackSelect = document.getElementById('reseller_credit_pack_id');
+    const customProductSelect = document.getElementById('custom_product_id');
     const amountInput = document.getElementById('amount');
     
     // Update customer preview
@@ -656,25 +684,28 @@ function updatePreview() {
     const customerText = selectedUser.value ? selectedUser.textContent.split(' (')[0] : 'Select a customer';
     document.getElementById('preview-customer').textContent = customerText;
     
-    // Update plan/credit pack preview based on user role
-    const userRole = getUserRole(userSelect);
+    // Check which product type is selected
     let selectedItem = null;
-    let itemText = 'Select a plan';
+    let itemText = 'Select a product';
+    let itemPrice = null;
     
-    if (userRole === 'reseller') {
+    if (customProductSelect && customProductSelect.value) {
+        selectedItem = customProductSelect.options[customProductSelect.selectedIndex];
+        itemText = 'Custom Product';
+    } else if (creditPackSelect && creditPackSelect.value) {
         selectedItem = creditPackSelect.options[creditPackSelect.selectedIndex];
-        itemText = 'Select a credit pack';
-    } else {
+        itemText = 'Credit Pack';
+    } else if (planSelect && planSelect.value) {
         selectedItem = planSelect.options[planSelect.selectedIndex];
-        itemText = 'Select a pricing plan';
+        itemText = 'Pricing Plan';
     }
     
     if (selectedItem && selectedItem.value) {
-        const itemPrice = selectedItem.getAttribute('data-price');
+        itemPrice = selectedItem.getAttribute('data-price');
         const itemDisplayText = selectedItem.textContent.split(' - $')[0];
         document.getElementById('preview-plan').textContent = itemDisplayText;
         
-        // Always update amount when plan/credit pack changes
+        // Always update amount when product changes
         if (amountInput && itemPrice) {
             amountInput.value = itemPrice;
         }
@@ -683,7 +714,7 @@ function updatePreview() {
     } else {
         document.getElementById('preview-plan').textContent = itemText;
         document.getElementById('preview-amount').textContent = '$0.00';
-        // Clear amount if no plan selected
+        // Clear amount if no product selected
         if (amountInput) {
             amountInput.value = '';
         }
@@ -703,6 +734,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (pricingPlanSelect) {
         pricingPlanSelect.addEventListener('change', function() {
+            // Clear other selections when one is chosen
+            if (this.value) {
+                const creditPackSelect = document.getElementById('reseller_credit_pack_id');
+                if (creditPackSelect) creditPackSelect.value = '';
+                const customProductSelect = document.getElementById('custom_product_id');
+                if (customProductSelect) customProductSelect.value = '';
+            }
             updateDeviceFields();
             updatePreview();
         });
@@ -711,6 +749,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const creditPackSelect = document.getElementById('reseller_credit_pack_id');
     if (creditPackSelect) {
         creditPackSelect.addEventListener('change', function() {
+            // Clear other selections when one is chosen
+            if (this.value) {
+                if (pricingPlanSelect) pricingPlanSelect.value = '';
+                const customProductSelect = document.getElementById('custom_product_id');
+                if (customProductSelect) customProductSelect.value = '';
+            }
+            updatePreview();
+        });
+    }
+    
+    const customProductSelect = document.getElementById('custom_product_id');
+    if (customProductSelect) {
+        customProductSelect.addEventListener('change', function() {
+            // Clear other selections when one is chosen
+            if (this.value) {
+                if (pricingPlanSelect) pricingPlanSelect.value = '';
+                if (creditPackSelect) creditPackSelect.value = '';
+            }
+            toggleCredentialsSections();
             updatePreview();
         });
     }

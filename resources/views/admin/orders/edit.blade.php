@@ -77,6 +77,7 @@
                             <option value="active" {{ old('status', $order->status) == 'active' ? 'selected' : '' }}>Active</option>
                             <option value="expired" {{ old('status', $order->status) == 'expired' ? 'selected' : '' }}>Expired</option>
                             <option value="cancelled" {{ old('status', $order->status) == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            <option value="completed" {{ old('status', $order->status) == 'completed' ? 'selected' : '' }}>Completed</option>
                         </select>
                         @error('status')
                             <p class="text-sm text-red-600">{{ $message }}</p>

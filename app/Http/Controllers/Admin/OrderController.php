@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\PricingPlan;
 use App\Models\Source;
+use App\Models\CustomProduct;
 use App\Mail\ResellerCredentialsMail;
 use App\Events\ResellerOrderActivated;
 use Illuminate\Support\Facades\Mail;
@@ -66,6 +67,15 @@ class OrderController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhere('subscription_username', 'like', "%{$search}%")
+                  ->orWhere('subscription_password', 'like', "%{$search}%")
+                  ->orWhere('subscription_url', 'like', "%{$search}%")
+                  ->orWhere('reseller_username', 'like', "%{$search}%")
+                  ->orWhere('reseller_password', 'like', "%{$search}%")
+                  ->orWhere('reseller_login_url', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%")
+                  // Search in devices JSON array (for multi-device credentials)
+                  ->orWhereRaw("devices LIKE ?", ["%{$search}%"])
                   ->orWhereHas('user', function($userQuery) use ($search) {
                       $userQuery->where('name', 'like', "%{$search}%")
                                ->orWhere('email', 'like', "%{$search}%");
@@ -115,9 +125,10 @@ class OrderController extends Controller
         $users = User::whereIn('role', ['client', 'reseller'])->orderBy('name')->get();
         $pricingPlans = PricingPlan::where('is_active', true)->orderBy('display_name')->get();
         $resellerCreditPacks = \App\Models\ResellerCreditPack::where('is_active', true)->orderBy('name')->get();
+        $customProducts = CustomProduct::where('is_active', true)->orderBy('name')->get();
         $sources = Source::orderBy('name')->get();
 
-        return view('admin.orders.create', compact('users', 'pricingPlans', 'resellerCreditPacks', 'sources'));
+        return view('admin.orders.create', compact('users', 'pricingPlans', 'resellerCreditPacks', 'customProducts', 'sources'));
     }
 
     /**
@@ -129,9 +140,10 @@ class OrderController extends Controller
             'user_id' => 'required|exists:users,id',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
             'reseller_credit_pack_id' => 'nullable|exists:reseller_credit_packs,id',
+            'custom_product_id' => 'nullable|exists:custom_products,id',
             'source' => 'nullable|string|max:255',
             'payment_method' => 'required|in:email_link,stripe,paypal,crypto,manual',
-            'status' => 'required|in:pending,active,expired,cancelled',
+            'status' => 'required|in:pending,active,expired,cancelled,completed',
             'amount' => 'nullable|numeric|min:0',
             'starts_at' => 'nullable|date',
             'expires_at' => 'nullable|date|after:starts_at',
@@ -152,10 +164,36 @@ class OrderController extends Controller
 
         $user = User::findOrFail($validated['user_id']);
         
-        // Determine if this is a reseller credit pack order or regular pricing plan order
+        // Determine order type: custom product, reseller credit pack, or regular pricing plan
+        $isCustomProductOrder = !empty($validated['custom_product_id']);
         $isResellerOrder = !empty($validated['reseller_credit_pack_id']);
         
-        if ($isResellerOrder) {
+        // Validate that only one product type is selected
+        $selectedTypes = array_filter([
+            'custom_product' => $isCustomProductOrder,
+            'reseller_credit_pack' => $isResellerOrder,
+            'pricing_plan' => !empty($validated['pricing_plan_id']),
+        ]);
+        
+        if (count($selectedTypes) > 1) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['pricing_plan_id' => 'Please select only one: pricing plan, reseller credit pack, or custom product.']);
+        }
+        
+        if ($isCustomProductOrder) {
+            // Validate that other product types are not set
+            if (!empty($validated['pricing_plan_id']) || !empty($validated['reseller_credit_pack_id'])) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['custom_product_id' => 'Cannot select custom product with pricing plan or credit pack.']);
+            }
+            
+            $customProduct = CustomProduct::findOrFail($validated['custom_product_id']);
+            $amount = $validated['amount'] ?? $customProduct->price;
+            $expiresAt = $validated['expires_at'] ?? null; // Custom products may or may not expire
+            $orderType = 'custom_product';
+        } elseif ($isResellerOrder) {
             // Validate that pricing_plan_id is not set when reseller_credit_pack_id is set
             if (!empty($validated['pricing_plan_id'])) {
                 return redirect()->back()
@@ -178,7 +216,7 @@ class OrderController extends Controller
             if (empty($validated['pricing_plan_id'])) {
                 return redirect()->back()
                     ->withInput()
-                    ->withErrors(['pricing_plan_id' => 'Please select either a pricing plan or reseller credit pack.']);
+                    ->withErrors(['pricing_plan_id' => 'Please select either a pricing plan, reseller credit pack, or custom product.']);
             }
             
             $pricingPlan = PricingPlan::findOrFail($validated['pricing_plan_id']);
@@ -197,7 +235,11 @@ class OrderController extends Controller
         }
 
         // Generate unique order number
-        $orderNumber = $isResellerOrder ? 'CP-' . strtoupper(uniqid()) : 'ORD-' . strtoupper(uniqid());
+        $orderNumber = match($orderType) {
+            'credit_pack' => 'CP-' . strtoupper(uniqid()),
+            'custom_product' => 'CUST-' . strtoupper(uniqid()),
+            default => 'ORD-' . strtoupper(uniqid())
+        };
 
         $orderData = [
             'order_number' => $orderNumber,
@@ -207,13 +249,15 @@ class OrderController extends Controller
             'amount' => $amount,
             'starts_at' => $validated['starts_at'] ?? now(),
             'expires_at' => $expiresAt,
-            'admin_notes' => $validated['admin_notes'],
+            'notes' => $validated['admin_notes'] ?? null,
             'order_type' => $orderType,
             'source' => $validated['source'] ?? null,
         ];
         
-        // Set pricing_plan_id or reseller_credit_pack_id based on order type
-        if ($isResellerOrder) {
+        // Set product type based on order type
+        if ($isCustomProductOrder) {
+            $orderData['custom_product_id'] = $validated['custom_product_id'];
+        } elseif ($isResellerOrder) {
             $orderData['reseller_credit_pack_id'] = $validated['reseller_credit_pack_id'];
             // Store credit pack ID in pricing_plan_id for backward compatibility
             $orderData['pricing_plan_id'] = $validated['reseller_credit_pack_id'];
@@ -222,48 +266,51 @@ class OrderController extends Controller
         }
 
         // Process credentials if provided
-        // Handle multi-device credentials for client orders
-        if ($user->role === 'client' && $request->has('devices') && is_array($request->input('devices'))) {
-            $pricingPlan = $isResellerOrder ? null : PricingPlan::find($validated['pricing_plan_id']);
-            $deviceCount = $pricingPlan ? $pricingPlan->device_count : 1;
-            $inputDevices = $request->input('devices');
-            
-            // Prepare devices data
-            $devices = [];
-            foreach ($inputDevices as $deviceIndex => $deviceData) {
-                if (is_array($deviceData)) {
-                    $devices[] = [
-                        'device_number' => $deviceIndex,
-                        'username' => $deviceData['username'] ?? '',
-                        'password' => $deviceData['password'] ?? '',
-                        'url' => $deviceData['url'] ?? '',
-                    ];
+        // Skip credentials for custom product orders
+        if ($orderType !== 'custom_product') {
+            // Handle multi-device credentials for client orders
+            if ($user->role === 'client' && $request->has('devices') && is_array($request->input('devices'))) {
+                $pricingPlan = $isResellerOrder ? null : PricingPlan::find($validated['pricing_plan_id'] ?? null);
+                $deviceCount = $pricingPlan ? $pricingPlan->device_count : 1;
+                $inputDevices = $request->input('devices');
+                
+                // Prepare devices data
+                $devices = [];
+                foreach ($inputDevices as $deviceIndex => $deviceData) {
+                    if (is_array($deviceData)) {
+                        $devices[] = [
+                            'device_number' => $deviceIndex,
+                            'username' => $deviceData['username'] ?? '',
+                            'password' => $deviceData['password'] ?? '',
+                            'url' => $deviceData['url'] ?? '',
+                        ];
+                    }
                 }
+                
+                // For backward compatibility, set the first device as main subscription
+                $firstDevice = $devices[0] ?? null;
+                
+                if ($firstDevice) {
+                    $orderData['subscription_username'] = $firstDevice['username'] ?? null;
+                    $orderData['subscription_password'] = $firstDevice['password'] ?? null;
+                    $orderData['subscription_url'] = $firstDevice['url'] ?? null;
+                }
+                
+                // Set devices array
+                $orderData['devices'] = $devices;
+            } elseif ($user->role === 'client' && ($validated['subscription_username'] ?? null)) {
+                // Single device credentials (backward compatibility)
+                $orderData['subscription_username'] = $validated['subscription_username'] ?? null;
+                $orderData['subscription_password'] = $validated['subscription_password'] ?? null;
+                $orderData['subscription_url'] = $validated['subscription_url'] ?? null;
             }
             
-            // For backward compatibility, set the first device as main subscription
-            $firstDevice = $devices[0] ?? null;
-            
-            if ($firstDevice) {
-                $orderData['subscription_username'] = $firstDevice['username'] ?? null;
-                $orderData['subscription_password'] = $firstDevice['password'] ?? null;
-                $orderData['subscription_url'] = $firstDevice['url'] ?? null;
+            // Handle reseller credentials
+            if (($user->role === 'reseller' || $isResellerOrder) && ($validated['reseller_username'] ?? null)) {
+                $orderData['reseller_username'] = $validated['reseller_username'] ?? null;
+                $orderData['reseller_password'] = $validated['reseller_password'] ?? null;
+                $orderData['reseller_login_url'] = $validated['reseller_login_url'] ?? null;
             }
-            
-            // Set devices array
-            $orderData['devices'] = $devices;
-        } elseif ($user->role === 'client' && ($validated['subscription_username'] ?? null)) {
-            // Single device credentials (backward compatibility)
-            $orderData['subscription_username'] = $validated['subscription_username'] ?? null;
-            $orderData['subscription_password'] = $validated['subscription_password'] ?? null;
-            $orderData['subscription_url'] = $validated['subscription_url'] ?? null;
-        }
-        
-        // Handle reseller credentials
-        if (($user->role === 'reseller' || $isResellerOrder) && ($validated['reseller_username'] ?? null)) {
-            $orderData['reseller_username'] = $validated['reseller_username'] ?? null;
-            $orderData['reseller_password'] = $validated['reseller_password'] ?? null;
-            $orderData['reseller_login_url'] = $validated['reseller_login_url'] ?? null;
         }
 
         $order = Order::create($orderData);
@@ -273,12 +320,16 @@ class OrderController extends Controller
 
         // Send emails if requested
         if ($request->boolean('send_order_confirmation')) {
-            // Send order confirmation email
-            Mail::to($user->email)->send(new \App\Mail\OrderConfirmationMail($order));
+            // Send appropriate order confirmation email based on order type
+            if ($orderType === 'custom_product') {
+                Mail::to($user->email)->send(new \App\Mail\CustomProductOrderMail($order));
+            } else {
+                Mail::to($user->email)->send(new \App\Mail\OrderConfirmationMail($order));
+            }
         }
 
-        if ($request->boolean('send_payment_instructions') && $validated['status'] === 'pending') {
-            // Send payment instructions email
+        if ($request->boolean('send_payment_instructions') && $validated['status'] === 'pending' && $orderType !== 'custom_product') {
+            // Send payment instructions email (not for custom products)
             Mail::to($user->email)->send(new \App\Mail\PaymentInstructionsMail($order));
         }
 
@@ -319,7 +370,7 @@ class OrderController extends Controller
         ]);
         
         $validationRules = [
-            'status' => 'required|in:pending,active,expired,cancelled',
+            'status' => 'required|in:pending,active,expired,cancelled,completed',
             'amount' => 'required|numeric|min:0',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
             'reseller_credit_pack_id' => 'nullable|exists:reseller_credit_packs,id',

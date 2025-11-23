@@ -29,7 +29,7 @@
             <div>
                 <label class="block text-sm font-medium mb-1">Renewal URL (Optional)</label>
                 <input type="url" name="renewal_url" value="{{ old('renewal_url', $source->renewal_url) }}" class="w-full px-3 py-2 border rounded" placeholder="https://example.com/renew">
-                <p class="text-xs text-gray-500 mt-1">Custom renewal URL for renewal reminder emails. If not set, will use default renewal route.</p>
+                <p class="text-xs text-gray-500 mt-1">Custom renewal URL for renewal reminder emails. If not set, will automatically use Return URL + /renew. If Return URL is also not set, will use default renewal route.</p>
                 @error('renewal_url')<div class="text-sm text-red-600 mt-1">{{ $message }}</div>@enderror
             </div>
             <div class="flex items-center space-x-2">

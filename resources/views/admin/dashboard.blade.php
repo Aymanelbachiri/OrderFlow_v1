@@ -255,7 +255,7 @@
                             <div class="flex-shrink-0">
                                 <a href="{{ route('admin.orders.show', $order) }}" 
                                    class="text-sm font-semibold text-[#D63613] hover:text-[#b52c0e] transition-colors duration-200">
-                                    #{{ substr($order->order_number, -6) }}
+                                    #{{ $order->order_number }}
                                 </a>
                             </div>
                 
@@ -323,7 +323,7 @@
                             <div class="flex-shrink-0">
                                 <a href="{{ route('admin.orders.show', $order) }}" 
                                    class="text-sm font-semibold text-[#D63613] hover:text-[#D63613]/80 transition-colors duration-200">
-                                    #{{ substr($order->order_number, -6) }}
+                                    #{{ $order->order_number }}
                                 </a>
                             </div>
                             

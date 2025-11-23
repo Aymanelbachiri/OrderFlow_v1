@@ -97,8 +97,13 @@ class SendRenewalReminders extends Command
                 // Check if this order should get this specific reminder
                 if ($days === 0) {
                     // For 0-day (expired) reminders, check if order is expired or expires today
-                    if ($actualDays > 0) {
-                        continue; // Skip if not expired yet
+                    // Use date comparison to catch orders expiring today regardless of time
+                    $expiresToday = $order->expires_at->isToday();
+                    $isExpired = $order->expires_at->isPast();
+                    
+                    if (!$expiresToday && !$isExpired) {
+                        $this->line("  ⊘ Skipping {$order->user->email} (Order #{$order->order_number}) - expires at {$order->expires_at->format('Y-m-d H:i:s')}, not today and not expired");
+                        continue; // Skip if not expired and not expiring today
                     }
                 } else {
                     // For future reminders, check if actual days is within acceptable range
@@ -123,19 +128,34 @@ class SendRenewalReminders extends Command
                 }
 
                 // Send reminder email
-                if ($this->sendRenewalReminder($order, $days)) {
-                    // Record the notification
-                    RenewalNotification::create([
-                        'order_id' => $order->id,
-                        'days_before_expiry' => $days,
-                        'sent' => true,
-                        'sent_at' => now(),
-                    ]);
+                try {
+                    $sent = $this->sendRenewalReminder($order, $days);
+                    if ($sent) {
+                        // Record the notification
+                        RenewalNotification::create([
+                            'order_id' => $order->id,
+                            'days_before_expiry' => $days,
+                            'sent' => true,
+                            'sent_at' => now(),
+                        ]);
 
-                    $totalSent++;
-                    $this->line("  ✓ Sent {$days}-day reminder to {$order->user->email} (Order #{$order->order_number})");
-                } else {
-                    $this->error("  ✗ Failed to send {$days}-day reminder to {$order->user->email}");
+                        $totalSent++;
+                        $this->line("  ✓ Sent {$days}-day reminder to {$order->user->email} (Order #{$order->order_number})");
+                    } else {
+                        $this->error("  ✗ Failed to send {$days}-day reminder to {$order->user->email} (Order #{$order->order_number})");
+                        $this->line("    Reason: sendRenewalReminder returned false - check logs for details");
+                    }
+                } catch (\Exception $e) {
+                    $this->error("  ✗ Exception sending {$days}-day reminder to {$order->user->email} (Order #{$order->order_number})");
+                    $this->line("    Error: " . $e->getMessage());
+                    \Log::error("Renewal reminder exception", [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'email' => $order->user->email,
+                        'days' => $days,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
             }
         }
@@ -150,25 +170,45 @@ class SendRenewalReminders extends Command
     private function sendRenewalReminder(Order $order, int $days): bool
     {
         try {
+            // Validate order has required data
+            if (!$order->user) {
+                $this->error("    Order #{$order->order_number} has no user associated");
+                \Log::error("Renewal reminder: Order missing user", ['order_id' => $order->id]);
+                return false;
+            }
+
+            if (!$order->pricingPlan && $order->order_type === 'subscription') {
+                $this->error("    Order #{$order->order_number} has no pricing plan");
+                \Log::error("Renewal reminder: Order missing pricing plan", ['order_id' => $order->id]);
+                return false;
+            }
+
             $sourceMailService = new SourceMailService();
             $source = $sourceMailService->getSource(null, $order);
             $sourceVars = $sourceMailService->getEmailVariables($source);
             
             $customerName = $order->user->name;
             $orderNumber = $order->order_number;
-            $expiresAt = $order->expires_at->format('M d, Y');
-            $planName = $order->pricingPlan->display_name;
+            $expiresAt = $order->expires_at ? $order->expires_at->format('M d, Y') : 'N/A';
+            $planName = $order->pricingPlan ? $order->pricingPlan->display_name : ($order->customProduct ? $order->customProduct->name : 'N/A');
+            
+            // Use source data, fallback to app config only if no source
             $companyName = $sourceVars['company_name'] ?? config('app.name');
-            $contactEmail = $sourceVars['contact_email'] ?? 'contact@smarters-proiptv.com';
-            $website = $sourceVars['website'] ?? config('app.url', 'http://smarters-proiptv.com');
+            $contactEmail = $sourceVars['contact_email'] ?? config('mail.from.address', '');
+            $website = $sourceVars['website'] ?? config('app.url', '');
+            $phoneNumber = $sourceVars['phone_number'] ?? '';
+            $teamName = $sourceVars['team_name'] ?? ($companyName . ' Team');
             $websiteHost = parse_url($website, PHP_URL_HOST) ?: $website;
             
-            // Get renewal link - priority: source renewal_url > system setting > default route
+            // Get renewal link - priority: source renewal_url > source return_url + /renew > system setting > default route
             $renewalLink = null;
             
-            // First, check if source has a custom renewal URL
+            // First, check if source has a custom renewal_url
             if ($source && !empty($source->renewal_url)) {
                 $renewalLink = $source->renewal_url;
+            } elseif ($source && !empty($source->return_url)) {
+                // Fallback to return_url + /renew if renewal_url not set
+                $renewalLink = rtrim($source->return_url, '/') . '/renew';
             } else {
                 // Fallback to system setting
                 $customRenewalUrl = SystemSetting::get('renewal_link_url', '');
@@ -193,6 +233,18 @@ class SendRenewalReminders extends Command
                 $subject = 'Renewal Reminder - Your IPTV Service Expires in ' . $days . ' day' . ($days > 1 ? 's' : '');
                 $daysText = "Your service expires in {$days} day" . ($days > 1 ? 's' : '');
                 $urgencyText = 'Please renew your subscription to continue enjoying our services.';
+            }
+
+            // Build contact information section from source data
+            $contactSection = '';
+            if ($contactEmail) {
+                $contactSection .= "<p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Support Email: <a href=\"mailto:{$contactEmail}\" style=\"color: #007bff; text-decoration: none;\">{$contactEmail}</a></p>";
+            }
+            if ($website) {
+                $contactSection .= "<p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Website: <a href=\"{$website}\" style=\"color: #007bff; text-decoration: none;\">{$websiteHost}</a></p>";
+            }
+            if ($phoneNumber) {
+                $contactSection .= "<p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Phone: <a href=\"tel:{$phoneNumber}\" style=\"color: #007bff; text-decoration: none;\">{$phoneNumber}</a></p>";
             }
 
             $body = "
@@ -232,11 +284,10 @@ class SendRenewalReminders extends Command
                         <a href=\"{$renewalLink}\" style=\"display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; padding: 12px 30px; border-radius: 4px; border: none;\">Continue Service</a>
                     </div>
                     
-                    <p style=\"font-size: 14px; line-height: 1.5; color: #495057; margin: 0 0 20px 0;\">If you have any questions or need assistance, please don't hesitate to reach out to our support team.</p>
+                    <p style=\"font-size: 14px; line-height: 1.5; color: #495057; margin: 0 0 20px 0;\">If you have any questions or need assistance, please don't hesitate to reach out to {$teamName}.</p>
                     
                     <div style=\"border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 25px;\">
-                        <p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Support Email: <a href=\"mailto:{$contactEmail}\" style=\"color: #007bff; text-decoration: none;\">{$contactEmail}</a></p>
-                        <p style=\"font-size: 13px; color: #6c757d; margin: 5px 0;\">Website: <a href=\"{$website}\" style=\"color: #007bff; text-decoration: none;\">{$websiteHost}</a></p>
+                        {$contactSection}
                     </div>
                 </div>
                 
@@ -251,32 +302,78 @@ class SendRenewalReminders extends Command
                 </html>
             ";
 
+            // Skip sending emails in testing environment (unless Mail is faked for testing)
+            // The MAIL_MAILER=array in phpunit.xml should prevent actual sending,
+            // but we check here to be extra safe
+            if (app()->environment('testing') && config('mail.default') !== 'array') {
+                // In testing but mail is not configured to use array driver
+                // This shouldn't happen if phpunit.xml is correct, but we skip to be safe
+                $this->line("  [TEST MODE] Skipping email send to {$order->user->email} (testing environment)");
+                return true; // Return true so notification is still recorded
+            }
+            
             // Configure mailer for source and send email
             $mailerName = $sourceMailService->configureMailForSource($source);
             
             if ($mailerName) {
                 // Use source-specific mailer
-                Mail::mailer($mailerName)->html($body, function ($message) use ($order, $subject, $source, $sourceVars) {
-                    $message->to($order->user->email)->subject($subject);
-                    
-                    // Set from address if source is configured
-                    if ($source && $source->smtp_from_address) {
-                        $message->from(
-                            $source->smtp_from_address,
-                            $source->smtp_from_name ?? $source->company_name ?? $sourceVars['company_name'] ?? config('app.name')
-                        );
-                    }
-                });
+                $this->line("    Using source mailer: {$mailerName} for source: " . ($source->name ?? 'N/A'));
+                
+                try {
+                    Mail::mailer($mailerName)->html($body, function ($message) use ($order, $subject, $source, $sourceVars) {
+                        $message->to($order->user->email)->subject($subject);
+                        
+                        // Set from address if source is configured
+                        if ($source && $source->smtp_from_address) {
+                            $message->from(
+                                $source->smtp_from_address,
+                                $source->smtp_from_name ?? $source->company_name ?? $sourceVars['company_name'] ?? config('app.name')
+                            );
+                        }
+                    });
+                } catch (\Exception $e) {
+                    $this->error("    Failed to send via source mailer {$mailerName}: " . $e->getMessage());
+                    \Log::error("Renewal reminder: Source mailer failed", [
+                        'order_id' => $order->id,
+                        'email' => $order->user->email,
+                        'mailer' => $mailerName,
+                        'source' => $source->name ?? null,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    return false;
+                }
             } else {
                 // Fallback to default mailer
-                Mail::html($body, function ($message) use ($order, $subject) {
-                    $message->to($order->user->email)->subject($subject);
-                });
+                $this->line("    Using default mailer (no source SMTP configured)");
+                
+                try {
+                    Mail::html($body, function ($message) use ($order, $subject) {
+                        $message->to($order->user->email)->subject($subject);
+                    });
+                } catch (\Exception $e) {
+                    $this->error("    Failed to send via default mailer: " . $e->getMessage());
+                    \Log::error("Renewal reminder: Default mailer failed", [
+                        'order_id' => $order->id,
+                        'email' => $order->user->email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    return false;
+                }
             }
 
             return true;
         } catch (\Exception $e) {
-            $this->error("Failed to send reminder to {$order->user->email}: " . $e->getMessage());
+            $this->error("    Exception in sendRenewalReminder: " . $e->getMessage());
+            \Log::error("Renewal reminder: General exception", [
+                'order_id' => $order->id ?? null,
+                'order_number' => $order->order_number ?? null,
+                'email' => $order->user->email ?? null,
+                'days' => $days,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return false;
         }
     }

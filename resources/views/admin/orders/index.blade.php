@@ -161,10 +161,9 @@
 
                 <!-- Search -->
                 <div class="flex-1">
-                    <label for="search" class="block text-sm font-medium text-[#201E1F]/70 mb-1">Search (Order, Name or
-                        Email)</label>
+                    <label for="search" class="block text-sm font-medium text-[#201E1F]/70 mb-1">Search (Order, Name, Email, Credentials, or Notes)</label>
                     <input type="text" name="search" id="search" value="{{ request('search') }}"
-                        placeholder="Search orders..."
+                        placeholder="Search orders, customers, credentials, or notes..."
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#D63613] focus:border-[#D63613]">
                 </div>
 
