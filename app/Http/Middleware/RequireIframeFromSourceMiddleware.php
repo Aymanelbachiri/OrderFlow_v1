@@ -75,14 +75,45 @@ class RequireIframeFromSourceMiddleware
         
         // If no domain info available
         if (!$sourceDomain) {
-            // If we have clear cross-site iframe indicators, we need domain validation
+            // If we have clear cross-site iframe indicators, try to validate using source parameter
             if ($isIframeContext && $secFetchSite === 'cross-site') {
-                Log::warning('RequireIframeFromSource: Cross-site iframe detected but no domain info available', [
+                // Check if source parameter is provided and matches an active source
+                $sourceParam = $request->query('source');
+                if ($sourceParam) {
+                    try {
+                        $source = Source::where('name', $sourceParam)
+                            ->where('is_active', true)
+                            ->first();
+                        
+                        if ($source) {
+                            // Source exists and is active - allow the request
+                            // This is a fallback when headers are stripped by browser
+                            Log::info('RequireIframeFromSource: Allowed cross-site iframe with valid source parameter', [
+                                'path' => $request->path(),
+                                'source_name' => $sourceParam,
+                                'source_id' => $source->id,
+                                'sec_fetch_site' => $secFetchSite,
+                                'sec_fetch_mode' => $secFetchMode,
+                                'ip' => $request->ip(),
+                            ]);
+                            return $next($request);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('RequireIframeFromSource: Error checking source parameter', [
+                            'error' => $e->getMessage(),
+                            'source_param' => $sourceParam,
+                        ]);
+                    }
+                }
+                
+                // No valid source parameter - block it
+                Log::warning('RequireIframeFromSource: Cross-site iframe detected but no domain info and no valid source parameter', [
                     'path' => $request->path(),
                     'sec_fetch_site' => $secFetchSite,
                     'sec_fetch_mode' => $secFetchMode,
                     'referer' => $referer,
                     'origin' => $origin,
+                    'source_param' => $sourceParam,
                     'ip' => $request->ip(),
                 ]);
                 return response()->view('errors.iframe-required', [
