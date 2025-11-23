@@ -65,6 +65,7 @@ class CustomProductController extends Controller
             'price' => 'required|numeric|min:0',
             'product_type' => 'required|in:service,digital,other',
             'is_active' => 'boolean',
+            'allow_direct_checkout' => 'boolean',
             'stock_quantity' => 'nullable|integer|min:0',
             'custom_fields' => 'nullable|array',
             'custom_fields.*.label' => 'required|string|max:255',
@@ -138,6 +139,7 @@ class CustomProductController extends Controller
             'price' => 'required|numeric|min:0',
             'product_type' => 'required|in:service,digital,other',
             'is_active' => 'boolean',
+            'allow_direct_checkout' => 'boolean',
             'stock_quantity' => 'nullable|integer|min:0',
             'custom_fields' => 'nullable|array',
             'custom_fields.*.label' => 'required|string|max:255',
@@ -149,6 +151,7 @@ class CustomProductController extends Controller
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['allow_direct_checkout'] = $request->has('allow_direct_checkout');
 
         // Process custom fields
         if ($request->has('custom_fields') && is_array($request->custom_fields)) {

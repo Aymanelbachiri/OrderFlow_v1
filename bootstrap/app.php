@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
             'rate.limit' => \App\Http\Middleware\RateLimitMiddleware::class,
+            'require.iframe.source' => \App\Http\Middleware\RequireIframeFromSourceMiddleware::class,
         ]);
 
         // Apply iframe cookie middleware early (before session middleware)

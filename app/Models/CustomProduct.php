@@ -28,6 +28,7 @@ class CustomProduct extends Model
         'price',
         'product_type',
         'is_active',
+        'allow_direct_checkout',
         'stock_quantity',
         'metadata',
         'custom_fields',
@@ -38,6 +39,7 @@ class CustomProduct extends Model
         return [
             'price' => 'decimal:2',
             'is_active' => 'boolean',
+            'allow_direct_checkout' => 'boolean',
             'stock_quantity' => 'integer',
             'metadata' => 'array',
             'custom_fields' => 'array',

@@ -110,6 +110,15 @@
                     </label>
                 </div>
 
+                <!-- Allow Direct Checkout -->
+                <div class="flex items-center">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="allow_direct_checkout" value="1" {{ old('allow_direct_checkout', false) ? 'checked' : '' }} class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#D63613]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D63613]"></div>
+                        <span class="ms-3 text-sm font-medium text-[#201E1F]">Allow Direct Checkout (bypass iframe restriction)</span>
+                    </label>
+                </div>
+
                 <!-- Short Description -->
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-[#201E1F] mb-2">

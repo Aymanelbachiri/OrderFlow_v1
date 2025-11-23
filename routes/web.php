@@ -30,9 +30,11 @@ Route::view('/services/other-services', 'services.other-services')->name('other-
 Route::get('/pricing', [HomeController::class, 'pricing'])->name('pricing');
 Route::get('/reseller-plans', [\App\Http\Controllers\PublicResellerController::class, 'creditPacks'])->name('public.reseller-plans');
 
-// Public reseller checkout (no auth)
-Route::get('/reseller/checkout', [ResellerCheckoutController::class, 'show'])->name('reseller.checkout.show');
-Route::post('/reseller/checkout', [ResellerCheckoutController::class, 'submit'])->name('reseller.checkout.submit');
+// Public reseller checkout (no auth) - iframe only from authorized sources
+Route::middleware(['require.iframe.source'])->group(function () {
+    Route::get('/reseller/checkout', [ResellerCheckoutController::class, 'show'])->name('reseller.checkout.show');
+    Route::post('/reseller/checkout', [ResellerCheckoutController::class, 'submit'])->name('reseller.checkout.submit');
+});
 
 
 
@@ -49,9 +51,11 @@ Route::match(['get','post'],'/payment-intents/{paymentIntent}/payment/success', 
 // Thank you page
 Route::get('/thank-you/{order}', [PublicPaymentController::class, 'thankYou'])->name('public.thank-you');
 
-// Public checkout (no auth)
-Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
-Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
+// Public checkout (no auth) - iframe only from authorized sources
+Route::middleware(['require.iframe.source'])->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+    Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
+});
 
 // Public renewal routes (no auth)
 Route::get('/renew', [\App\Http\Controllers\PublicRenewalController::class, 'lookup'])->name('renewal.lookup');
@@ -59,9 +63,11 @@ Route::get('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalControlle
 Route::post('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'submit'])->name('renewal.submit');
 Route::get('/renew/{orderNumber}/quick', [\App\Http\Controllers\PublicRenewalController::class, 'quickRenew'])->name('renewal.quick');
 
-// Custom product checkout (no auth)
-Route::get('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'show'])->name('custom-product.checkout.show');
-Route::post('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'submit'])->name('custom-product.checkout.submit');
+// Custom product checkout (no auth) - iframe only from authorized sources
+Route::middleware(['require.iframe.source'])->group(function () {
+    Route::get('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'show'])->name('custom-product.checkout.show');
+    Route::post('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'submit'])->name('custom-product.checkout.submit');
+});
 
 // Authenticated dashboard -> only admin kept
 Route::get('/dashboard', function () {
@@ -117,6 +123,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     // System settings
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+
+    // WordPress Integration
+    Route::get('/wordpress-integration', [\App\Http\Controllers\Admin\WordPressIntegrationController::class, 'index'])->name('wordpress-integration.index');
+    Route::post('/wordpress-integration/tokens/generate', [\App\Http\Controllers\Admin\WordPressIntegrationController::class, 'generateToken'])->name('wordpress-integration.generate-token');
+    Route::delete('/wordpress-integration/tokens/{tokenId}', [\App\Http\Controllers\Admin\WordPressIntegrationController::class, 'revokeToken'])->name('wordpress-integration.revoke-token');
+    Route::get('/wordpress-integration/download-plugin', [\App\Http\Controllers\Admin\WordPressIntegrationController::class, 'downloadPlugin'])->name('wordpress-integration.download-plugin');
     Route::get('/settings/system', [\App\Http\Controllers\Admin\SettingsController::class, 'system'])->name('settings.system');
     Route::get('/settings/logs', [\App\Http\Controllers\Admin\SettingsController::class, 'logs'])->name('settings.logs');
     Route::post('/settings/logs/clear', [\App\Http\Controllers\Admin\SettingsController::class, 'clearLogs'])->name('settings.clear-logs');
