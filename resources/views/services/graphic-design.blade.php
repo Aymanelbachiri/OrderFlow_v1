@@ -54,7 +54,7 @@
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Social media kit</li>
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>2 rounds of revisions</li>
                     </ul>
-                    <a href="https://checkout.controlweb.ma/products/creating-a-visual-identity/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
+                    <a href="https://checkout.controlweb.dev/products/creating-a-visual-identity/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
                 </div>
 
                 <!-- Mockup design -->
@@ -74,7 +74,7 @@
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Source files included</li>
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>1 round of revisions</li>
                     </ul>
-                    <a href="https://checkout.controlweb.ma/products/mockup-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
+                    <a href="https://checkout.controlweb.dev/products/mockup-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
                 </div>
 
                 <!-- UI/UX design (featured) -->
@@ -95,7 +95,7 @@
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Interactive prototype</li>
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Handover to development</li>
                     </ul>
-                    <a href="https://checkout.controlweb.ma/products/uiux-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg bg-[#8ACE00] text-black hover:brightness-95 px-4 py-2 font-semibold transition">Get started</a>
+                    <a href="https://checkout.controlweb.dev/products/uiux-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg bg-[#8ACE00] text-black hover:brightness-95 px-4 py-2 font-semibold transition">Get started</a>
                 </div>
 
                 <!-- Mobile application design -->
@@ -114,7 +114,7 @@
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Prototype for flows</li>
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Developer handover</li>
                     </ul>
-                    <a href="https://checkout.controlweb.ma/products/mobile-application-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
+                    <a href="https://checkout.controlweb.dev/products/mobile-application-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
                 </div>
 
                 <!-- Landing page design -->
@@ -133,7 +133,7 @@
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Conversion‑focused CTA</li>
                         <li class="flex items-start gap-2"><svg class="w-5 h-5 text-[#8ACE00] mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Copy guidance</li>
                     </ul>
-                    <a href="https://checkout.controlweb.ma/products/landing-page-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
+                    <a href="https://checkout.controlweb.dev/products/landing-page-design/checkout" class="mt-6 inline-flex items-center justify-center rounded-lg border border-[#8ACE00] text-[#8ACE00] hover:bg-[#8ACE00] hover:text-black px-4 py-2 font-semibold transition-colors">Get Started</a>
                 </div>
             </div>
         </div>

@@ -40,9 +40,9 @@ class SecurityHeadersMiddleware
             $allowedDomains[] = 'smarters-proiptv.com';
         }
         
-        // Also include checkout.controlweb.ma for same-origin iframe embedding
-        if (!in_array('checkout.controlweb.ma', $allowedDomains)) {
-            $allowedDomains[] = 'checkout.controlweb.ma';
+        // Also include checkout.controlweb.dev for same-origin iframe embedding
+        if (!in_array('checkout.controlweb.dev', $allowedDomains)) {
+            $allowedDomains[] = 'checkout.controlweb.dev';
         }
 
         // Build frame-ancestors directive

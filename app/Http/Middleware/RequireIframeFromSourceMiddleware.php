@@ -42,9 +42,7 @@ class RequireIframeFromSourceMiddleware
                 'path' => $request->path(),
                 'referer' => $request->header('Referer'),
             ]);
-            return response()->view('errors.iframe-required', [
-                'message' => 'No authorized sources configured. Please contact the administrator.'
-            ], 403);
+            abort(404);
         }
 
         // Check multiple indicators for iframe context (browsers often strip Referer header)
@@ -116,9 +114,7 @@ class RequireIframeFromSourceMiddleware
                     'source_param' => $sourceParam,
                     'ip' => $request->ip(),
                 ]);
-                return response()->view('errors.iframe-required', [
-                    'message' => 'This checkout page can only be accessed through an embedded iframe on an authorized website.'
-                ], 403);
+                abort(404);
             }
             
             // If no iframe indicators and no domain, likely direct access
@@ -129,9 +125,7 @@ class RequireIframeFromSourceMiddleware
                     'sec_fetch_site' => $secFetchSite,
                     'sec_fetch_mode' => $secFetchMode,
                 ]);
-                return response()->view('errors.iframe-required', [
-                    'message' => 'This checkout page can only be accessed through an embedded iframe on an authorized website.'
-                ], 403);
+                abort(404);
             }
             
             // Same-origin iframe (same domain) - allow it
@@ -195,9 +189,7 @@ class RequireIframeFromSourceMiddleware
                 'path' => $request->path(),
                 'ip' => $request->ip(),
             ]);
-            return response()->view('errors.iframe-required', [
-                'message' => 'This checkout page can only be accessed from authorized partner websites. Your domain is not authorized.'
-            ], 403);
+            abort(404);
         }
 
         // All checks passed - allow the request
