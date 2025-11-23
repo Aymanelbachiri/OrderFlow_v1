@@ -65,9 +65,9 @@
                         </div>
 
                         <!-- Security Features -->
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 class="font-semibold text-blue-700 text-sm mb-2">Your Payment is Protected</h4>
-                            <div class="space-y-2 text-xs text-blue-600">
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                            <h4 class="font-semibold text-blue-700 dark:text-blue-300 text-sm mb-2">Your Payment is Protected</h4>
+                            <div class="space-y-2 text-xs text-blue-600 dark:text-blue-400">
                                 <div class="flex items-center space-x-2">
                                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -111,48 +111,29 @@
 
                         @php $stripePublicKey = \App\Models\SystemSetting::get('stripe_public_key', ''); @endphp
                         @if(empty($stripePublicKey))
-                            <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                                <svg class="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+                                <svg class="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <h3 class="text-lg font-semibold text-red-700 mb-2">Payment Unavailable</h3>
-                                <p class="text-red-600">Stripe is not configured. Please contact our support team for assistance.</p>
+                                <h3 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">Payment Unavailable</h3>
+                                <p class="text-red-600 dark:text-red-400">Stripe is not configured. Please contact our support team for assistance.</p>
                             </div>
                         @else
                             <form id="payment-form" class="space-y-6">
-                                <!-- Cardholder Name -->
-                                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200">
-                                    <label for="cardholder-name" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Cardholder Name</label>
-                                    <div class="relative">
-                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg class="w-5 h-5 text-gray-900 dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                            </svg>
-                                        </div>
-                                        <input type="text" id="cardholder-name" required 
-                                               class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-gray-900 dark:text-white focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                               placeholder="John Doe">
-                                    </div>
+                                <!-- Payment Element -->
+                                <div id="payment-element">
+                                    <!-- Payment Element will be mounted here -->
                                 </div>
-
-                                <!-- Card Information -->
-                                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200">
-                                    <label class="block text-sm font-semibold text-gray-900 dark:text-white mb-3">Card Information</label>
-                                    <div class="relative">
-                                        <div id="card-element" class="p-4 border border-gray-200 rounded-lg bg-white focus-within:border-[#D63613] focus-within:ring-2 focus-within:ring-[#D63613]/20 transition-all duration-300"></div>
-                                        <div id="card-errors" role="alert" class="mt-3 text-sm text-red-600"></div>
-                                    </div>
-                                </div>
-
+                                <div id="payment-element-errors" role="alert" class="mt-3 text-sm text-red-600 dark:text-red-400"></div>
                                 <!-- Security Notice -->
-                                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                                     <div class="flex items-start space-x-3">
-                                        <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg class="w-5 h-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
                                         </svg>
                                         <div>
-                                            <h4 class="font-semibold text-green-700 text-sm mb-1">Secure Payment</h4>
-                                            <p class="text-green-600 text-sm">Your card information is encrypted and secure. We don't store your payment details.</p>
+                                            <h4 class="font-semibold text-green-700 dark:text-green-300 text-sm mb-1">Secure Payment</h4>
+                                            <p class="text-green-600 dark:text-green-400 text-sm">Your card information is encrypted and secure. We don't store your payment details.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -194,22 +175,14 @@
     animation: fade-in-up 0.6s ease-out forwards;
 }
 
-/* Stripe Elements Styling */
-.StripeElement {
-    background: white;
+/* Stripe Payment Element Styling */
+#payment-element {
     padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    transition: all 0.3s ease;
 }
 
-.StripeElement--focus {
-    border-color: #D63613;
-    box-shadow: 0 0 0 3px rgba(214, 54, 19, 0.1);
-}
-
-.StripeElement--invalid {
-    border-color: #ef4444;
+/* Dark mode support for Payment Element container */
+.dark #payment-element {
+    background-color: transparent;
 }
 
 /* Custom spinner animation */
@@ -227,42 +200,100 @@
 @if(!empty($stripePublicKey))
 <script src="https://js.stripe.com/v3/"></script>
 <script>
+// Initialize Stripe
 const stripe = Stripe('{{ $stripePublicKey }}');
-const elements = stripe.elements({
-    appearance: {
-        theme: 'stripe',
-        variables: {
-            colorPrimary: '#D63613',
-            colorBackground: '#ffffff',
-            colorText: '#201E1F',
-            colorDanger: '#ef4444',
-            fontFamily: 'system-ui, sans-serif',
-            spacingUnit: '4px',
-            borderRadius: '8px'
-        }
-    }
-});
 
-const cardElement = elements.create('card', {
-    style: {
-        base: {
-            fontSize: '16px',
+// Function to detect if dark mode is active
+function isDarkMode() {
+    return document.documentElement.classList.contains('dark');
+}
+
+// Function to get theme-appropriate appearance configuration
+function getStripeAppearance() {
+    const darkMode = isDarkMode();
+    
+    return {
+        theme: darkMode ? 'night' : 'stripe',
+        variables: {
+            colorPrimary: '#0570de',
+            colorBackground: darkMode ? '#1f2937' : '#ffffff', // gray-800 : white
+            colorText: darkMode ? '#f9fafb' : '#201E1F', // gray-50 : dark
+            colorTextSecondary: darkMode ? '#d1d5db' : '#6b7280', // gray-300 : gray-500
+            colorTextPlaceholder: darkMode ? '#9ca3af' : '#9ca3af', // gray-400
+            colorDanger: '#ef4444',
+            colorBorder: darkMode ? '#374151' : '#e5e7eb', // gray-700 : gray-200
+            colorIcon: darkMode ? '#9ca3af' : '#6b7280', // gray-400 : gray-500
+            borderRadius: '8px',
+            spacingUnit: '4px',
             fontFamily: 'system-ui, sans-serif',
-            color: '#201E1F',
-            '::placeholder': {
-                color: '#9ca3af',
+            fontSizeBase: '16px'
+        },
+        rules: {
+            '.Input': {
+                border: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+                color: darkMode ? '#f9fafb' : '#201E1F',
+                boxShadow: 'none',
             },
+            '.Input:focus': {
+                border: '1px solid #0570de',
+                boxShadow: '0 0 0 3px rgba(214, 54, 19, 0.1)',
+            },
+            '.Input--invalid': {
+                border: '1px solid #ef4444',
+                color: darkMode ? '#f9fafb' : '#201E1F',
+            },
+            '.Label': {
+                color: darkMode ? '#f9fafb' : '#201E1F',
+            },
+            '.Tab': {
+                border: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+                backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+                color: darkMode ? '#d1d5db' : '#6b7280',
+            },
+            '.Tab--selected': {
+                border: '1px solid #0570de',
+                backgroundColor: darkMode ? '#374151' : '#f9fafb',
+                color: darkMode ? '#f9fafb' : '#201E1F',
+            },
+            '.TabIcon': {
+                color: darkMode ? '#9ca3af' : '#6b7280',
+            },
+            '.TabIcon--selected': {
+                color: '#0570de',
+            }
+        }
+    };
+}
+
+// Set up Stripe Elements with client secret and theme-aware appearance
+const options = {
+    clientSecret: '{{ $stripePaymentIntent->client_secret ?? '' }}',
+    appearance: getStripeAppearance()
+};
+
+const elements = stripe.elements(options);
+
+// Create and mount the Payment Element with billing details collection
+const paymentElementOptions = {
+    layout: 'accordion',
+    // Collect billing details for better risk assessment (AVS - Address Verification)
+    fields: {
+        billingDetails: {
+            address: 'auto', // Automatically collect billing address
         },
     },
-});
+};
+const paymentElement = elements.create('payment', paymentElementOptions);
+paymentElement.mount('#payment-element');
 
-cardElement.mount('#card-element');
-
-cardElement.on('change', function(event) {
-    const displayError = document.getElementById('card-errors');
+// Handle real-time validation errors from the Payment Element
+paymentElement.on('change', function(event) {
+    const displayError = document.getElementById('payment-element-errors');
     if (event.error) {
+        const isDark = isDarkMode();
         displayError.innerHTML = `
-            <div class="flex items-center space-x-2 text-red-600">
+            <div class="flex items-center space-x-2 ${isDark ? 'text-red-400' : 'text-red-600'}">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                 </svg>
@@ -274,104 +305,97 @@ cardElement.on('change', function(event) {
     }
 });
 
+// Update Payment Element appearance when theme changes
+function updatePaymentElementTheme() {
+    const newAppearance = getStripeAppearance();
+    elements.update({ appearance: newAppearance });
+}
+
+// Listen for theme changes
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            updatePaymentElementTheme();
+        }
+    });
+});
+
+// Observe the document element for class changes (dark mode toggle)
+observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+});
+
+// Handle form submission
 document.getElementById('payment-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const submitButton = document.getElementById('submit-button');
     const buttonText = document.getElementById('button-text');
     const spinner = document.getElementById('spinner');
-    const cardholderName = document.getElementById('cardholder-name').value;
-    
-    // Validation
-    if (!cardholderName.trim()) {
-        document.getElementById('payment-status').innerHTML = `
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div class="flex items-center space-x-2 text-amber-700">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span>Please enter the cardholder name.</span>
-                </div>
-            </div>
-        `;
-        return;
-    }
     
     // Set loading state
     submitButton.disabled = true;
     buttonText.classList.add('hidden');
     spinner.classList.remove('hidden');
     
+    // Clear any previous error messages
+    document.getElementById('payment-status').innerHTML = '';
+    document.getElementById('payment-element-errors').textContent = '';
+    
     try {
-        const {error, paymentIntent} = await stripe.confirmCardPayment('{{ $stripePaymentIntent->client_secret ?? '' }}', {
-            payment_method: {
-                card: cardElement,
-                billing_details: {
-                    name: cardholderName
-                }
-            }
+        const {error} = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+                return_url: '{{ route("public.payment-intents.success", $paymentIntent) }}',
+            },
         });
         
         if (error) {
+            // This point will only be reached if there is an immediate error when
+            // confirming the payment. Show error to your customer (for example, payment
+            // details incomplete)
+            const isDark = isDarkMode();
             document.getElementById('payment-status').innerHTML = `
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                     <div class="flex items-start space-x-3">
-                        <svg class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
                         </svg>
                         <div>
-                            <h4 class="font-semibold text-red-700 text-sm mb-1">Payment Failed</h4>
-                            <p class="text-red-600 text-sm">${error.message}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            // Show success message
-            document.getElementById('payment-status').innerHTML = `
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div class="flex items-start space-x-3">
-                        <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                        </svg>
-                        <div>
-                            <h4 class="font-semibold text-green-700 text-sm mb-1">Payment Successful!</h4>
-                            <p class="text-green-600 text-sm">Redirecting you to confirmation page...</p>
+                            <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Payment Failed</h4>
+                            <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">${error.message}</p>
                         </div>
                     </div>
                 </div>
             `;
             
-            // Submit success form
-            setTimeout(() => {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{{ route("public.payment-intents.success", $paymentIntent) }}';
-                form.innerHTML = `
-                    <input type="hidden" name="_token" value='{{ csrf_token() }}'/>
-                    <input type="hidden" name="payment_id" value='${paymentIntent.id}'/>
-                    <input type="hidden" name="payment_method" value='stripe'/>
-                    <input type="hidden" name="payment_details" value='${JSON.stringify(paymentIntent)}'/>
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }, 1500);
+            // Reset button state
+            submitButton.disabled = false;
+            buttonText.classList.remove('hidden');
+            spinner.classList.add('hidden');
+        } else {
+            // Your customer will be redirected to your `return_url`. For some payment
+            // methods like iDEAL, your customer will be redirected to an intermediate
+            // site first to authorize the payment, then redirected to the `return_url`.
+            // The payment status will be checked on the return_url page.
         }
     } catch (error) {
+        const isDark = isDarkMode();
         document.getElementById('payment-status').innerHTML = `
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                 <div class="flex items-start space-x-3">
-                    <svg class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
                     </svg>
                     <div>
-                        <h4 class="font-semibold text-red-700 text-sm mb-1">Connection Error</h4>
-                        <p class="text-red-600 text-sm">Unable to process payment. Please check your connection and try again.</p>
+                        <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Connection Error</h4>
+                        <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">Unable to process payment. Please check your connection and try again.</p>
                     </div>
                 </div>
             </div>
         `;
-    } finally {
+        
         // Reset button state
         submitButton.disabled = false;
         buttonText.classList.remove('hidden');

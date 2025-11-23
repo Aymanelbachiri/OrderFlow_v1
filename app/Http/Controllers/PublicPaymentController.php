@@ -560,6 +560,15 @@ class PublicPaymentController extends Controller
 
     public function paymentIntentSuccess(Request $request, PaymentIntent $paymentIntent)
     {
+        // Handle Stripe redirect with query parameters
+        // Stripe redirects with payment_intent and payment_intent_client_secret query parameters
+        if ($request->has('payment_intent_client_secret') || $request->has('payment_intent')) {
+            // This is a Stripe redirect - return a view that checks payment status client-side
+            $stripePublicKey = SystemSetting::get('stripe_public_key', '');
+            $clientSecret = $request->get('payment_intent_client_secret');
+            
+            return view('public.payment.stripe-success', compact('paymentIntent', 'stripePublicKey', 'clientSecret'));
+        }
 
         // If already completed/processed, idempotently redirect to thank-you (handles GET access/bookmarks)
         if ($paymentIntent->isCompleted() || $paymentIntent->status === 'processed') {
@@ -584,6 +593,7 @@ class PublicPaymentController extends Controller
             return redirect()->route('pricing')->with('warning', 'Payment already processed.');
         }
 
+        // Handle POST form submission (legacy flow for other payment methods)
         $validated = $request->validate([
             'payment_id' => 'required|string',
             'payment_method' => 'required|in:stripe,paypal,crypto,coinbase_commerce',

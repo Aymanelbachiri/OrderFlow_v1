@@ -52,7 +52,7 @@ class PaymentService
         $configs = [
             'stripe' => [
                 'key' => 'stripe',
-                'name' => 'Credit Card',
+                'name' => 'Stripe',
                 'description' => 'Stripe',
                 'icon' => 'credit-card',
                 'enabled' => self::isStripeConfigured(),
@@ -527,13 +527,116 @@ class PaymentService
                 'service_id' => (string) $internalIntent->pricing_plan_id,
             ];
 
-            $stripeIntent = \Stripe\PaymentIntent::create([
+            // Get or create Stripe Customer for the user (lowers risk score)
+            $stripeCustomerId = null;
+            $receiptEmail = null;
+            
+            if ($internalIntent->user) {
+                $user = $internalIntent->user;
+                $receiptEmail = $user->email;
+                
+                // Get existing Stripe customer ID or create new one
+                if ($user->stripe_id) {
+                    $stripeCustomerId = $user->stripe_id;
+                } else {
+                    // Create new Stripe Customer
+                    try {
+                        $stripeCustomer = \Stripe\Customer::create([
+                            'email' => $user->email,
+                            'name' => $user->name,
+                            'phone' => $user->phone,
+                            'metadata' => [
+                                'user_id' => (string) $user->id,
+                                'app_user_email' => $user->email,
+                            ],
+                        ]);
+                        
+                        $stripeCustomerId = $stripeCustomer->id;
+                        
+                        // Save Stripe customer ID to user
+                        $user->update(['stripe_id' => $stripeCustomerId]);
+                    } catch (\Exception $e) {
+                        // If customer creation fails, continue without customer
+                        // This allows payment to proceed even if customer creation fails
+                        \Log::warning('Failed to create Stripe customer', [
+                            'user_id' => $user->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+
+            // Build PaymentIntent parameters
+            $paymentIntentParams = [
                 'amount' => max($amountInCents, 50), // minimum amount safeguard
                 'currency' => $currency,
                 'metadata' => $metadata,
                 'description' => 'Web Service',
                 'automatic_payment_methods' => ['enabled' => true],
-            ]);
+                // Note: statement_descriptor is not supported with automatic_payment_methods for cards
+                // Statement descriptor is controlled by your Stripe account settings instead
+            ];
+
+            // Configure payment method options for better authentication (lowers risk score)
+            $paymentIntentParams['payment_method_options'] = [
+                'card' => [
+                    // Request 3D Secure when needed - helps with authentication and lowers risk
+                    'request_three_d_secure' => 'automatic', // 'automatic', 'any', or 'challenge'
+                    // Enable network tokenization for better success rates
+                    'network' => null, // Let Stripe choose best network
+                ],
+            ];
+
+            // Attach customer if available (significantly lowers risk score)
+            if ($stripeCustomerId) {
+                $paymentIntentParams['customer'] = $stripeCustomerId;
+                
+                // Update customer information if it has changed (keeps data fresh)
+                try {
+                    $stripeCustomer = \Stripe\Customer::retrieve($stripeCustomerId);
+                    $needsUpdate = false;
+                    $updateData = [];
+                    
+                    if ($internalIntent->user) {
+                        $user = $internalIntent->user;
+                        
+                        // Update email if changed
+                        if ($user->email && $stripeCustomer->email !== $user->email) {
+                            $updateData['email'] = $user->email;
+                            $needsUpdate = true;
+                        }
+                        
+                        // Update name if changed
+                        if ($user->name && $stripeCustomer->name !== $user->name) {
+                            $updateData['name'] = $user->name;
+                            $needsUpdate = true;
+                        }
+                        
+                        // Update phone if changed
+                        if ($user->phone && $stripeCustomer->phone !== $user->phone) {
+                            $updateData['phone'] = $user->phone;
+                            $needsUpdate = true;
+                        }
+                        
+                        if ($needsUpdate) {
+                            \Stripe\Customer::update($stripeCustomerId, $updateData);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // If update fails, continue with payment - non-critical
+                    \Log::warning('Failed to update Stripe customer', [
+                        'customer_id' => $stripeCustomerId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Add receipt email if available (lowers risk score)
+            if ($receiptEmail) {
+                $paymentIntentParams['receipt_email'] = $receiptEmail;
+            }
+
+            $stripeIntent = \Stripe\PaymentIntent::create($paymentIntentParams);
 
             return [$stripeIntent, $stripeIntent->client_secret];
         }
