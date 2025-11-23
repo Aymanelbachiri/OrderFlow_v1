@@ -75,13 +75,27 @@ class RequireIframeFromSourceMiddleware
             ], 403);
         }
 
+        // Normalize referer host (remove www prefix for comparison)
+        $refererHostNormalized = $this->normalizeDomain($refererHost);
+
         // Check if referer domain is in allowed domains
         $isAllowed = false;
         foreach ($allowedDomains as $allowedDomain) {
-            // Exact match or subdomain match
-            if ($refererHost === $allowedDomain || 
-                str_ends_with($refererHost, '.' . $allowedDomain)) {
+            // Normalize allowed domain too
+            $allowedDomainNormalized = $this->normalizeDomain($allowedDomain);
+            
+            // Exact match, subdomain match, or www variant match
+            if ($refererHostNormalized === $allowedDomainNormalized || 
+                $refererHost === $allowedDomain ||
+                str_ends_with($refererHost, '.' . $allowedDomain) ||
+                str_ends_with($refererHostNormalized, '.' . $allowedDomainNormalized)) {
                 $isAllowed = true;
+                Log::debug('RequireIframeFromSource: Domain matched', [
+                    'referer_host' => $refererHost,
+                    'referer_normalized' => $refererHostNormalized,
+                    'allowed_domain' => $allowedDomain,
+                    'allowed_normalized' => $allowedDomainNormalized,
+                ]);
                 break;
             }
         }
@@ -89,8 +103,11 @@ class RequireIframeFromSourceMiddleware
         if (!$isAllowed) {
             // Referer domain not in allowed sources
             Log::warning('RequireIframeFromSource: Blocked unauthorized domain', [
+                'referer' => $referer,
                 'referer_host' => $refererHost,
+                'referer_normalized' => $refererHostNormalized,
                 'allowed_domains' => $allowedDomains,
+                'allowed_domains_normalized' => array_map([$this, 'normalizeDomain'], $allowedDomains),
                 'path' => $request->path(),
                 'ip' => $request->ip(),
             ]);
@@ -110,35 +127,63 @@ class RequireIframeFromSourceMiddleware
 
     /**
      * Get allowed iframe domains from active sources
-     * Reuses the same logic as SecurityHeadersMiddleware
+     * Extracts domains from both return_url and website fields
      */
     private function getAllowedIframeDomains(): array
     {
         return Cache::remember('allowed_iframe_domains', 3600, function () {
             try {
-                $sources = Source::where('is_active', true)
-                    ->whereNotNull('return_url')
-                    ->pluck('return_url')
-                    ->map(function ($url) {
-                        // Extract domain from URL
-                        $parsed = parse_url($url);
+                $sources = Source::where('is_active', true)->get();
+                $domains = [];
+                
+                foreach ($sources as $source) {
+                    // Extract domain from return_url
+                    if ($source->return_url) {
+                        $parsed = parse_url($source->return_url);
                         if (isset($parsed['host'])) {
-                            return $parsed['host'];
+                            $domains[] = $parsed['host'];
                         }
-                        return null;
-                    })
-                    ->filter()
-                    ->unique()
-                    ->values()
-                    ->toArray();
+                    }
+                    
+                    // Extract domain from website field (if it exists)
+                    if ($source->website) {
+                        $parsed = parse_url($source->website);
+                        if (isset($parsed['host'])) {
+                            $domains[] = $parsed['host'];
+                        }
+                    }
+                }
+                
+                // Remove duplicates and normalize
+                $domains = array_unique(array_filter($domains));
+                $domains = array_values($domains);
 
-                return $sources;
+                Log::debug('RequireIframeFromSource: Loaded allowed domains', [
+                    'domains' => $domains,
+                    'count' => count($domains),
+                    'sources_checked' => $sources->count(),
+                ]);
+
+                return $domains;
             } catch (\Exception $e) {
                 // Fallback to empty array if sources table doesn't exist or error occurs
                 Log::warning('Failed to fetch allowed iframe domains from sources: ' . $e->getMessage());
                 return [];
             }
         });
+    }
+
+    /**
+     * Normalize domain by removing www prefix
+     * This helps match www.example.com with example.com
+     */
+    private function normalizeDomain(string $domain): string
+    {
+        // Remove www. prefix if present
+        if (str_starts_with(strtolower($domain), 'www.')) {
+            return substr($domain, 4);
+        }
+        return $domain;
     }
 }
 
