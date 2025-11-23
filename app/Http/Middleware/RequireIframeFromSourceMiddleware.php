@@ -47,52 +47,102 @@ class RequireIframeFromSourceMiddleware
             ], 403);
         }
 
-        // Check Referer header - must exist and be from an allowed domain
+        // Check multiple indicators for iframe context (browsers often strip Referer header)
         $referer = $request->header('Referer');
+        $origin = $request->header('Origin');
+        $secFetchSite = $request->header('Sec-Fetch-Site');
+        $secFetchMode = $request->header('Sec-Fetch-Mode');
+        $currentHost = $request->getHost();
         
-        if (!$referer) {
-            // No referer = direct access, block it
-            Log::info('RequireIframeFromSource: Blocked direct access (no referer)', [
-                'path' => $request->path(),
-                'ip' => $request->ip(),
-            ]);
-            return response()->view('errors.iframe-required', [
-                'message' => 'This checkout page can only be accessed through an embedded iframe on an authorized website.'
-            ], 403);
+        // Detect iframe context using multiple indicators
+        $isIframeContext = 
+            $secFetchSite === 'cross-site' || 
+            $secFetchMode === 'nested' ||
+            ($referer && parse_url($referer, PHP_URL_HOST) !== $currentHost) ||
+            ($origin && parse_url($origin, PHP_URL_HOST) !== $currentHost);
+        
+        // Try to get domain from Referer first, then fallback to Origin
+        $sourceDomain = null;
+        $sourceUrl = null;
+        
+        if ($referer) {
+            $sourceUrl = $referer;
+            $sourceDomain = parse_url($referer, PHP_URL_HOST);
+        } elseif ($origin) {
+            $sourceUrl = $origin;
+            $sourceDomain = parse_url($origin, PHP_URL_HOST);
+        }
+        
+        // If no domain info available
+        if (!$sourceDomain) {
+            // If we have clear cross-site iframe indicators, we need domain validation
+            if ($isIframeContext && $secFetchSite === 'cross-site') {
+                Log::warning('RequireIframeFromSource: Cross-site iframe detected but no domain info available', [
+                    'path' => $request->path(),
+                    'sec_fetch_site' => $secFetchSite,
+                    'sec_fetch_mode' => $secFetchMode,
+                    'referer' => $referer,
+                    'origin' => $origin,
+                    'ip' => $request->ip(),
+                ]);
+                return response()->view('errors.iframe-required', [
+                    'message' => 'This checkout page can only be accessed through an embedded iframe on an authorized website.'
+                ], 403);
+            }
+            
+            // If no iframe indicators and no domain, likely direct access
+            if (!$isIframeContext) {
+                Log::info('RequireIframeFromSource: Blocked direct access (no iframe indicators, no domain)', [
+                    'path' => $request->path(),
+                    'ip' => $request->ip(),
+                    'sec_fetch_site' => $secFetchSite,
+                    'sec_fetch_mode' => $secFetchMode,
+                ]);
+                return response()->view('errors.iframe-required', [
+                    'message' => 'This checkout page can only be accessed through an embedded iframe on an authorized website.'
+                ], 403);
+            }
+            
+            // Same-origin iframe (same domain) - allow it
+            if ($secFetchSite === 'same-origin' || $secFetchMode === 'nested') {
+                Log::debug('RequireIframeFromSource: Allowed same-origin iframe access', [
+                    'path' => $request->path(),
+                    'sec_fetch_site' => $secFetchSite,
+                    'sec_fetch_mode' => $secFetchMode,
+                ]);
+                return $next($request);
+            }
         }
 
-        // Extract domain from referer
-        $refererHost = parse_url($referer, PHP_URL_HOST);
-        
-        if (!$refererHost) {
-            // Invalid referer URL
-            Log::warning('RequireIframeFromSource: Invalid referer URL', [
-                'referer' => $referer,
+        // Check if same-origin (source domain matches current host) - allow same-origin iframes
+        if ($sourceDomain && $this->normalizeDomain($sourceDomain) === $this->normalizeDomain($currentHost)) {
+            Log::debug('RequireIframeFromSource: Allowed same-origin iframe access', [
+                'source_domain' => $sourceDomain,
+                'current_host' => $currentHost,
                 'path' => $request->path(),
             ]);
-            return response()->view('errors.iframe-required', [
-                'message' => 'Invalid referer. This checkout page can only be accessed through an embedded iframe on an authorized website.'
-            ], 403);
+            return $next($request);
         }
 
-        // Normalize referer host (remove www prefix for comparison)
-        $refererHostNormalized = $this->normalizeDomain($refererHost);
+        // Normalize source domain (remove www prefix for comparison)
+        $sourceDomainNormalized = $this->normalizeDomain($sourceDomain);
 
-        // Check if referer domain is in allowed domains
+        // Check if source domain is in allowed domains
         $isAllowed = false;
         foreach ($allowedDomains as $allowedDomain) {
             // Normalize allowed domain too
             $allowedDomainNormalized = $this->normalizeDomain($allowedDomain);
             
             // Exact match, subdomain match, or www variant match
-            if ($refererHostNormalized === $allowedDomainNormalized || 
-                $refererHost === $allowedDomain ||
-                str_ends_with($refererHost, '.' . $allowedDomain) ||
-                str_ends_with($refererHostNormalized, '.' . $allowedDomainNormalized)) {
+            if ($sourceDomainNormalized === $allowedDomainNormalized || 
+                $sourceDomain === $allowedDomain ||
+                str_ends_with($sourceDomain, '.' . $allowedDomain) ||
+                str_ends_with($sourceDomainNormalized, '.' . $allowedDomainNormalized)) {
                 $isAllowed = true;
                 Log::debug('RequireIframeFromSource: Domain matched', [
-                    'referer_host' => $refererHost,
-                    'referer_normalized' => $refererHostNormalized,
+                    'source_domain' => $sourceDomain,
+                    'source_normalized' => $sourceDomainNormalized,
+                    'source_url' => $sourceUrl,
                     'allowed_domain' => $allowedDomain,
                     'allowed_normalized' => $allowedDomainNormalized,
                 ]);
@@ -101,13 +151,16 @@ class RequireIframeFromSourceMiddleware
         }
 
         if (!$isAllowed) {
-            // Referer domain not in allowed sources
+            // Source domain not in allowed sources
             Log::warning('RequireIframeFromSource: Blocked unauthorized domain', [
                 'referer' => $referer,
-                'referer_host' => $refererHost,
-                'referer_normalized' => $refererHostNormalized,
+                'origin' => $origin,
+                'source_domain' => $sourceDomain,
+                'source_normalized' => $sourceDomainNormalized,
                 'allowed_domains' => $allowedDomains,
                 'allowed_domains_normalized' => array_map([$this, 'normalizeDomain'], $allowedDomains),
+                'sec_fetch_site' => $secFetchSite,
+                'sec_fetch_mode' => $secFetchMode,
                 'path' => $request->path(),
                 'ip' => $request->ip(),
             ]);
@@ -118,7 +171,8 @@ class RequireIframeFromSourceMiddleware
 
         // All checks passed - allow the request
         Log::debug('RequireIframeFromSource: Allowed iframe access', [
-            'referer_host' => $refererHost,
+            'source_domain' => $sourceDomain,
+            'source_url' => $sourceUrl,
             'path' => $request->path(),
         ]);
 
