@@ -334,7 +334,14 @@
                 position: relative;
                 z-index: 1000 !important;
                 pointer-events: auto !important;
-                cursor: pointer;
+                cursor: pointer !important;
+                -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+            }
+            
+            /* Ensure no overlay blocks the button */
+            nav[x-data] > div > div > div:last-child {
+                position: relative;
+                z-index: 1001 !important;
             }
         }
     </style>
@@ -621,17 +628,27 @@
             const hamburgerButtons = document.querySelectorAll('[aria-label="Toggle menu"]');
 
             hamburgerButtons.forEach(button => {
-                // Add explicit click handler as fallback
-                button.addEventListener('click', function(e) {
-                    // Let Alpine handle it, but ensure the event propagates
-                    e.stopPropagation();
+                // Remove any existing handlers that might block
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                // Ensure button is clickable
+                newButton.style.pointerEvents = 'auto';
+                newButton.style.cursor = 'pointer';
+                newButton.style.zIndex = '1000';
+                
+                // Add explicit touch handler that works with Alpine
+                newButton.addEventListener('touchstart', function(e) {
+                    // Don't prevent default - let Alpine handle it
+                    this.style.opacity = '0.8';
                 }, {
-                    passive: false
+                    passive: true
                 });
-
-                // Also handle touch events explicitly
-                button.addEventListener('touchstart', function(e) {
-                    e.stopPropagation();
+                
+                newButton.addEventListener('touchend', function(e) {
+                    this.style.opacity = '1';
+                    // Trigger click event for Alpine
+                    this.click();
                 }, {
                     passive: true
                 });

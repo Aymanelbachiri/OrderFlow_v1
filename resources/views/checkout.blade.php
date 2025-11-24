@@ -295,26 +295,49 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Fix submit button for mobile
             const submitBtn = document.querySelector('button[type="submit"]');
+            const form = document.getElementById('checkoutForm');
             
-            if (submitBtn) {
+            if (submitBtn && form) {
+                // Add form validation before submit
+                form.addEventListener('submit', function(e) {
+                    // Check if required fields are filled
+                    const requiredFields = form.querySelectorAll('[required]');
+                    let isValid = true;
+                    
+                    requiredFields.forEach(field => {
+                        if (!field.value.trim()) {
+                            isValid = false;
+                            field.classList.add('border-red-500');
+                            // Remove error class after user starts typing
+                            field.addEventListener('input', function() {
+                                this.classList.remove('border-red-500');
+                            }, { once: true });
+                        }
+                    });
+                    
+                    // Check if pricing plan is selected
+                    const planId = form.querySelector('input[name="pricing_plan_id"]');
+                    if (planId && !planId.value) {
+                        isValid = false;
+                        alert('Please select a pricing plan first.');
+                    }
+                    
+                    if (!isValid) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('Please fill in all required fields before continuing.');
+                        return false;
+                    }
+                });
+                
                 submitBtn.addEventListener('touchstart', function(e) {
                     this.style.opacity = '0.9';
                 }, { passive: true });
                 
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
-                    
-                    // Prevent default and submit form programmatically
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const form = this.closest('form');
-                    if (form) {
-                        form.submit();
-                    }
-                    
-                    return false;
-                }, { passive: false });
+                    // Let the form's submit handler validate and submit
+                }, { passive: true });
             }
         });
         

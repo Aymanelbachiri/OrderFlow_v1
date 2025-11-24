@@ -347,20 +347,38 @@
                     this.style.opacity = '0.9';
                 }, { passive: true });
                 
+                // Add form validation before submit
+                const form = submitBtn.closest('form');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        // Check if required fields are filled
+                        const requiredFields = form.querySelectorAll('[required]');
+                        let isValid = true;
+                        
+                        requiredFields.forEach(field => {
+                            if (!field.value.trim()) {
+                                isValid = false;
+                                field.classList.add('border-red-500');
+                                // Remove error class after user starts typing
+                                field.addEventListener('input', function() {
+                                    this.classList.remove('border-red-500');
+                                }, { once: true });
+                            }
+                        });
+                        
+                        if (!isValid) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            alert('Please fill in all required fields before continuing.');
+                            return false;
+                        }
+                    });
+                }
+                
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
-                    
-                    // Prevent default and submit form programmatically
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const form = this.closest('form');
-                    if (form) {
-                        form.submit();
-                    }
-                    
-                    return false;
-                }, { passive: false });
+                    // Let the form's submit handler validate and submit
+                }, { passive: true });
                 
                 // Fix payment method cards for mobile
                 const paymentCards = document.querySelectorAll('.payment-method-card');
