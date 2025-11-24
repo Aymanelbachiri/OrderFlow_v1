@@ -8,6 +8,7 @@ use App\Models\PricingPlan;
 use App\Models\ResellerCreditPack;
 use App\Models\CustomProduct;
 use App\Models\User;
+use App\Models\Source;
 use Illuminate\Support\Str;
 
 class WordPressIntegrationController extends Controller
@@ -27,10 +28,10 @@ class WordPressIntegrationController extends Controller
             ], 401);
         }
 
-        // Get source from token (optional)
+        // Get source from token (required for iframe access)
         $token = $request->user()->currentAccessToken();
         $sourceName = null;
-        if ($token && isset($token->source_id)) {
+        if ($token && $token->source_id) {
             $source = \App\Models\Source::find($token->source_id);
             if ($source) {
                 $sourceName = $source->name;
@@ -135,12 +136,27 @@ class WordPressIntegrationController extends Controller
             ], 401);
         }
 
+        $validated = $request->validate([
+            'token_name' => 'nullable|string|max:255',
+            'source_id' => 'nullable|exists:sources,id',
+        ]);
+
+        $tokenName = $validated['token_name'] ?? 'wordpress-integration-' . Str::random(8);
+        
         // Create new token
-        $token = $user->createToken('wordpress-integration-' . Str::random(8), ['wordpress:read'])->plainTextToken;
+        $token = $user->createToken($tokenName, ['wordpress:read']);
+        
+        // Attach source if provided
+        if (!empty($validated['source_id'])) {
+            $token->accessToken->source_id = $validated['source_id'];
+            $token->accessToken->save();
+        }
+        
+        $plainTextToken = $token->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'token' => $token,
+            'token' => $plainTextToken,
             'message' => 'API token generated successfully. Store this securely in your WordPress plugin settings.'
         ]);
     }
@@ -159,13 +175,18 @@ class WordPressIntegrationController extends Controller
             ], 401);
         }
 
-        $tokens = $user->tokens()->get()->map(function($token) {
+        $tokens = $user->tokens()->with('source')->get()->map(function($token) {
             return [
                 'id' => $token->id,
                 'name' => $token->name,
                 'abilities' => $token->abilities,
                 'last_used_at' => $token->last_used_at,
                 'created_at' => $token->created_at,
+                'source_id' => $token->source_id,
+                'source' => $token->source ? [
+                    'id' => $token->source->id,
+                    'name' => $token->source->name,
+                ] : null,
             ];
         });
 

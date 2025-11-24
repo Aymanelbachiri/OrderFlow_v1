@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Source;
 use ZipArchive;
 
 class WordPressIntegrationController extends Controller
@@ -21,18 +22,26 @@ class WordPressIntegrationController extends Controller
                 ->with('error', 'Unauthorized. Admin access required.');
         }
         
-        // Get existing tokens (single-user version - no source filtering)
-        $tokens = $user->tokens()->get()->map(function($token) {
+        // Get existing tokens with source information
+        $tokens = $user->tokens()->with('source')->get()->map(function($token) {
             return [
                 'id' => $token->id,
                 'name' => $token->name,
                 'abilities' => $token->abilities,
                 'last_used_at' => $token->last_used_at,
                 'created_at' => $token->created_at,
+                'source_id' => $token->source_id,
+                'source' => $token->source ? [
+                    'id' => $token->source->id,
+                    'name' => $token->source->name,
+                ] : null,
             ];
         });
 
-        return view('admin.wordpress-integration.index', compact('tokens'));
+        // Get all active sources for dropdown
+        $sources = Source::where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.wordpress-integration.index', compact('tokens', 'sources'));
     }
 
     /**
@@ -49,12 +58,20 @@ class WordPressIntegrationController extends Controller
 
         $validated = $request->validate([
             'token_name' => 'nullable|string|max:255',
+            'source_id' => 'nullable|exists:sources,id',
         ]);
 
         $tokenName = $validated['token_name'] ?? 'wordpress-integration-' . now()->format('Y-m-d');
         
         // Create new token
         $token = $user->createToken($tokenName, ['wordpress:read']);
+        
+        // Attach source if provided
+        if (!empty($validated['source_id'])) {
+            $token->accessToken->source_id = $validated['source_id'];
+            $token->accessToken->save();
+        }
+        
         $plainTextToken = $token->plainTextToken;
 
         return redirect()->route('admin.wordpress-integration.index')
