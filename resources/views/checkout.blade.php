@@ -298,8 +298,8 @@
             const form = document.getElementById('checkoutForm');
             
             if (submitBtn && form) {
-                // Add form validation before submit
-                form.addEventListener('submit', function(e) {
+                // Validation function
+                function validateForm() {
                     // Check if required fields are filled
                     const requiredFields = form.querySelectorAll('[required]');
                     let isValid = true;
@@ -322,7 +322,12 @@
                         alert('Please select a pricing plan first.');
                     }
                     
-                    if (!isValid) {
+                    return isValid;
+                }
+                
+                // Add form validation before submit
+                form.addEventListener('submit', function(e) {
+                    if (!validateForm()) {
                         e.preventDefault();
                         e.stopPropagation();
                         alert('Please fill in all required fields before continuing.');
@@ -336,8 +341,21 @@
                 
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
-                    // Let the form's submit handler validate and submit
-                }, { passive: true });
+                    
+                    // Validate before submitting
+                    if (!validateForm()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                    }
+                    
+                    // If valid, trigger form submit
+                    e.preventDefault();
+                    e.stopPropagation();
+                    form.requestSubmit();
+                    
+                    return false;
+                }, { passive: false });
             }
         });
         

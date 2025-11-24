@@ -350,7 +350,8 @@
                 // Add form validation before submit
                 const form = submitBtn.closest('form');
                 if (form) {
-                    form.addEventListener('submit', function(e) {
+                    // Validation function
+                    function validateForm() {
                         // Check if required fields are filled
                         const requiredFields = form.querySelectorAll('[required]');
                         let isValid = true;
@@ -366,19 +367,36 @@
                             }
                         });
                         
-                        if (!isValid) {
+                        return isValid;
+                    }
+                    
+                    form.addEventListener('submit', function(e) {
+                        if (!validateForm()) {
                             e.preventDefault();
                             e.stopPropagation();
                             alert('Please fill in all required fields before continuing.');
                             return false;
                         }
                     });
+                    
+                    submitBtn.addEventListener('touchend', function(e) {
+                        this.style.opacity = '1';
+                        
+                        // Validate before submitting
+                        if (!validateForm()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                        
+                        // If valid, trigger form submit
+                        e.preventDefault();
+                        e.stopPropagation();
+                        form.requestSubmit();
+                        
+                        return false;
+                    }, { passive: false });
                 }
-                
-                submitBtn.addEventListener('touchend', function(e) {
-                    this.style.opacity = '1';
-                    // Let the form's submit handler validate and submit
-                }, { passive: true });
                 
                 // Fix payment method cards for mobile
                 const paymentCards = document.querySelectorAll('.payment-method-card');
