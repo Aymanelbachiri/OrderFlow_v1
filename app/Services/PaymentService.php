@@ -571,7 +571,7 @@ class PaymentService
                 'amount' => max($amountInCents, 50), // minimum amount safeguard
                 'currency' => $currency,
                 'metadata' => $metadata,
-                'description' => 'Web Service',
+                'description' => 'CONTROL WEB LLC : Service charge',
                 'automatic_payment_methods' => ['enabled' => true],
                 // Note: statement_descriptor is not supported with automatic_payment_methods for cards
                 // Statement descriptor is controlled by your Stripe account settings instead
