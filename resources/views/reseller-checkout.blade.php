@@ -372,8 +372,8 @@
                     
                     form.addEventListener('submit', function(e) {
                         if (!validateForm()) {
-                            e.preventDefault();
-                            e.stopPropagation();
+                    e.preventDefault();
+                    e.stopPropagation();
                             alert('Please fill in all required fields before continuing.');
                             return false;
                         }
@@ -393,9 +393,9 @@
                         e.preventDefault();
                         e.stopPropagation();
                         form.requestSubmit();
-                        
-                        return false;
-                    }, { passive: false });
+                    
+                    return false;
+                }, { passive: false });
                 }
                 
                 // Fix payment method cards for mobile

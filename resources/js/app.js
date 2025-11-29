@@ -107,14 +107,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const interactiveElements = document.querySelectorAll('button, a, input, select, textarea');
         interactiveElements.forEach(el => {
             el.classList.add('touch-target');
-        });
-
-        // Prevent double-tap zoom on buttons
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(button => {
-            button.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-            });
+            // Use CSS touch-action to prevent double-tap zoom without blocking clicks
+            if (el.tagName === 'BUTTON' || el.tagName === 'A') {
+                el.style.touchAction = 'manipulation';
+            }
         });
     }
 

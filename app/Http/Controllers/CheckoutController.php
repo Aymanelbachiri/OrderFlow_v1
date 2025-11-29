@@ -95,15 +95,15 @@ class CheckoutController extends Controller
         $planId = $request->input('pricing_plan_id') ?? $request->query('plan_id');
 
         try {
-            $validated = $request->validate([
-                'full_name' => 'required|string|max:255',
-                'email' => 'required|email',
-                'phone' => 'required|string|max:50',
-                'pricing_plan_id' => 'required|exists:pricing_plans,id',
-                'subscription_type' => 'required|in:new,renewal',
-                'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),
-                'source' => $sourceRule,
-            ]);
+        $validated = $request->validate([
+            'full_name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'phone' => 'required|string|max:50',
+            'pricing_plan_id' => 'required|exists:pricing_plans,id',
+            'subscription_type' => 'required|in:new,renewal',
+            'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),
+            'source' => $sourceRule,
+        ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Redirect back with errors and preserve plan_id
             return redirect()->route('checkout.show', ['plan_id' => $planId])

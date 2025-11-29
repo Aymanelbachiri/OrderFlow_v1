@@ -39,6 +39,17 @@
     border: 1px solid #d1d5db;
   }
 
+  /* Mobile-friendly button and link touch handling */
+  button,
+  a,
+  input[type="submit"],
+  input[type="button"],
+  [role="button"] {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+
   
 }
 

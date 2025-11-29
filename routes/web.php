@@ -32,8 +32,8 @@ Route::get('/reseller-plans', [\App\Http\Controllers\PublicResellerController::c
 
 // Public reseller checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-    Route::get('/reseller/checkout', [ResellerCheckoutController::class, 'show'])->name('reseller.checkout.show');
-    Route::post('/reseller/checkout', [ResellerCheckoutController::class, 'submit'])->name('reseller.checkout.submit');
+Route::get('/reseller/checkout', [ResellerCheckoutController::class, 'show'])->name('reseller.checkout.show');
+Route::post('/reseller/checkout', [ResellerCheckoutController::class, 'submit'])->name('reseller.checkout.submit');
 });
 
 
@@ -53,8 +53,8 @@ Route::get('/thank-you/{order}', [PublicPaymentController::class, 'thankYou'])->
 
 // Public checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
-    Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
+Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
 });
 
 // Public renewal routes (no auth)
@@ -65,8 +65,8 @@ Route::get('/renew/{orderNumber}/quick', [\App\Http\Controllers\PublicRenewalCon
 
 // Custom product checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-    Route::get('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'show'])->name('custom-product.checkout.show');
-    Route::post('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'submit'])->name('custom-product.checkout.submit');
+Route::get('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'show'])->name('custom-product.checkout.show');
+Route::post('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'submit'])->name('custom-product.checkout.submit');
 });
 
 // Authenticated dashboard -> only admin kept
