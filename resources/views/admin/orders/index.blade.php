@@ -223,7 +223,7 @@
 
                 <!-- Buttons -->
                 <div class="flex space-x-2">
-                    <button type="submit"
+                    <button type="submit" id="applyFilterBtn"
                         class="bg-[#D63613] hover:bg-[#B72D10] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
                         Apply
                     </button>
@@ -650,6 +650,27 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && !document.getElementById('deleteModal').classList.contains('hidden')) {
                 closeDeleteModal();
+            }
+        });
+
+        // Fix mobile apply button
+        document.addEventListener('DOMContentLoaded', function() {
+            const applyBtn = document.getElementById('applyFilterBtn');
+            const filterForm = applyBtn?.closest('form');
+            
+            if (applyBtn && filterForm) {
+                // Ensure button is clickable on mobile
+                applyBtn.style.touchAction = 'manipulation';
+                applyBtn.style.cursor = 'pointer';
+                applyBtn.style.pointerEvents = 'auto';
+                
+                // Add explicit touch handler for mobile
+                applyBtn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    filterForm.submit();
+                    return false;
+                }, { passive: false });
             }
         });
     </script>
