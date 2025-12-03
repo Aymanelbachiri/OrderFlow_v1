@@ -490,66 +490,6 @@ class IPTV_Integration {
                 height: 100% !important;
             }
             
-            .iptv-blocked-message {
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                right: 0 !important;
-                bottom: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                background-color: #1f2937 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                z-index: 1000000 !important;
-                padding: 2rem !important;
-                color: #ffffff !important;
-            }
-            
-            .iptv-blocked-content {
-                max-width: 600px !important;
-                background-color: #374151 !important;
-                padding: 2rem !important;
-                border-radius: 8px !important;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
-            }
-            
-            .iptv-blocked-content h2 {
-                margin: 0 0 1rem 0 !important;
-                color: #fbbf24 !important;
-                font-size: 1.5rem !important;
-            }
-            
-            .iptv-blocked-content p {
-                margin: 1rem 0 !important;
-                line-height: 1.6 !important;
-            }
-            
-            .iptv-blocked-content ul {
-                margin: 1rem 0 !important;
-                padding-left: 1.5rem !important;
-            }
-            
-            .iptv-blocked-content li {
-                margin: 0.5rem 0 !important;
-            }
-            
-            .iptv-checkout-link {
-                display: inline-block !important;
-                margin-top: 1.5rem !important;
-                padding: 0.75rem 1.5rem !important;
-                background-color: #3b82f6 !important;
-                color: #ffffff !important;
-                text-decoration: none !important;
-                border-radius: 6px !important;
-                font-weight: 600 !important;
-                transition: background-color 0.2s !important;
-            }
-            
-            .iptv-checkout-link:hover {
-                background-color: #2563eb !important;
-            }
         </style>';
         $content .= '<div class="iptv-checkout-container">';
         $content .= '<div class="iptv-checkout-iframe-wrapper">';
@@ -560,19 +500,6 @@ class IPTV_Integration {
         $content .= 'allow="payment; fullscreen" ';
         $content .= 'sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation">';
         $content .= '</iframe>';
-        $content .= '<div id="iptv-blocked-message" class="iptv-blocked-message" style="display: none;">';
-        $content .= '<div class="iptv-blocked-content">';
-        $content .= '<h2>⚠️ Checkout Blocked by Browser</h2>';
-        $content .= '<p>Your browser (or an extension) is blocking the checkout page from loading.</p>';
-        $content .= '<p><strong>To fix this:</strong></p>';
-        $content .= '<ul>';
-        $content .= '<li><strong>Brave Browser:</strong> Click the Brave Shields icon in the address bar and disable shields for this site</li>';
-        $content .= '<li><strong>Ad Blockers:</strong> Disable your ad blocker for this website</li>';
-        $content .= '<li><strong>Other Extensions:</strong> Check if any privacy/security extensions are blocking iframes</li>';
-        $content .= '</ul>';
-        $content .= '<p><a href="' . esc_url($checkout_url) . '" target="_blank" class="iptv-checkout-link">Open Checkout in New Window →</a></p>';
-        $content .= '</div>';
-        $content .= '</div>';
         $content .= '</div>';
         $content .= '</div>';
         
@@ -581,7 +508,6 @@ class IPTV_Integration {
                 var iframe = document.getElementById("iptv-checkout-iframe");
                 var container = document.querySelector(".iptv-checkout-container");
                 var wrapper = document.querySelector(".iptv-checkout-iframe-wrapper");
-                var blockedMessage = document.getElementById("iptv-blocked-message");
                 
                 if (!iframe) return;
                 
@@ -608,42 +534,6 @@ class IPTV_Integration {
                 
                 forceDimensions();
                 window.addEventListener("resize", forceDimensions);
-                
-                // Disable automatic detection - cross-origin iframes cannot be reliably checked
-                // The blocked message will only be shown if explicitly needed
-                // Users can use the "Open Checkout in New Window" link if they experience issues
-                
-                // Only check if we can access the iframe content (same-origin only)
-                // For cross-origin iframes, we assume they load correctly
-                iframe.onload = function() {
-                    // Only check for blocking if we can actually access the iframe content
-                    // This will only work for same-origin iframes
-                    setTimeout(function() {
-                        try {
-                            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                            // If we can access the document, check for specific error messages
-                            if (iframeDoc && iframeDoc.body) {
-                                var bodyText = iframeDoc.body.innerText || iframeDoc.body.textContent || "";
-                                // Only show message for specific Chrome/Chromium error pages
-                                if (bodyText.includes("ERR_BLOCKED_BY_CLIENT") || 
-                                    bodyText.includes("ERR_BLOCKED_BY_RESPONSE")) {
-                                    if (blockedMessage) {
-                                        blockedMessage.style.display = "flex";
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            // Cross-origin - this is expected and normal
-                            // Do nothing - the iframe is likely loading correctly
-                        }
-                    }, 2000);
-                };
-                
-                // Don\'t show blocked message on error - many cross-origin iframes
-                // trigger onerror but still load correctly
-                iframe.onerror = function() {
-                    // Silently ignore - cross-origin iframes often trigger this
-                };
             })();
         </script>';
         
