@@ -585,8 +585,6 @@ class IPTV_Integration {
                 
                 if (!iframe) return;
                 
-                var iframeLoaded = false;
-                
                 function forceDimensions() {
                     var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
                     var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -611,50 +609,41 @@ class IPTV_Integration {
                 forceDimensions();
                 window.addEventListener("resize", forceDimensions);
                 
-                // Only show blocked message if we can actually confirm it\'s blocked
-                function checkIfBlocked() {
-                    if (iframeLoaded) {
-                        return false; // Iframe loaded successfully, don\'t show blocked message
-                    }
-                    
-                    try {
-                        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                        if (iframeDoc && iframeDoc.body) {
-                            var bodyText = iframeDoc.body.innerText || iframeDoc.body.textContent || "";
-                            // Only check for specific error messages, not generic "blocked" text
-                            if (bodyText.includes("ERR_BLOCKED_BY_CLIENT") || 
-                                bodyText.includes("ERR_BLOCKED_BY_RESPONSE") ||
-                                iframeDoc.body.classList.contains("neterror")) {
-                                if (blockedMessage) {
-                                    blockedMessage.style.display = "flex";
-                                }
-                                return true;
-                            }
-                        }
-                    } catch (e) {
-                        // Cross-origin - expected, this is normal behavior
-                        // Don\'t show blocked message for cross-origin iframes
-                    }
-                    return false;
-                }
+                // Disable automatic detection - cross-origin iframes cannot be reliably checked
+                // The blocked message will only be shown if explicitly needed
+                // Users can use the "Open Checkout in New Window" link if they experience issues
                 
+                // Only check if we can access the iframe content (same-origin only)
+                // For cross-origin iframes, we assume they load correctly
                 iframe.onload = function() {
-                    iframeLoaded = true;
-                    // Wait a bit before checking, in case there\'s an error page
+                    // Only check for blocking if we can actually access the iframe content
+                    // This will only work for same-origin iframes
                     setTimeout(function() {
-                        checkIfBlocked();
-                    }, 3000);
+                        try {
+                            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            // If we can access the document, check for specific error messages
+                            if (iframeDoc && iframeDoc.body) {
+                                var bodyText = iframeDoc.body.innerText || iframeDoc.body.textContent || "";
+                                // Only show message for specific Chrome/Chromium error pages
+                                if (bodyText.includes("ERR_BLOCKED_BY_CLIENT") || 
+                                    bodyText.includes("ERR_BLOCKED_BY_RESPONSE")) {
+                                    if (blockedMessage) {
+                                        blockedMessage.style.display = "flex";
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            // Cross-origin - this is expected and normal
+                            // Do nothing - the iframe is likely loading correctly
+                        }
+                    }, 2000);
                 };
                 
-                // onerror may not fire for cross-origin iframes, so we don\'t rely on it
-                // Only show blocked message if we can actually confirm it\'s blocked
+                // Don\'t show blocked message on error - many cross-origin iframes
+                // trigger onerror but still load correctly
                 iframe.onerror = function() {
-                    // Don\'t show blocked message immediately on error
-                    // Many cross-origin iframes will trigger onerror but still load correctly
+                    // Silently ignore - cross-origin iframes often trigger this
                 };
-                
-                // Removed the aggressive dimension check that causes false positives
-                // The iframe should load normally without this check
             })();
         </script>';
         
