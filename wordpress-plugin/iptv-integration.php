@@ -585,6 +585,8 @@ class IPTV_Integration {
                 
                 if (!iframe) return;
                 
+                var iframeLoaded = false;
+                
                 function forceDimensions() {
                     var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
                     var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -609,47 +611,50 @@ class IPTV_Integration {
                 forceDimensions();
                 window.addEventListener("resize", forceDimensions);
                 
-                iframe.onload = function() {
-                    setTimeout(function() {
-                        try {
-                            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                            if (iframeDoc && iframeDoc.body) {
-                                var bodyText = iframeDoc.body.innerText || iframeDoc.body.textContent || "";
-                                if (bodyText.includes("ERR_BLOCKED_BY_CLIENT") || 
-                                    bodyText.includes("blocked") || 
-                                    bodyText.includes("Brave") ||
-                                    iframeDoc.body.classList.contains("neterror")) {
-                                    if (blockedMessage) {
-                                        blockedMessage.style.display = "flex";
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            // Cross-origin - expected
-                        }
-                    }, 2000);
-                };
-                
-                iframe.onerror = function() {
-                    if (blockedMessage) {
-                        blockedMessage.style.display = "flex";
+                // Only show blocked message if we can actually confirm it\'s blocked
+                function checkIfBlocked() {
+                    if (iframeLoaded) {
+                        return false; // Iframe loaded successfully, don\'t show blocked message
                     }
-                };
-                
-                setTimeout(function() {
-                    var rect = iframe.getBoundingClientRect();
-                    if (rect.width === 0 || rect.height === 0) {
-                        forceDimensions();
-                        setTimeout(function() {
-                            var newRect = iframe.getBoundingClientRect();
-                            if (newRect.width === 0 || newRect.height === 0) {
+                    
+                    try {
+                        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc && iframeDoc.body) {
+                            var bodyText = iframeDoc.body.innerText || iframeDoc.body.textContent || "";
+                            // Only check for specific error messages, not generic "blocked" text
+                            if (bodyText.includes("ERR_BLOCKED_BY_CLIENT") || 
+                                bodyText.includes("ERR_BLOCKED_BY_RESPONSE") ||
+                                iframeDoc.body.classList.contains("neterror")) {
                                 if (blockedMessage) {
                                     blockedMessage.style.display = "flex";
                                 }
+                                return true;
                             }
-                        }, 100);
+                        }
+                    } catch (e) {
+                        // Cross-origin - expected, this is normal behavior
+                        // Don\'t show blocked message for cross-origin iframes
                     }
-                }, 1000);
+                    return false;
+                }
+                
+                iframe.onload = function() {
+                    iframeLoaded = true;
+                    // Wait a bit before checking, in case there\'s an error page
+                    setTimeout(function() {
+                        checkIfBlocked();
+                    }, 3000);
+                };
+                
+                // onerror may not fire for cross-origin iframes, so we don\'t rely on it
+                // Only show blocked message if we can actually confirm it\'s blocked
+                iframe.onerror = function() {
+                    // Don\'t show blocked message immediately on error
+                    // Many cross-origin iframes will trigger onerror but still load correctly
+                };
+                
+                // Removed the aggressive dimension check that causes false positives
+                // The iframe should load normally without this check
             })();
         </script>';
         
