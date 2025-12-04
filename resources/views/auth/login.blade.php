@@ -97,7 +97,8 @@
     
                         <!-- Submit Button -->
                         <button type="submit"
-                                class="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-800 dark:to-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-black hover:to-gray-900 dark:hover:from-gray-700 dark:hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8ACD00] transition-all duration-200 shadow-lg hover:shadow-xl">
+                                class="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-800 dark:to-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-black hover:to-gray-900 dark:hover:from-gray-700 dark:hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8ACD00] transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] relative z-10 touch-manipulation"
+                                style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); min-height: 44px; cursor: pointer; pointer-events: auto;">
                             Get Started
                         </button>
     
@@ -112,6 +113,32 @@
             </div>
         </div>
     
+        <style>
+            /* Mobile button fix - ensure button is always clickable */
+            button[type="submit"] {
+                position: relative;
+                z-index: 10;
+                pointer-events: auto !important;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+                min-height: 44px;
+                cursor: pointer;
+            }
+            
+            /* Ensure form doesn't block button clicks */
+            form {
+                position: relative;
+                z-index: 1;
+            }
+            
+            /* Prevent any overlays from blocking the button */
+            @media (max-width: 768px) {
+                button[type="submit"] {
+                    z-index: 999;
+                }
+            }
+        </style>
+        
         <script>
             function togglePassword() {
                 const passwordInput = document.getElementById('password');
