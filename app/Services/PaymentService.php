@@ -52,8 +52,8 @@ class PaymentService
         $configs = [
             'stripe' => [
                 'key' => 'stripe',
-                'name' => 'Stripe',
-                'description' => 'Stripe',
+                'name' => 'Card',
+                'description' => 'Credit/Debit Card',
                 'icon' => 'credit-card',
                 'enabled' => self::isStripeConfigured(),
                 'configured' => self::isStripeConfigured(),

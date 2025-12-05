@@ -22,7 +22,7 @@ class RequireIframeFromSourceMiddleware
         // Check if this is a custom product checkout route
         if ($request->route()->hasParameter('product')) {
             $product = $request->route('product');
-            
+
             // If product is a CustomProduct model instance and allows direct checkout, bypass iframe check
             if ($product instanceof CustomProduct && $product->allow_direct_checkout) {
                 Log::debug('RequireIframeFromSource: Allowed direct access for custom product with allow_direct_checkout enabled', [
@@ -33,9 +33,20 @@ class RequireIframeFromSourceMiddleware
                 return $next($request);
             }
         }
+
+        // Allow local development access (localhost, 127.0.0.1)
+        $currentHost = $request->getHost();
+        if ($this->isLocalDevelopment($currentHost)) {
+            Log::debug('RequireIframeFromSource: Allowed local development access', [
+                'host' => $currentHost,
+                'path' => $request->path(),
+            ]);
+            return $next($request);
+        }
+
         // Get allowed domains from active sources
         $allowedDomains = $this->getAllowedIframeDomains();
-        
+
         // If no sources are configured, block all access for security
         if (empty($allowedDomains)) {
             Log::warning('RequireIframeFromSource: No allowed domains configured', [
@@ -261,6 +272,35 @@ class RequireIframeFromSourceMiddleware
             return substr($domain, 4);
         }
         return $domain;
+    }
+
+    /**
+     * Check if the current host is a local development environment
+     */
+    private function isLocalDevelopment(string $host): bool
+    {
+        $localHosts = [
+            'localhost',
+            '127.0.0.1',
+            '::1',
+        ];
+
+        // Check exact match
+        if (in_array($host, $localHosts)) {
+            return true;
+        }
+
+        // Check if host starts with localhost: (e.g., localhost:8000)
+        if (str_starts_with($host, 'localhost:')) {
+            return true;
+        }
+
+        // Check if host starts with 127.0.0.1: (e.g., 127.0.0.1:8000)
+        if (str_starts_with($host, '127.0.0.1:')) {
+            return true;
+        }
+
+        return false;
     }
 }
 

@@ -27,8 +27,8 @@ Route::view('/services/digital-marketing', 'services.digital-marketing')->name('
 Route::view('/services/other-services', 'services.other-services')->name('other-services');
 
 // Keep pricing pages accessible (hidden from navigation)
-Route::get('/pricing', [HomeController::class, 'pricing'])->name('pricing');
-Route::get('/reseller-plans', [\App\Http\Controllers\PublicResellerController::class, 'creditPacks'])->name('public.reseller-plans');
+// Route::get('/pricing', [HomeController::class, 'pricing'])->name('pricing');
+// Route::get('/reseller-plans', [\App\Http\Controllers\PublicResellerController::class, 'creditPacks'])->name('public.reseller-plans');
 
 // Public reseller checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
