@@ -26,6 +26,21 @@ class CheckoutController extends Controller
         $availablePaymentMethods = \App\Services\PaymentService::getAvailablePaymentMethods();
         $defaultPaymentMethod = \App\Services\PaymentService::getDefaultPaymentMethod();
 
+        // Get user subscriptions if email is provided (for renewal flow)
+        $subscriptions = collect();
+        $email = $request->query('email');
+        if ($email) {
+            $subscriptions = \App\Models\Order::where('order_type', 'subscription')
+                ->where('status', '!=', 'cancelled')
+                ->where('status', '!=', 'completed')
+                ->whereHas('user', function($q) use ($email) {
+                    $q->whereRaw('LOWER(email) = ?', [strtolower($email)]);
+                })
+                ->with(['user', 'pricingPlan'])
+                ->latest('expires_at')
+                ->get();
+        }
+
         $safePlanId = '';
         if (!empty($plan?->id)) {
             $safePlanId = (string) $plan->id;
@@ -81,6 +96,8 @@ class CheckoutController extends Controller
             'planId' => $safePlanId,
             'availablePaymentMethods' => $availablePaymentMethods,
             'defaultPaymentMethod' => $defaultPaymentMethod,
+            'subscriptions' => $subscriptions,
+            'email' => $email,
         ]);
     }
 
@@ -101,13 +118,21 @@ class CheckoutController extends Controller
             'phone' => 'required|string|max:50',
             'pricing_plan_id' => 'required|exists:pricing_plans,id',
             'subscription_type' => 'required|in:new,renewal',
+            'renewal_order_number' => 'nullable|string|exists:orders,order_number',
             'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),
             'source' => $sourceRule,
         ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Redirect back with errors and preserve plan_id
-            return redirect()->route('checkout.show', ['plan_id' => $planId])
+            return redirect()->route('checkout.show', ['plan_id' => $planId, 'email' => $request->input('email')])
                 ->withErrors($e->errors())
+                ->withInput();
+        }
+
+        // Validate renewal order number if subscription type is renewal
+        if ($validated['subscription_type'] === 'renewal' && empty($validated['renewal_order_number'])) {
+            return redirect()->route('checkout.show', ['plan_id' => $planId, 'email' => $validated['email']])
+                ->withErrors(['renewal_order_number' => 'Please select a subscription to renew.'])
                 ->withInput();
         }
 
@@ -148,6 +173,63 @@ class CheckoutController extends Controller
         }
 
         // Create a payment intent to proceed to selected gateway
+        $orderData = [
+            'user_id' => $user->id,
+            'pricing_plan_id' => $plan->id,
+            'source' => $sourceFromRequest,
+            'order_type' => 'subscription',
+            'subscription_type' => $validated['subscription_type'],
+            'customer' => [
+                'name' => $validated['full_name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+            ],
+        ];
+
+        // Handle renewal logic
+        if ($validated['subscription_type'] === 'renewal' && !empty($validated['renewal_order_number'])) {
+            // Find the original order
+            $originalOrder = \App\Models\Order::where('order_number', $validated['renewal_order_number'])
+                ->where('order_type', 'subscription')
+                ->first();
+
+            if ($originalOrder) {
+                // Add renewal tracking
+                $orderData['renewal_of_order_id'] = $originalOrder->id;
+                $orderData['renewal_of_order_number'] = $originalOrder->order_number;
+
+                // Keep existing credentials
+                $orderData['credentials_option'] = 'keep';
+                $orderData['renewal_credentials'] = [
+                    'subscription_username' => $originalOrder->subscription_username,
+                    'subscription_password' => $originalOrder->subscription_password,
+                    'subscription_url' => $originalOrder->subscription_url,
+                    'devices' => $originalOrder->devices,
+                ];
+
+                // Calculate start and expiry dates based on whether the original order is expired
+                $isExpired = $originalOrder->isExpired();
+
+                if ($isExpired) {
+                    // If expired, start from now
+                    $orderData['starts_at'] = now();
+                    $orderData['expires_at'] = now()->addMonths($plan->duration_months);
+                } else {
+                    // If not expired, extend from current expiry date
+                    $orderData['starts_at'] = $originalOrder->expires_at;
+                    $orderData['expires_at'] = $originalOrder->expires_at->copy()->addMonths($plan->duration_months);
+                }
+            } else {
+                // If original order not found, treat as new subscription
+                $orderData['starts_at'] = now();
+                $orderData['expires_at'] = now()->addMonths($plan->duration_months);
+            }
+        } else {
+            // New subscription
+            $orderData['starts_at'] = now();
+            $orderData['expires_at'] = now()->addMonths($plan->duration_months);
+        }
+
         $paymentIntent = PaymentIntent::create([
             'user_id' => $user->id,
             'pricing_plan_id' => $plan->id,
@@ -157,20 +239,7 @@ class CheckoutController extends Controller
             'currency' => 'USD',
             'status' => 'pending',
             'order_type' => 'subscription',
-            'order_data' => [
-                'user_id' => $user->id,
-                'pricing_plan_id' => $plan->id,
-                'source' => $sourceFromRequest,
-                'order_type' => 'subscription',
-                'subscription_type' => $validated['subscription_type'],
-                'starts_at' => now(),
-                'expires_at' => now()->addMonths($plan->duration_months),
-                'customer' => [
-                    'name' => $validated['full_name'],
-                    'email' => $validated['email'],
-                    'phone' => $validated['phone'],
-                ],
-            ],
+            'order_data' => $orderData,
             'expires_at' => now()->addHour(),
         ]);
 
@@ -182,6 +251,46 @@ class CheckoutController extends Controller
             'coinbase_commerce' => redirect()->route('public.payment.coinbase-commerce', $paymentIntent),
             default => redirect()->route('checkout.show')->with('error', 'Unsupported payment method'),
         };
+    }
+
+    /**
+     * Fetch subscriptions by email (AJAX endpoint)
+     */
+    public function fetchSubscriptions(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = $request->input('email');
+
+        $subscriptions = \App\Models\Order::where('order_type', 'subscription')
+            ->where('status', '!=', 'cancelled')
+            ->where('status', '!=', 'completed')
+            ->whereHas('user', function($q) use ($email) {
+                $q->whereRaw('LOWER(email) = ?', [strtolower($email)]);
+            })
+            ->with(['user', 'pricingPlan'])
+            ->latest('expires_at')
+            ->get();
+
+        // Format subscriptions for JSON response
+        $formattedSubscriptions = $subscriptions->map(function($subscription) {
+            return [
+                'order_number' => $subscription->order_number,
+                'plan_name' => $subscription->pricingPlan->display_name ?? 'Subscription',
+                'status' => $subscription->status,
+                'is_active' => $subscription->isActive(),
+                'is_expired' => $subscription->isExpired(),
+                'expires_at' => $subscription->expires_at ? $subscription->expires_at->format('M d, Y') : null,
+                'days_until_expiry' => $subscription->daysUntilExpiry(),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'subscriptions' => $formattedSubscriptions,
+        ]);
     }
 }
 

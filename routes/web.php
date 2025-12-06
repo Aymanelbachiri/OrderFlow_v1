@@ -55,13 +55,16 @@ Route::get('/thank-you/{order}', [PublicPaymentController::class, 'thankYou'])->
 Route::middleware(['require.iframe.source'])->group(function () {
 Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
 Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
+Route::post('/checkout/fetch-subscriptions', [CheckoutController::class, 'fetchSubscriptions'])->name('checkout.fetch-subscriptions');
 });
 
-// Public renewal routes (no auth)
+// Public renewal routes (no auth) - iframe only from authorized sources
+Route::middleware(['require.iframe.source'])->group(function () {
 Route::get('/renew', [\App\Http\Controllers\PublicRenewalController::class, 'lookup'])->name('renewal.lookup');
 Route::get('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'show'])->name('renewal.show');
 Route::post('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'submit'])->name('renewal.submit');
 Route::get('/renew/{orderNumber}/quick', [\App\Http\Controllers\PublicRenewalController::class, 'quickRenew'])->name('renewal.quick');
+});
 
 // Custom product checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {

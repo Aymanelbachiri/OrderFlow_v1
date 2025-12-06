@@ -123,6 +123,7 @@
                             <input type="hidden" name="source" value="{{ request('source', 'main') }}">
                             <input type="hidden" name="pricing_plan_id"
                                 value="{{ $planId ?? old('pricing_plan_id', '') }}">
+                            <input type="hidden" name="renewal_order_number" id="renewal_order_number" value="{{ old('renewal_order_number', '') }}">
 
                             <!-- Personal Info -->
                             <section>
@@ -196,6 +197,17 @@
                                             </div>
                                         </div>
                                     </label>
+                                </div>
+
+                                <!-- Renewal Subscription Selection (shown when renewal is selected) -->
+                                <div id="renewal-subscription-section" class="mt-6 hidden">
+                                    <div id="renewal-subscriptions-container">
+                                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
+                                            <p class="text-sm text-blue-800 dark:text-blue-300">
+                                                <strong>Note:</strong> Enter your email address above to see your active subscriptions.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
 
@@ -392,6 +404,9 @@
         });
         
         // Subscription Type Radio Button Functionality
+        const renewalSection = document.getElementById('renewal-subscription-section');
+        const renewalOrderNumberInput = document.getElementById('renewal_order_number');
+
         document.querySelectorAll('.subscription-type-radio').forEach(radio => {
             radio.addEventListener('change', function() {
                 document.querySelectorAll('.subscription-type-card').forEach(card => {
@@ -402,10 +417,25 @@
                     const card = this.closest('.subscription-type-card');
                     card.querySelector('.subscription-type-check').classList.remove('hidden');
                     card.querySelector('div').classList.add('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+
+                    // Show/hide renewal subscription section
+                    if (renewalSection) {
+                        if (this.value === 'renewal') {
+                            renewalSection.classList.remove('hidden');
+                            // Fetch subscriptions when renewal is selected
+                            fetchSubscriptions();
+                        } else {
+                            renewalSection.classList.add('hidden');
+                            // Clear renewal order number when switching to new subscription
+                            if (renewalOrderNumberInput) {
+                                renewalOrderNumberInput.value = '';
+                            }
+                        }
+                    }
                 }
             });
         });
-        
+
         // Initialize both payment method and subscription type selections on page load
         document.addEventListener('DOMContentLoaded', function() {
             const selectedPaymentRadio = document.querySelector('.payment-method-radio:checked');
@@ -421,6 +451,152 @@
             const selectedSubscriptionRadio = document.querySelector('.subscription-type-radio:checked');
             if (selectedSubscriptionRadio) selectedSubscriptionRadio.dispatchEvent(new Event('change'));
         });
+
+        // Fetch subscriptions when email is entered and renewal is selected
+        const emailInput = document.querySelector('input[name="email"]');
+        const renewalSubscriptionsContainer = document.getElementById('renewal-subscriptions-container');
+        let fetchTimeout = null;
+
+        function fetchSubscriptions() {
+            const email = emailInput.value.trim();
+            const renewalRadio = document.querySelector('input[name="subscription_type"][value="renewal"]');
+
+            // Only fetch if renewal is selected and email is valid
+            if (!renewalRadio || !renewalRadio.checked || !email || !email.includes('@')) {
+                return;
+            }
+
+            // Show loading state
+            renewalSubscriptionsContainer.innerHTML = `
+                <div class="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-center">
+                    <svg class="animate-spin h-6 w-6 mx-auto text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading subscriptions...</p>
+                </div>
+            `;
+
+            // Fetch subscriptions via AJAX
+            fetch('{{ route('checkout.fetch-subscriptions') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.subscriptions.length > 0) {
+                    renderSubscriptions(data.subscriptions);
+                } else {
+                    renewalSubscriptionsContainer.innerHTML = `
+                        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl">
+                            <p class="text-sm text-yellow-800 dark:text-yellow-300">
+                                No active subscriptions found for this email address.
+                            </p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching subscriptions:', error);
+                renewalSubscriptionsContainer.innerHTML = `
+                    <div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                        <p class="text-sm text-red-800 dark:text-red-300">
+                            Error loading subscriptions. Please try again.
+                        </p>
+                    </div>
+                `;
+            });
+        }
+
+        function renderSubscriptions(subscriptions) {
+            let html = '<div class="space-y-3"><p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Select the subscription you want to renew:</p>';
+
+            subscriptions.forEach(subscription => {
+                const statusClass = subscription.is_active
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : subscription.is_expired
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+
+                html += `
+                    <label class="renewal-subscription-card relative cursor-pointer group block">
+                        <input type="radio" name="renewal_order_number_display" value="${subscription.order_number}"
+                            class="sr-only renewal-subscription-radio">
+                        <div class="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 hover:border-indigo-500 transition-all duration-200">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <h4 class="font-semibold text-gray-900 dark:text-white">
+                                            ${subscription.plan_name}
+                                        </h4>
+                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full ${statusClass}">
+                                            ${subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                        <div><span class="font-medium">Order:</span> ${subscription.order_number}</div>
+                                        ${subscription.expires_at ? `<div><span class="font-medium">Expires:</span> ${subscription.expires_at}</div>` : ''}
+                                    </div>
+                                </div>
+                                <div class="renewal-subscription-check hidden w-6 h-6 bg-indigo-600 rounded-full text-white flex items-center justify-center ml-3">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            });
+
+            html += '</div>';
+            renewalSubscriptionsContainer.innerHTML = html;
+
+            // Re-attach event listeners to new radio buttons
+            attachRenewalSubscriptionListeners();
+        }
+
+        function attachRenewalSubscriptionListeners() {
+            document.querySelectorAll('.renewal-subscription-radio').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.querySelectorAll('.renewal-subscription-card').forEach(card => {
+                        const div = card.querySelector('div');
+                        div.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+                        div.classList.add('border-gray-200', 'dark:border-gray-700');
+                        card.querySelector('.renewal-subscription-check').classList.add('hidden');
+                    });
+                    if (this.checked) {
+                        const card = this.closest('.renewal-subscription-card');
+                        const div = card.querySelector('div');
+                        div.classList.add('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+                        div.classList.remove('border-gray-200', 'dark:border-gray-700');
+                        card.querySelector('.renewal-subscription-check').classList.remove('hidden');
+
+                        // Update hidden input with selected order number
+                        if (renewalOrderNumberInput) {
+                            renewalOrderNumberInput.value = this.value;
+                        }
+                    }
+                });
+            });
+        }
+
+        // Debounce email input to fetch subscriptions
+        if (emailInput) {
+            emailInput.addEventListener('input', function() {
+                clearTimeout(fetchTimeout);
+                fetchTimeout = setTimeout(() => {
+                    const renewalRadio = document.querySelector('input[name="subscription_type"][value="renewal"]');
+                    if (renewalRadio && renewalRadio.checked) {
+                        fetchSubscriptions();
+                    }
+                }, 500); // Wait 500ms after user stops typing
+            });
+        }
     </script>
 
     <style>

@@ -240,7 +240,20 @@ class PublicRenewalController extends Controller
                 'devices' => $originalOrder->devices,
             ];
         }
-        
+
+        // Calculate start and expiry dates based on whether the original order is expired
+        $isExpired = $originalOrder->isExpired();
+
+        if ($isExpired) {
+            // If expired, start from now
+            $startsAt = now();
+            $expiresAt = now()->addMonths($plan->duration_months);
+        } else {
+            // If not expired, extend from current expiry date
+            $startsAt = $originalOrder->expires_at;
+            $expiresAt = $originalOrder->expires_at->copy()->addMonths($plan->duration_months);
+        }
+
         // Create payment intent for renewal
         $paymentIntent = PaymentIntent::create([
             'user_id' => $user->id,
@@ -259,8 +272,8 @@ class PublicRenewalController extends Controller
                 'subscription_type' => 'renewal', // Mark as renewal
                 'renewal_of_order_id' => $originalOrder->id, // Link to original order
                 'renewal_of_order_number' => $originalOrder->order_number,
-                'starts_at' => $originalOrder->expires_at ?? now(), // Start from expiry of old order
-                'expires_at' => ($originalOrder->expires_at ?? now())->addMonths($plan->duration_months),
+                'starts_at' => $startsAt,
+                'expires_at' => $expiresAt,
                 'credentials_option' => 'keep', // Always keep existing credentials for renewals
                 'renewal_credentials' => $renewalCredentials,
                 'customer' => [
@@ -347,7 +360,20 @@ class PublicRenewalController extends Controller
         // Determine source: prioritize query param, then default 'renewal'
         // Do NOT use original order source - renewal should use the new source from the URL
         $renewalSource = $source ?? 'renewal';
-        
+
+        // Calculate start and expiry dates based on whether the original order is expired
+        $isExpired = $order->isExpired();
+
+        if ($isExpired) {
+            // If expired, start from now
+            $startsAt = now();
+            $expiresAt = now()->addMonths($plan->duration_months);
+        } else {
+            // If not expired, extend from current expiry date
+            $startsAt = $order->expires_at;
+            $expiresAt = $order->expires_at->copy()->addMonths($plan->duration_months);
+        }
+
         // Create payment intent
         $paymentIntent = PaymentIntent::create([
             'user_id' => $user->id,
@@ -366,8 +392,8 @@ class PublicRenewalController extends Controller
                 'subscription_type' => 'renewal',
                 'renewal_of_order_id' => $order->id,
                 'renewal_of_order_number' => $order->order_number,
-                'starts_at' => $order->expires_at ?? now(),
-                'expires_at' => ($order->expires_at ?? now())->addMonths($plan->duration_months),
+                'starts_at' => $startsAt,
+                'expires_at' => $expiresAt,
                 'customer' => [
                     'name' => $user->name,
                     'email' => $user->email,
