@@ -121,12 +121,12 @@
                         @else
                             <form id="payment-form" class="space-y-6">
                                 <!-- Payment Element -->
-                                <div id="payment-element">
+                                <div id="payment-element" style="margin-bottom: 24px;">
                                     <!-- Payment Element will be mounted here -->
                                 </div>
                                 <div id="payment-element-errors" role="alert" class="mt-3 text-sm text-red-600 dark:text-red-400"></div>
                                 <!-- Security Notice -->
-                                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4" style="margin-bottom: 24px;">
                                     <div class="flex items-start space-x-3">
                                         <svg class="w-5 h-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
@@ -138,15 +138,17 @@
                                     </div>
                                 </div>
 
-                                <!-- Submit Button -->
-                                <button type="submit" id="submit"
-                                        class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.98] relative z-10 touch-manipulation"
-                                        style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); min-height: 48px; cursor: pointer; pointer-events: auto;">
-                                    <span id="button-text">Complete Payment - ${{ number_format($paymentIntent->amount, 2) }}</span>
-                                    <span id="spinner" class="hidden">
-                                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
-                                    </span>
-                                </button>
+                                <!-- Submit Button - Separated with clear spacing -->
+                                <div style="margin-top: 32px; position: relative; z-index: 999;">
+                                    <button type="submit" id="submit"
+                                            class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.98]"
+                                            style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); min-height: 52px; cursor: pointer; pointer-events: auto; position: relative; z-index: 999;">
+                                        <span id="button-text">Complete Payment - ${{ number_format($paymentIntent->amount, 2) }}</span>
+                                        <span id="spinner" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                        </span>
+                                    </button>
+                                </div>
                             </form>
                         @endif
                     </div>
@@ -192,6 +194,22 @@
 
 .animate-spin {
     animation: spin 1s linear infinite;
+}
+
+/* Submit button - ensure it's always on top and clickable */
+#submit {
+    transition: transform 0.1s ease, opacity 0.3s ease;
+    will-change: transform;
+}
+
+#submit:active {
+    transform: scale(0.98) !important;
+}
+
+/* Ensure payment element doesn't overflow */
+#payment-element iframe {
+    max-height: 400px;
+    overflow: hidden;
 }
 </style>
 
@@ -330,8 +348,10 @@ const submitBtn = document.getElementById('submit');
 const btnText = document.getElementById('button-text');
 const spinner = document.getElementById('spinner');
 
-form.addEventListener('submit', async function(e) {
+// Handle payment submission
+async function handlePaymentSubmit(e) {
     e.preventDefault();
+    e.stopPropagation();
 
     // Prevent double submission
     if (submitBtn.disabled) {
@@ -383,6 +403,36 @@ form.addEventListener('submit', async function(e) {
         submitBtn.style.opacity = '1';
         submitBtn.style.cursor = 'pointer';
     }
+}
+
+// Add form submit listener
+form.addEventListener('submit', handlePaymentSubmit);
+
+// MOBILE FIX: Add touchend listener directly to button
+submitBtn.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Visual feedback
+    submitBtn.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+        submitBtn.style.transform = 'scale(1)';
+    }, 100);
+
+    // Trigger form submit
+    if (!submitBtn.disabled) {
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    }
+}, { passive: false });
+
+// Also add click listener for desktop
+submitBtn.addEventListener('click', function(e) {
+    // Let the form submit handle it naturally
+    // This is just for visual feedback
+    submitBtn.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+        submitBtn.style.transform = 'scale(1)';
+    }, 100);
 });
 </script>
 @endif
