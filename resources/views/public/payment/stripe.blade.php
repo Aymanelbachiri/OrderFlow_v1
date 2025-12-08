@@ -175,6 +175,7 @@
 /* Stripe Payment Element Styling */
 #payment-element {
     padding: 12px;
+    margin-bottom: 1.5rem;
 }
 
 /* Dark mode support for Payment Element container */
@@ -204,10 +205,31 @@
     display: none;
 }
 
-/* Ensure button is always clickable on mobile */
+/* Ensure button is always clickable on mobile - AGGRESSIVE FIX */
 #submit {
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+    position: relative !important;
+    z-index: 9999 !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+#submit:disabled {
+    cursor: not-allowed !important;
+}
+
+/* Ensure form doesn't block button */
+#payment-form {
+    position: relative;
+    z-index: 1;
+}
+
+/* Ensure payment element iframe doesn't overflow and block button */
+#payment-element iframe {
+    max-width: 100% !important;
 }
 </style>
 
@@ -342,9 +364,17 @@ observer.observe(document.documentElement, {
 
 // Stripe recommended approach - handle form submission
 const form = document.getElementById('payment-form');
+const submitButton = document.getElementById('submit');
 
-form.addEventListener('submit', async (event) => {
+// Handle form submission
+async function handleSubmit(event) {
     event.preventDefault();
+    event.stopPropagation();
+
+    // Prevent double submission
+    if (submitButton.disabled) {
+        return false;
+    }
 
     setLoading(true);
 
@@ -369,6 +399,22 @@ form.addEventListener('submit', async (event) => {
     }
 
     setLoading(false);
+    return false;
+}
+
+// Add both form submit and button click listeners for maximum compatibility
+form.addEventListener('submit', handleSubmit);
+
+// Fallback for mobile - also listen to button click
+submitButton.addEventListener('click', function(e) {
+    // If button is inside form, let form submit handle it
+    // This is just a fallback to ensure button is responsive
+    if (!submitButton.disabled) {
+        // Trigger form submit
+        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    }
+    e.preventDefault();
+    return false;
 });
 
 // ------- UI helpers -------
