@@ -402,6 +402,27 @@ document.getElementById('payment-form').addEventListener('submit', async functio
         spinner.classList.add('hidden');
     }
 });
+
+// Mobile button fix
+document.addEventListener('DOMContentLoaded', function() {
+    const submitButton = document.getElementById('submit-button');
+    const paymentForm = document.getElementById('payment-form');
+    
+    if (submitButton && paymentForm) {
+        submitButton.style.touchAction = 'manipulation';
+        submitButton.style.cursor = 'pointer';
+        
+        submitButton.addEventListener('touchend', function(e) {
+            if (!this.disabled) {
+                e.preventDefault();
+                e.stopPropagation();
+                const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                paymentForm.dispatchEvent(submitEvent);
+            }
+            return false;
+        }, { passive: false });
+    }
+});
 </script>
 @endif
 @endsection
