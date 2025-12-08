@@ -178,11 +178,19 @@
 /* Stripe Payment Element Styling */
 #payment-element {
     padding: 12px;
+    position: relative;
+    z-index: 1;
 }
 
 /* Dark mode support for Payment Element container */
 .dark #payment-element {
     background-color: transparent;
+}
+
+/* Ensure form doesn't block button clicks */
+#payment-form {
+    position: relative;
+    z-index: 1;
 }
 
 /* Custom spinner animation */
@@ -194,6 +202,25 @@
 
 .animate-spin {
     animation: spin 1s linear infinite;
+}
+
+/* Mobile button fix - ensure button is always clickable */
+#submit-button {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    min-height: 48px;
+    cursor: pointer;
+}
+
+/* Prevent any overlays from blocking the button on mobile */
+@media (max-width: 768px) {
+    #submit-button {
+        z-index: 999;
+        min-height: 52px;
+    }
 }
 </style>
 
@@ -403,24 +430,27 @@ document.getElementById('payment-form').addEventListener('submit', async functio
     }
 });
 
-// Mobile button fix
+// Mobile button fix - ensure button is clickable on mobile
 document.addEventListener('DOMContentLoaded', function() {
     const submitButton = document.getElementById('submit-button');
     const paymentForm = document.getElementById('payment-form');
-    
+
     if (submitButton && paymentForm) {
+        // Improve mobile touch handling
         submitButton.style.touchAction = 'manipulation';
         submitButton.style.cursor = 'pointer';
-        
-        submitButton.addEventListener('touchend', function(e) {
+        submitButton.style.webkitTapHighlightColor = 'rgba(0, 0, 0, 0.1)';
+
+        // Add visual feedback on touch
+        submitButton.addEventListener('touchstart', function(e) {
             if (!this.disabled) {
-                e.preventDefault();
-                e.stopPropagation();
-                const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-                paymentForm.dispatchEvent(submitEvent);
+                this.style.opacity = '0.9';
             }
-            return false;
-        }, { passive: false });
+        }, { passive: true });
+
+        submitButton.addEventListener('touchend', function(e) {
+            this.style.opacity = '1';
+        }, { passive: true });
     }
 });
 </script>
