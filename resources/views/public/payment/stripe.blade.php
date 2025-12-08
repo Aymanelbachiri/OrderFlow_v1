@@ -139,16 +139,13 @@
                                 </div>
 
                                 <!-- Submit Button -->
-                                <button type="submit" id="submit-button" 
-                                        class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 transition-all duration-300 shadow-md hover:shadow-lg">
-                                    <span id="button-text" class="flex items-center space-x-2">
-                                        
-                                        <span>Complete Payment - ${{ number_format($paymentIntent->amount, 2) }}</span>
-                                    </span>
-                                    <span id="spinner" class="hidden flex items-center space-x-2">
-                                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Processing...</span>
-                                    </span>
+                                <button type="submit" id="submit"
+                                        class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg">
+                                    <div class="spinner hidden" id="spinner" role="status">
+                                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                        <span class="sr-only">Processing...</span>
+                                    </div>
+                                    <span id="button-text">Complete Payment - ${{ number_format($paymentIntent->amount, 2) }}</span>
                                 </button>
                             </form>
                         @endif
@@ -194,6 +191,23 @@
 
 .animate-spin {
     animation: spin 1s linear infinite;
+}
+
+/* Button spinner */
+.spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner.hidden {
+    display: none;
+}
+
+/* Ensure button is always clickable on mobile */
+#submit {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 </style>
 
@@ -326,82 +340,77 @@ observer.observe(document.documentElement, {
     attributeFilter: ['class']
 });
 
-// Simple form submission handler - works on both mobile and desktop
+// Stripe recommended approach - handle form submission
 const form = document.getElementById('payment-form');
-const submitButton = document.getElementById('submit-button');
-const buttonText = document.getElementById('button-text');
-const spinner = document.getElementById('spinner');
 
-// Handle button click directly
-submitButton.addEventListener('click', async function(e) {
-    e.preventDefault();
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
 
-    // Prevent double submission
-    if (submitButton.disabled) {
-        return;
+    setLoading(true);
+
+    const {error} = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+            return_url: '{{ route("public.payment-intents.success", $paymentIntent) }}',
+        },
+    });
+
+    // This point will only be reached if there is an immediate error when
+    // confirming the payment. Otherwise, your customer will be redirected to
+    // your `return_url`. For some payment methods like iDEAL, your customer will
+    // be redirected to an intermediate site first to authorize the payment, then
+    // redirected to the `return_url`.
+    if (error) {
+        if (error.type === "card_error" || error.type === "validation_error") {
+            showMessage(error.message);
+        } else {
+            showMessage("An unexpected error occurred.");
+        }
     }
 
-    // Set loading state
-    submitButton.disabled = true;
-    buttonText.classList.add('hidden');
-    spinner.classList.remove('hidden');
+    setLoading(false);
+});
 
-    // Clear any previous error messages
-    document.getElementById('payment-status').innerHTML = '';
-    document.getElementById('payment-element-errors').textContent = '';
+// ------- UI helpers -------
 
-    try {
-        const {error} = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                return_url: '{{ route("public.payment-intents.success", $paymentIntent) }}',
-            },
-        });
+function showMessage(messageText) {
+    const isDark = isDarkMode();
+    const messageContainer = document.querySelector("#payment-status");
 
-        if (error) {
-            // Show error to customer
-            const isDark = isDarkMode();
-            document.getElementById('payment-status').innerHTML = `
-                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                    <div class="flex items-start space-x-3">
-                        <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                        </svg>
-                        <div>
-                            <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Payment Failed</h4>
-                            <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">${error.message}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Reset button state
-            submitButton.disabled = false;
-            buttonText.classList.remove('hidden');
-            spinner.classList.add('hidden');
-        }
-    } catch (error) {
-        const isDark = isDarkMode();
-        document.getElementById('payment-status').innerHTML = `
-            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <div class="flex items-start space-x-3">
-                    <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                    </svg>
-                    <div>
-                        <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Connection Error</h4>
-                        <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">Unable to process payment. Please check your connection and try again.</p>
-                    </div>
+    messageContainer.classList.remove("hidden");
+    messageContainer.innerHTML = `
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+                <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <div>
+                    <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Payment Failed</h4>
+                    <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">${messageText}</p>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        // Reset button state
-        submitButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        spinner.classList.add('hidden');
+    setTimeout(function () {
+        messageContainer.classList.add("hidden");
+        messageContainer.textContent = "";
+    }, 10000);
+}
+
+// Show a spinner on payment submission
+function setLoading(isLoading) {
+    if (isLoading) {
+        // Disable the button and show a spinner
+        document.querySelector("#submit").disabled = true;
+        document.querySelector("#spinner").classList.remove("hidden");
+        document.querySelector("#button-text").classList.add("hidden");
+    } else {
+        document.querySelector("#submit").disabled = false;
+        document.querySelector("#spinner").classList.add("hidden");
+        document.querySelector("#button-text").classList.remove("hidden");
     }
-});
+}
 </script>
 @endif
 @endsection
