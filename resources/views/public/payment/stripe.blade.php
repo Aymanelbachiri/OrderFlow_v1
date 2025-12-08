@@ -178,19 +178,11 @@
 /* Stripe Payment Element Styling */
 #payment-element {
     padding: 12px;
-    position: relative;
-    z-index: 1;
 }
 
 /* Dark mode support for Payment Element container */
 .dark #payment-element {
     background-color: transparent;
-}
-
-/* Ensure form doesn't block button clicks */
-#payment-form {
-    position: relative;
-    z-index: 1;
 }
 
 /* Custom spinner animation */
@@ -202,25 +194,6 @@
 
 .animate-spin {
     animation: spin 1s linear infinite;
-}
-
-/* Mobile button fix - ensure button is always clickable */
-#submit-button {
-    position: relative;
-    z-index: 10;
-    pointer-events: auto !important;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
-    min-height: 48px;
-    cursor: pointer;
-}
-
-/* Prevent any overlays from blocking the button on mobile */
-@media (max-width: 768px) {
-    #submit-button {
-        z-index: 999;
-        min-height: 52px;
-    }
 }
 </style>
 
@@ -353,23 +326,30 @@ observer.observe(document.documentElement, {
     attributeFilter: ['class']
 });
 
-// Handle form submission
-document.getElementById('payment-form').addEventListener('submit', async function(e) {
+// Simple form submission handler - works on both mobile and desktop
+const form = document.getElementById('payment-form');
+const submitButton = document.getElementById('submit-button');
+const buttonText = document.getElementById('button-text');
+const spinner = document.getElementById('spinner');
+
+// Handle button click directly
+submitButton.addEventListener('click', async function(e) {
     e.preventDefault();
-    
-    const submitButton = document.getElementById('submit-button');
-    const buttonText = document.getElementById('button-text');
-    const spinner = document.getElementById('spinner');
-    
+
+    // Prevent double submission
+    if (submitButton.disabled) {
+        return;
+    }
+
     // Set loading state
     submitButton.disabled = true;
     buttonText.classList.add('hidden');
     spinner.classList.remove('hidden');
-    
+
     // Clear any previous error messages
     document.getElementById('payment-status').innerHTML = '';
     document.getElementById('payment-element-errors').textContent = '';
-    
+
     try {
         const {error} = await stripe.confirmPayment({
             elements,
@@ -377,11 +357,9 @@ document.getElementById('payment-form').addEventListener('submit', async functio
                 return_url: '{{ route("public.payment-intents.success", $paymentIntent) }}',
             },
         });
-        
+
         if (error) {
-            // This point will only be reached if there is an immediate error when
-            // confirming the payment. Show error to your customer (for example, payment
-            // details incomplete)
+            // Show error to customer
             const isDark = isDarkMode();
             document.getElementById('payment-status').innerHTML = `
                 <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -396,16 +374,11 @@ document.getElementById('payment-form').addEventListener('submit', async functio
                     </div>
                 </div>
             `;
-            
+
             // Reset button state
             submitButton.disabled = false;
             buttonText.classList.remove('hidden');
             spinner.classList.add('hidden');
-        } else {
-            // Your customer will be redirected to your `return_url`. For some payment
-            // methods like iDEAL, your customer will be redirected to an intermediate
-            // site first to authorize the payment, then redirected to the `return_url`.
-            // The payment status will be checked on the return_url page.
         }
     } catch (error) {
         const isDark = isDarkMode();
@@ -422,35 +395,11 @@ document.getElementById('payment-form').addEventListener('submit', async functio
                 </div>
             </div>
         `;
-        
+
         // Reset button state
         submitButton.disabled = false;
         buttonText.classList.remove('hidden');
         spinner.classList.add('hidden');
-    }
-});
-
-// Mobile button fix - ensure button is clickable on mobile
-document.addEventListener('DOMContentLoaded', function() {
-    const submitButton = document.getElementById('submit-button');
-    const paymentForm = document.getElementById('payment-form');
-
-    if (submitButton && paymentForm) {
-        // Improve mobile touch handling
-        submitButton.style.touchAction = 'manipulation';
-        submitButton.style.cursor = 'pointer';
-        submitButton.style.webkitTapHighlightColor = 'rgba(0, 0, 0, 0.1)';
-
-        // Add visual feedback on touch
-        submitButton.addEventListener('touchstart', function(e) {
-            if (!this.disabled) {
-                this.style.opacity = '0.9';
-            }
-        }, { passive: true });
-
-        submitButton.addEventListener('touchend', function(e) {
-            this.style.opacity = '1';
-        }, { passive: true });
     }
 });
 </script>
