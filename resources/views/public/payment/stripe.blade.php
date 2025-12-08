@@ -140,12 +140,12 @@
 
                                 <!-- Submit Button -->
                                 <button type="submit" id="submit"
-                                        class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg">
-                                    <div class="spinner hidden" id="spinner" role="status">
-                                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
-                                        <span class="sr-only">Processing...</span>
-                                    </div>
+                                        class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.98] relative z-10 touch-manipulation"
+                                        style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); min-height: 48px; cursor: pointer; pointer-events: auto;">
                                     <span id="button-text">Complete Payment - ${{ number_format($paymentIntent->amount, 2) }}</span>
+                                    <span id="spinner" class="hidden">
+                                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                    </span>
                                 </button>
                             </form>
                         @endif
@@ -192,44 +192,6 @@
 
 .animate-spin {
     animation: spin 1s linear infinite;
-}
-
-/* Button spinner */
-.spinner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.spinner.hidden {
-    display: none;
-}
-
-/* Ensure button is always clickable on mobile - AGGRESSIVE FIX */
-#submit {
-    position: relative !important;
-    z-index: 9999 !important;
-    -webkit-tap-highlight-color: transparent !important;
-    touch-action: manipulation !important;
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
-}
-
-#submit:disabled {
-    cursor: not-allowed !important;
-}
-
-/* Ensure form doesn't block button */
-#payment-form {
-    position: relative;
-    z-index: 1;
-}
-
-/* Ensure payment element iframe doesn't overflow and block button */
-#payment-element iframe {
-    max-width: 100% !important;
 }
 </style>
 
@@ -362,21 +324,29 @@ observer.observe(document.documentElement, {
     attributeFilter: ['class']
 });
 
-// Stripe recommended approach - handle form submission
+// Simple form submission - exactly like login form
 const form = document.getElementById('payment-form');
-const submitButton = document.getElementById('submit');
+const submitBtn = document.getElementById('submit');
+const btnText = document.getElementById('button-text');
+const spinner = document.getElementById('spinner');
 
-// Handle form submission
-async function handleSubmit(event) {
-    event.preventDefault();
-    event.stopPropagation();
+form.addEventListener('submit', async function(e) {
+    e.preventDefault();
 
     // Prevent double submission
-    if (submitButton.disabled) {
-        return false;
+    if (submitBtn.disabled) {
+        return;
     }
 
-    setLoading(true);
+    // Show loading state
+    submitBtn.disabled = true;
+    btnText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    submitBtn.style.opacity = '0.7';
+    submitBtn.style.cursor = 'not-allowed';
+
+    // Clear any previous error messages
+    document.getElementById('payment-status').innerHTML = '';
 
     const {error} = await stripe.confirmPayment({
         elements,
@@ -385,78 +355,35 @@ async function handleSubmit(event) {
         },
     });
 
-    // This point will only be reached if there is an immediate error when
-    // confirming the payment. Otherwise, your customer will be redirected to
-    // your `return_url`. For some payment methods like iDEAL, your customer will
-    // be redirected to an intermediate site first to authorize the payment, then
-    // redirected to the `return_url`.
+    // This point will only be reached if there is an immediate error
     if (error) {
-        if (error.type === "card_error" || error.type === "validation_error") {
-            showMessage(error.message);
-        } else {
-            showMessage("An unexpected error occurred.");
-        }
-    }
+        const isDark = isDarkMode();
+        const messageText = error.type === "card_error" || error.type === "validation_error"
+            ? error.message
+            : "An unexpected error occurred.";
 
-    setLoading(false);
-    return false;
-}
-
-// Add both form submit and button click listeners for maximum compatibility
-form.addEventListener('submit', handleSubmit);
-
-// Fallback for mobile - also listen to button click
-submitButton.addEventListener('click', function(e) {
-    // If button is inside form, let form submit handle it
-    // This is just a fallback to ensure button is responsive
-    if (!submitButton.disabled) {
-        // Trigger form submit
-        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-    }
-    e.preventDefault();
-    return false;
-});
-
-// ------- UI helpers -------
-
-function showMessage(messageText) {
-    const isDark = isDarkMode();
-    const messageContainer = document.querySelector("#payment-status");
-
-    messageContainer.classList.remove("hidden");
-    messageContainer.innerHTML = `
-        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div class="flex items-start space-x-3">
-                <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                </svg>
-                <div>
-                    <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Payment Failed</h4>
-                    <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">${messageText}</p>
+        document.getElementById('payment-status').innerHTML = `
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-500'} mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <h4 class="font-semibold ${isDark ? 'text-red-300' : 'text-red-700'} text-sm mb-1">Payment Failed</h4>
+                        <p class="${isDark ? 'text-red-400' : 'text-red-600'} text-sm">${messageText}</p>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
 
-    setTimeout(function () {
-        messageContainer.classList.add("hidden");
-        messageContainer.textContent = "";
-    }, 10000);
-}
-
-// Show a spinner on payment submission
-function setLoading(isLoading) {
-    if (isLoading) {
-        // Disable the button and show a spinner
-        document.querySelector("#submit").disabled = true;
-        document.querySelector("#spinner").classList.remove("hidden");
-        document.querySelector("#button-text").classList.add("hidden");
-    } else {
-        document.querySelector("#submit").disabled = false;
-        document.querySelector("#spinner").classList.add("hidden");
-        document.querySelector("#button-text").classList.remove("hidden");
+        // Reset button state
+        submitBtn.disabled = false;
+        btnText.classList.remove('hidden');
+        spinner.classList.add('hidden');
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
     }
-}
+});
 </script>
 @endif
 @endsection
