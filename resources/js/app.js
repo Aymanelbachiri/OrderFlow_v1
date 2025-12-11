@@ -115,31 +115,43 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Add visual touch feedback to all buttons (passive handlers only)
-        const buttons = document.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]');
-        buttons.forEach(btn => {
-            // Skip if button already has custom touch handlers
-            if (btn.dataset.touchHandled) return;
-            btn.dataset.touchHandled = 'true';
+        // Add touch-to-click fix for ALL buttons and links
+        const clickables = document.querySelectorAll('button, a, input[type="submit"], input[type="button"]');
+        clickables.forEach(el => {
+            // Skip if already handled
+            if (el.dataset.touchFixed) return;
+            el.dataset.touchFixed = 'true';
 
-            // Store original styles
-            const originalTransform = btn.style.transform || '';
-            const originalOpacity = btn.style.opacity || '1';
+            let touchStarted = false;
+            let touchMoved = false;
 
-            btn.addEventListener('touchstart', function() {
-                this.style.opacity = '0.9';
-                this.style.transform = originalTransform ? originalTransform + ' scale(0.98)' : 'scale(0.98)';
+            el.addEventListener('touchstart', function(e) {
+                touchStarted = true;
+                touchMoved = false;
+                this.style.opacity = '0.8';
+                this.style.transform = 'scale(0.97)';
             }, { passive: true });
 
-            btn.addEventListener('touchend', function() {
-                this.style.opacity = originalOpacity;
-                this.style.transform = originalTransform;
-                // Don't trigger actions here - let the native click event handle it
+            el.addEventListener('touchmove', function(e) {
+                touchMoved = true;
             }, { passive: true });
 
-            btn.addEventListener('touchcancel', function() {
-                this.style.opacity = originalOpacity;
-                this.style.transform = originalTransform;
+            el.addEventListener('touchend', function(e) {
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
+
+                // Only trigger click if it was a tap (not a scroll)
+                if (touchStarted && !touchMoved) {
+                    // Trigger the click event programmatically
+                    this.click();
+                }
+                touchStarted = false;
+            }, { passive: true });
+
+            el.addEventListener('touchcancel', function() {
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
+                touchStarted = false;
             }, { passive: true });
         });
     }
