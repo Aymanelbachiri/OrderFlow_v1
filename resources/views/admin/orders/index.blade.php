@@ -223,7 +223,7 @@
 
                 <!-- Buttons -->
                 <div class="flex space-x-2">
-                    <button type="submit" id="applyFilterBtn"
+                    <button type="submit" id="applyFilterBtn" data-custom-touch="true"
                         class="bg-[#D63613] hover:bg-[#B72D10] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">
                         Apply
                     </button>
@@ -653,25 +653,36 @@
             }
         });
 
-        // Fix mobile apply button - universal handler approach
+        // Fix mobile apply button - trigger form submit on touchend
         document.addEventListener('DOMContentLoaded', function() {
             const applyBtn = document.getElementById('applyFilterBtn');
             const filterForm = applyBtn?.closest('form');
 
             if (applyBtn && filterForm) {
+                let touchMoved = false;
+
                 // Ensure button is clickable on mobile
                 applyBtn.style.touchAction = 'manipulation';
                 applyBtn.style.cursor = 'pointer';
                 applyBtn.style.pointerEvents = 'auto';
 
-                // Visual feedback only - let click handle submission
                 applyBtn.addEventListener('touchstart', function(e) {
+                    touchMoved = false;
                     this.style.transform = 'scale(0.98)';
+                    this.style.opacity = '0.9';
+                }, { passive: true });
+
+                applyBtn.addEventListener('touchmove', function(e) {
+                    touchMoved = true;
                 }, { passive: true });
 
                 applyBtn.addEventListener('touchend', function(e) {
                     this.style.transform = 'scale(1)';
-                    // Don't call form.submit() here - let click handle it
+                    this.style.opacity = '1';
+                    // Trigger form submit on touchend (click doesn't fire on mobile)
+                    if (!touchMoved) {
+                        filterForm.submit();
+                    }
                 }, { passive: true });
             }
         });

@@ -459,6 +459,7 @@
                         <button type="button"
                                 id="activate-custom-product-btn-{{ $order->id }}"
                                 class="activate-custom-product-btn w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 shadow-md hover:shadow-lg"
+                                data-custom-touch="true"
                                 data-order-id="{{ $order->id }}"
                                 data-order-number="{{ $order->order_number }}"
                                 data-customer-name="{{ $order->user->name }}"
@@ -472,13 +473,13 @@
                         (function() {
                             const btn = document.getElementById('activate-custom-product-btn-{{ $order->id }}');
                             if (btn) {
-                                btn.addEventListener('click', function(e) {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    const orderId = this.getAttribute('data-order-id');
-                                    const orderNumber = this.getAttribute('data-order-number');
-                                    const customerName = this.getAttribute('data-customer-name');
-                                    const productName = this.getAttribute('data-product-name');
+                                let touchMoved = false;
+
+                                function openModal() {
+                                    const orderId = btn.getAttribute('data-order-id');
+                                    const orderNumber = btn.getAttribute('data-order-number');
+                                    const customerName = btn.getAttribute('data-customer-name');
+                                    const productName = btn.getAttribute('data-product-name');
                                     if (window.openCustomProductActivateModal) {
                                         window.openCustomProductActivateModal(orderId, orderNumber, customerName, productName);
                                     } else {
@@ -490,20 +491,95 @@
                                             }
                                         }, 100);
                                     }
+                                }
+
+                                btn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    openModal();
                                 });
+
+                                // Mobile touch handlers
+                                btn.addEventListener('touchstart', function(e) {
+                                    touchMoved = false;
+                                    this.style.opacity = '0.9';
+                                    this.style.transform = 'scale(0.98)';
+                                }, { passive: true });
+
+                                btn.addEventListener('touchmove', function(e) {
+                                    touchMoved = true;
+                                }, { passive: true });
+
+                                btn.addEventListener('touchend', function(e) {
+                                    this.style.opacity = '1';
+                                    this.style.transform = 'scale(1)';
+                                    if (!touchMoved) {
+                                        openModal();
+                                    }
+                                }, { passive: true });
                             }
                         })();
                         </script>
                         @else
                         <button type="button"
-                                onclick="openActivateModal({{ $order->id }}, '{{ $order->order_number }}', '{{ $order->user->name }}', '{{ $order->order_type === 'credit_pack' ? ($order->resellerCreditPack->name ?? 'Credit Pack') : ($order->pricingPlan->display_name ?? 'IPTV Service') }}', {{ $order->pricingPlan->device_count ?? 1 }}, '{{ $order->pricingPlan->plan_type ?? 'regular' }}', '{{ $order->order_type ?? 'subscription' }}')"
+                                id="activate-order-btn-{{ $order->id }}"
+                                data-custom-touch="true"
                                 class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 shadow-md hover:shadow-lg"
-                                data-order-type="{{ $order->order_type ?? 'subscription' }}">
+                                data-order-type="{{ $order->order_type ?? 'subscription' }}"
+                                data-order-id="{{ $order->id }}"
+                                data-order-number="{{ $order->order_number }}"
+                                data-customer-name="{{ $order->user->name }}"
+                                data-service-name="{{ $order->order_type === 'credit_pack' ? ($order->resellerCreditPack->name ?? 'Credit Pack') : ($order->pricingPlan->display_name ?? 'IPTV Service') }}"
+                                data-device-count="{{ $order->pricingPlan->device_count ?? 1 }}"
+                                data-plan-type="{{ $order->pricingPlan->plan_type ?? 'regular' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                             <span>Activate Order</span>
                         </button>
+                        <script>
+                        (function() {
+                            const btn = document.getElementById('activate-order-btn-{{ $order->id }}');
+                            if (btn) {
+                                let touchMoved = false;
+
+                                function openModal() {
+                                    const orderId = btn.getAttribute('data-order-id');
+                                    const orderNumber = btn.getAttribute('data-order-number');
+                                    const customerName = btn.getAttribute('data-customer-name');
+                                    const serviceName = btn.getAttribute('data-service-name');
+                                    const deviceCount = parseInt(btn.getAttribute('data-device-count'));
+                                    const planType = btn.getAttribute('data-plan-type');
+                                    const orderType = btn.getAttribute('data-order-type');
+                                    openActivateModal(orderId, orderNumber, customerName, serviceName, deviceCount, planType, orderType);
+                                }
+
+                                btn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    openModal();
+                                });
+
+                                // Mobile touch handlers
+                                btn.addEventListener('touchstart', function(e) {
+                                    touchMoved = false;
+                                    this.style.opacity = '0.9';
+                                    this.style.transform = 'scale(0.98)';
+                                }, { passive: true });
+
+                                btn.addEventListener('touchmove', function(e) {
+                                    touchMoved = true;
+                                }, { passive: true });
+
+                                btn.addEventListener('touchend', function(e) {
+                                    this.style.opacity = '1';
+                                    this.style.transform = 'scale(1)';
+                                    if (!touchMoved) {
+                                        openModal();
+                                    }
+                                }, { passive: true });
+                            }
+                        })();
+                        </script>
                         @endif
                     @endif
                     

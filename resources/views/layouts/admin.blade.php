@@ -560,9 +560,9 @@
                     <div class="space-y-2">
                         
                         <li class="pt-4 border-t border-[#DC4822]/20 mt-4">
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" id="logout-form">
                                 @csrf
-                                <button type="submit"
+                                <button type="submit" id="logout-btn" data-custom-touch="true"
                                     class="nav-link flex items-center px-4 py-3 text-white hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all duration-200 font-medium group w-full text-left"
                                     title="Logout">
                                     <i
@@ -764,7 +764,32 @@
                     closeMobileSidebar();
                 }, { passive: true });
             }
-            
+
+            // Logout button - mobile touch handler
+            const logoutBtn = document.getElementById('logout-btn');
+            const logoutForm = document.getElementById('logout-form');
+            if (logoutBtn && logoutForm) {
+                let logoutTouchMoved = false;
+
+                logoutBtn.addEventListener('touchstart', function(e) {
+                    logoutTouchMoved = false;
+                    this.style.opacity = '0.8';
+                    this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                logoutBtn.addEventListener('touchmove', function(e) {
+                    logoutTouchMoved = true;
+                }, { passive: true });
+
+                logoutBtn.addEventListener('touchend', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                    if (!logoutTouchMoved) {
+                        logoutForm.submit();
+                    }
+                }, { passive: true });
+            }
+
             // Mobile overlay click handler
             if (mobileOverlay) {
                 mobileOverlay.addEventListener('click', function(e) {
