@@ -389,10 +389,11 @@
 
         <!-- Mobile Header -->
         <div class="mobile-header">
-            <button id="mobileMenuBtn" 
+            <button id="mobileMenuBtn"
                     class="mobile-menu-btn"
                     onclick="toggleAdminMobileMenu()"
                     type="button"
+                    data-custom-touch="true"
                     aria-label="Toggle navigation menu">
                 <i class="fas fa-bars"></i>
             </button>
@@ -409,10 +410,11 @@
             
             <!-- Mobile Close Button -->
             <div class="mobile-close-btn-container" style="display: none;">
-                <button id="mobileCloseBtn" 
+                <button id="mobileCloseBtn"
                         class="mobile-close-btn"
                         onclick="closeAdminMobileMenu()"
                         type="button"
+                        data-custom-touch="true"
                         aria-label="Close navigation menu">
                     <i class="fas fa-times text-xl"></i>
                 </button>

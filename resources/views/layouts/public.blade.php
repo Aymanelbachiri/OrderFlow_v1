@@ -485,7 +485,7 @@
                         <button id="mobile-hamburger-btn"
                             class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
                             style="min-width: 44px; min-height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: rgba(0,0,0,0.1);"
-                            type="button" aria-label="Toggle menu">
+                            type="button" data-custom-touch="true" aria-label="Toggle menu">
                             <svg id="hamburger-icon" class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                                 <path id="hamburger-bars" class="inline-flex"
                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

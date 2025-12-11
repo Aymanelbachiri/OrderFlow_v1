@@ -116,7 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Add touch-to-click fix for buttons and links (NOT form submit buttons)
-        const clickables = document.querySelectorAll('button:not([type="submit"]), a, input[type="button"]');
+        // Skip elements with data-custom-touch attribute (handled by individual pages)
+        const clickables = document.querySelectorAll('button:not([type="submit"]):not([data-custom-touch]), a:not([data-custom-touch]), input[type="button"]:not([data-custom-touch])');
         clickables.forEach(el => {
             if (el.dataset.touchFixed) return;
             el.dataset.touchFixed = 'true';
@@ -159,8 +160,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }, { passive: true });
         });
 
-        // Special handling for form submit buttons
-        const submitBtns = document.querySelectorAll('button[type="submit"], input[type="submit"]');
+        // Special handling for form submit buttons (skip those with custom handlers)
+        const submitBtns = document.querySelectorAll('button[type="submit"]:not([data-custom-touch]), input[type="submit"]:not([data-custom-touch])');
         submitBtns.forEach(btn => {
             if (btn.dataset.touchFixed) return;
             btn.dataset.touchFixed = 'true';
