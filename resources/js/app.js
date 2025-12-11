@@ -115,10 +115,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Add touch-to-click fix for ALL buttons and links
-        const clickables = document.querySelectorAll('button, a, input[type="submit"], input[type="button"]');
+        // Add touch-to-click fix for buttons and links (NOT form submit buttons)
+        const clickables = document.querySelectorAll('button:not([type="submit"]), a, input[type="button"]');
         clickables.forEach(el => {
-            // Skip if already handled
             if (el.dataset.touchFixed) return;
             el.dataset.touchFixed = 'true';
 
@@ -141,15 +140,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             el.addEventListener('touchmove', function() {
                 touchMoved = true;
-                // Reset immediately if user starts scrolling
                 resetStyles(this);
             }, { passive: true });
 
             el.addEventListener('touchend', function() {
-                // Reset styles immediately
                 resetStyles(this);
-
-                // Only trigger click if it was a tap (not a scroll)
                 if (touchStarted && !touchMoved) {
                     this.click();
                 }
@@ -159,6 +154,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
             el.addEventListener('touchcancel', function() {
                 resetStyles(this);
+                touchStarted = false;
+                touchMoved = false;
+            }, { passive: true });
+        });
+
+        // Special handling for form submit buttons
+        const submitBtns = document.querySelectorAll('button[type="submit"], input[type="submit"]');
+        submitBtns.forEach(btn => {
+            if (btn.dataset.touchFixed) return;
+            btn.dataset.touchFixed = 'true';
+
+            let touchStarted = false;
+            let touchMoved = false;
+
+            btn.addEventListener('touchstart', function() {
+                touchStarted = true;
+                touchMoved = false;
+                this.style.opacity = '0.8';
+                this.style.transform = 'scale(0.97)';
+            }, { passive: true });
+
+            btn.addEventListener('touchmove', function() {
+                touchMoved = true;
+                this.style.opacity = '';
+                this.style.transform = '';
+            }, { passive: true });
+
+            btn.addEventListener('touchend', function() {
+                this.style.opacity = '';
+                this.style.transform = '';
+
+                if (touchStarted && !touchMoved) {
+                    const form = this.closest('form');
+                    if (form) {
+                        // Use requestSubmit to trigger validation and submit events
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(this);
+                        } else {
+                            form.submit();
+                        }
+                    }
+                }
+                touchStarted = false;
+                touchMoved = false;
+            }, { passive: true });
+
+            btn.addEventListener('touchcancel', function() {
+                this.style.opacity = '';
+                this.style.transform = '';
                 touchStarted = false;
                 touchMoved = false;
             }, { passive: true });
