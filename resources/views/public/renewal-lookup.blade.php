@@ -56,8 +56,9 @@
                 </div>
 
                 <div class="flex justify-center">
-                    <button type="submit" 
-                        class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200">
+                    <button type="submit" id="searchBtn"
+                        class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200"
+                        style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);">
                         Find My Subscription
                     </button>
                 </div>
@@ -161,5 +162,49 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    // MOBILE FIX: Universal button handler for search button
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchBtn = document.getElementById('searchBtn');
+        if (searchBtn) {
+            let isSubmitting = false;
+
+            // Visual feedback only on touch
+            searchBtn.addEventListener('touchstart', function(e) {
+                this.style.opacity = '0.9';
+                this.style.transform = 'scale(0.98)';
+            }, { passive: true });
+
+            searchBtn.addEventListener('touchend', function(e) {
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
+                // Don't trigger submit here - let click handle it naturally
+            }, { passive: true });
+
+            searchBtn.addEventListener('mousedown', function(e) {
+                this.style.opacity = '0.9';
+                this.style.transform = 'scale(0.98)';
+            });
+
+            searchBtn.addEventListener('mouseup', function(e) {
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
+            });
+
+            // Prevent double submission
+            searchBtn.addEventListener('click', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return;
+                }
+                isSubmitting = true;
+                setTimeout(() => { isSubmitting = false; }, 3000);
+            });
+        }
+    });
+</script>
+@endpush
 @endsection
 

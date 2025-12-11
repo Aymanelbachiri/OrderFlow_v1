@@ -64,8 +64,6 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-
-
     <!-- Custom Styles for Animations and Mobile Optimization -->
     <style>
         @keyframes blob {
@@ -364,8 +362,7 @@
     class="font-sans antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
         <!-- Navigation -->
-        <nav class="bg-black shadow-lg dark:shadow-[#8ACE00]/20 transition-colors duration-200 border-b border-gray-700 dark:border-gray-600"
-            x-data="{ open: false }">
+        <nav class="bg-black shadow-lg dark:shadow-[#8ACE00]/20 transition-colors duration-200 border-b border-gray-700 dark:border-gray-600">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-20">
                     <div class="flex items-center gap-40">
@@ -485,15 +482,15 @@
                                 <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
                             </svg>
                         </button>
-                        <button @click="open = ! open"
-                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out touch-manipulation"
-                            style="min-width: 44px; min-height: 44px; -webkit-tap-highlight-color: transparent;"
+                        <button id="mobile-hamburger-btn"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
+                            style="min-width: 44px; min-height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: rgba(0,0,0,0.1);"
                             type="button" aria-label="Toggle menu">
-                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                <path :class="{ 'hidden': open, 'inline-flex': !open }" class="inline-flex"
+                            <svg id="hamburger-icon" class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <path id="hamburger-bars" class="inline-flex"
                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 6h16M4 12h16M4 18h16" />
-                                <path :class="{ 'hidden': !open, 'inline-flex': open }" class="hidden"
+                                <path id="hamburger-x" class="hidden"
                                     stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -503,7 +500,7 @@
             </div>
 
             <!-- Responsive Navigation Menu (simplified) -->
-            <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden fixed bg-gray-800 w-full z-40">
+            <div id="mobile-nav-menu" class="hidden sm:hidden fixed bg-gray-800 w-full z-40">
                 <div class="pt-2 pb-3 space-y-1">
                     <a href="{{ route('website-development') }}"
                         class="border-transparent text-gray-200 hover:text-white hover:bg-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition duration-150 ease-in-out">
@@ -619,39 +616,66 @@
         @endif
     </div>
 
-    <!-- Alpine.js (moved to footer for faster TTFB) -->
+    <!-- Alpine.js for other components -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- Mobile menu fallback for touch devices -->
+    <!-- Mobile menu - Pure JavaScript -->
     <script>
-        // Ensure mobile menu works reliably on touch devices
         document.addEventListener('DOMContentLoaded', function() {
-            const hamburgerButtons = document.querySelectorAll('[aria-label="Toggle menu"]');
+            const btn = document.getElementById('mobile-hamburger-btn');
+            const menu = document.getElementById('mobile-nav-menu');
+            const bars = document.getElementById('hamburger-bars');
+            const xIcon = document.getElementById('hamburger-x');
 
-            hamburgerButtons.forEach(button => {
-                // Remove any existing handlers that might block
-                const newButton = button.cloneNode(true);
-                button.parentNode.replaceChild(newButton, button);
-                
-                // Ensure button is clickable
-                newButton.style.pointerEvents = 'auto';
-                newButton.style.cursor = 'pointer';
-                newButton.style.zIndex = '1000';
-                
-                // Add explicit touch handler that works with Alpine
-                newButton.addEventListener('touchstart', function(e) {
-                    // Don't prevent default - let Alpine handle it
-                    this.style.opacity = '0.8';
-                }, {
-                    passive: true
-                });
-                
-                newButton.addEventListener('touchend', function(e) {
-                    this.style.opacity = '1';
-                    // Trigger click event for Alpine
-                    this.click();
-                }, {
-                    passive: true
-                });
+            if (!btn || !menu) return;
+
+            let isOpen = false;
+            let touchHandled = false;
+
+            function toggleMenu() {
+                isOpen = !isOpen;
+                if (isOpen) {
+                    menu.classList.remove('hidden');
+                    menu.classList.add('block');
+                    if (bars) bars.classList.add('hidden');
+                    if (xIcon) xIcon.classList.remove('hidden');
+                } else {
+                    menu.classList.add('hidden');
+                    menu.classList.remove('block');
+                    if (bars) bars.classList.remove('hidden');
+                    if (xIcon) xIcon.classList.add('hidden');
+                }
+            }
+
+            // Click handler (for desktop)
+            btn.addEventListener('click', function(e) {
+                if (touchHandled) {
+                    touchHandled = false;
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                toggleMenu();
+            }, true);
+
+            // Touch handlers - trigger action on touchend
+            btn.addEventListener('touchstart', function(e) {
+                this.style.opacity = '0.8';
+                this.style.transform = 'scale(0.95)';
+            }, { passive: true });
+
+            btn.addEventListener('touchend', function(e) {
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
+                touchHandled = true;
+                setTimeout(function() { touchHandled = false; }, 300);
+                toggleMenu();
+            }, { passive: true });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (isOpen && !menu.contains(e.target) && !btn.contains(e.target)) {
+                    toggleMenu();
+                }
             });
         });
     </script>

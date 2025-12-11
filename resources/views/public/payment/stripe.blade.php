@@ -408,32 +408,47 @@ async function handlePaymentSubmit(e) {
 // Add form submit listener
 form.addEventListener('submit', handlePaymentSubmit);
 
-// MOBILE FIX: Add touchend listener directly to button
-submitBtn.addEventListener('touchend', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
+// MOBILE FIX: Universal click/touch handler
+// Modern mobile browsers fire click events reliably - no need for touchend workarounds
+// This approach prevents double-firing and works consistently across all devices
+(function() {
+    let isSubmitting = false;
 
-    // Visual feedback
-    submitBtn.style.transform = 'scale(0.98)';
-    setTimeout(() => {
-        submitBtn.style.transform = 'scale(1)';
-    }, 100);
+    // Visual feedback on touch/mouse down
+    submitBtn.addEventListener('touchstart', function(e) {
+        this.style.transform = 'scale(0.98)';
+    }, { passive: true });
 
-    // Trigger form submit
-    if (!submitBtn.disabled) {
-        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-    }
-}, { passive: false });
+    submitBtn.addEventListener('mousedown', function(e) {
+        this.style.transform = 'scale(0.98)';
+    });
 
-// Also add click listener for desktop
-submitBtn.addEventListener('click', function(e) {
-    // Let the form submit handle it naturally
-    // This is just for visual feedback
-    submitBtn.style.transform = 'scale(0.98)';
-    setTimeout(() => {
-        submitBtn.style.transform = 'scale(1)';
-    }, 100);
-});
+    // Reset visual on touch/mouse end
+    submitBtn.addEventListener('touchend', function(e) {
+        this.style.transform = 'scale(1)';
+        // Don't trigger submit here - let click event handle it
+    }, { passive: true });
+
+    submitBtn.addEventListener('mouseup', function(e) {
+        this.style.transform = 'scale(1)';
+    });
+
+    submitBtn.addEventListener('mouseleave', function(e) {
+        this.style.transform = 'scale(1)';
+    });
+
+    // Single unified click handler for both mobile and desktop
+    submitBtn.addEventListener('click', function(e) {
+        if (isSubmitting || this.disabled) {
+            e.preventDefault();
+            return;
+        }
+        isSubmitting = true;
+
+        // Reset after a timeout to allow retry if needed
+        setTimeout(() => { isSubmitting = false; }, 3000);
+    });
+})();
 </script>
 @endif
 @endsection

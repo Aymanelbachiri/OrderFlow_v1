@@ -345,28 +345,40 @@
                         return false;
                     }
                 });
-                
+
+                // MOBILE FIX: Visual feedback only - let click/submit handle the action
+                let isSubmitting = false;
+
                 submitBtn.addEventListener('touchstart', function(e) {
                     this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
                 }, { passive: true });
-                
+
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
-                    
-                    // Validate before submitting
-                    if (!validateForm()) {
+                    this.style.transform = 'scale(1)';
+                    // Don't trigger submit here - let click handle it naturally
+                }, { passive: true });
+
+                submitBtn.addEventListener('mousedown', function(e) {
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
+                });
+
+                submitBtn.addEventListener('mouseup', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                });
+
+                // Prevent double submission
+                submitBtn.addEventListener('click', function(e) {
+                    if (isSubmitting) {
                         e.preventDefault();
-                        e.stopPropagation();
-                        return false;
+                        return;
                     }
-                    
-                    // If valid, trigger form submit
-                    e.preventDefault();
-                    e.stopPropagation();
-                    form.requestSubmit();
-                    
-                    return false;
-                }, { passive: false });
+                    isSubmitting = true;
+                    setTimeout(() => { isSubmitting = false; }, 3000);
+                });
             }
         });
         

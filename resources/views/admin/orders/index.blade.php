@@ -653,24 +653,26 @@
             }
         });
 
-        // Fix mobile apply button
+        // Fix mobile apply button - universal handler approach
         document.addEventListener('DOMContentLoaded', function() {
             const applyBtn = document.getElementById('applyFilterBtn');
             const filterForm = applyBtn?.closest('form');
-            
+
             if (applyBtn && filterForm) {
                 // Ensure button is clickable on mobile
                 applyBtn.style.touchAction = 'manipulation';
                 applyBtn.style.cursor = 'pointer';
                 applyBtn.style.pointerEvents = 'auto';
-                
-                // Add explicit touch handler for mobile
+
+                // Visual feedback only - let click handle submission
+                applyBtn.addEventListener('touchstart', function(e) {
+                    this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
                 applyBtn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    filterForm.submit();
-                    return false;
-                }, { passive: false });
+                    this.style.transform = 'scale(1)';
+                    // Don't call form.submit() here - let click handle it
+                }, { passive: true });
             }
         });
     </script>

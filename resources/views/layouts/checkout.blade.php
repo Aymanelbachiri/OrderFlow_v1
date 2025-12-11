@@ -377,36 +377,37 @@
             }
 
             if (themeToggle) {
-                // Click event
+                let isToggling = false;
+
+                // Single unified click handler for both mobile and desktop
                 themeToggle.addEventListener('click', function(e) {
                     e.preventDefault();
-                    e.stopPropagation();
+                    if (isToggling) return;
+                    isToggling = true;
                     toggleTheme();
-                }, true);
+                    setTimeout(() => { isToggling = false; }, 300);
+                });
 
-                // Touch events for mobile
+                // Visual feedback only - touch
                 themeToggle.addEventListener('touchstart', function(e) {
                     this.style.transform = 'scale(0.95)';
-                }, {
-                    passive: true
-                });
+                }, { passive: true });
 
                 themeToggle.addEventListener('touchend', function(e) {
                     this.style.transform = 'scale(1)';
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleTheme();
-                    return false;
-                }, {
-                    passive: false
-                });
+                    // Don't trigger toggleTheme here - let click handle it
+                }, { passive: true });
 
-                // Mouse events
+                // Visual feedback only - mouse
                 themeToggle.addEventListener('mousedown', function(e) {
                     this.style.transform = 'scale(0.95)';
                 });
 
                 themeToggle.addEventListener('mouseup', function(e) {
+                    this.style.transform = 'scale(1)';
+                });
+
+                themeToggle.addEventListener('mouseleave', function(e) {
                     this.style.transform = 'scale(1)';
                 });
             }

@@ -317,85 +317,95 @@
     </div>
 
     <script>
-        // Mobile button fixes
+        // Mobile button fixes - Universal handler approach
         document.addEventListener('DOMContentLoaded', function() {
-            // Fix submit button for mobile
             const submitBtn = document.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.addEventListener('touchstart', function(e) {
-                    this.style.opacity = '0.9';
-                }, { passive: true });
-                
-                // Add form validation before submit
-                const form = submitBtn.closest('form');
-                if (form) {
-                    // Validation function
-                    function validateForm() {
-                        // Check if required fields are filled
-                        const requiredFields = form.querySelectorAll('[required]');
-                        let isValid = true;
-                        
-                        requiredFields.forEach(field => {
-                            if (!field.value.trim()) {
-                                isValid = false;
-                                field.classList.add('border-red-500');
-                                // Remove error class after user starts typing
-                                field.addEventListener('input', function() {
-                                    this.classList.remove('border-red-500');
-                                }, { once: true });
-                            }
-                        });
-                        
-                        return isValid;
-                    }
-                    
-                    form.addEventListener('submit', function(e) {
-                        if (!validateForm()) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                            alert('Please fill in all required fields before continuing.');
-                            return false;
+            const form = submitBtn?.closest('form');
+
+            if (submitBtn && form) {
+                let isSubmitting = false;
+
+                // Validation function
+                function validateForm() {
+                    const requiredFields = form.querySelectorAll('[required]');
+                    let isValid = true;
+
+                    requiredFields.forEach(field => {
+                        if (!field.value.trim()) {
+                            isValid = false;
+                            field.classList.add('border-red-500');
+                            field.addEventListener('input', function() {
+                                this.classList.remove('border-red-500');
+                            }, { once: true });
                         }
                     });
-                    
-                    submitBtn.addEventListener('touchend', function(e) {
-                        this.style.opacity = '1';
-                        
-                        // Validate before submitting
-                        if (!validateForm()) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return false;
-                        }
-                        
-                        // If valid, trigger form submit
+
+                    return isValid;
+                }
+
+                // Form validation on submit
+                form.addEventListener('submit', function(e) {
+                    if (!validateForm()) {
                         e.preventDefault();
                         e.stopPropagation();
-                        form.requestSubmit();
-                    
-                    return false;
-                }, { passive: false });
-                }
-                
-                // Fix payment method cards for mobile
-                const paymentCards = document.querySelectorAll('.payment-method-card');
-                paymentCards.forEach(card => {
-                    card.addEventListener('touchstart', function(e) {
-                        this.style.transform = 'scale(0.98)';
-                    }, { passive: true });
-                    
-                    card.addEventListener('touchend', function(e) {
-                        this.style.transform = 'scale(1)';
-                        // Trigger radio selection
-                        const radio = this.querySelector('.payment-method-radio');
-                        if (radio) {
-                            radio.checked = true;
-                            radio.dispatchEvent(new Event('change'));
-                        }
+                        alert('Please fill in all required fields before continuing.');
                         return false;
-                    }, { passive: false });
+                    }
+                });
+
+                // MOBILE FIX: Visual feedback only on touch/mouse
+                submitBtn.addEventListener('touchstart', function(e) {
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchend', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                    // Don't trigger submit here - let click handle it naturally
+                }, { passive: true });
+
+                submitBtn.addEventListener('mousedown', function(e) {
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
+                });
+
+                submitBtn.addEventListener('mouseup', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                });
+
+                // Single unified click handler prevents double submission
+                submitBtn.addEventListener('click', function(e) {
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        return;
+                    }
+                    isSubmitting = true;
+                    setTimeout(() => { isSubmitting = false; }, 3000);
                 });
             }
+
+            // Fix payment method cards - click events work on mobile too
+            const paymentCards = document.querySelectorAll('.payment-method-card');
+            paymentCards.forEach(card => {
+                card.addEventListener('touchstart', function(e) {
+                    this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                card.addEventListener('touchend', function(e) {
+                    this.style.transform = 'scale(1)';
+                }, { passive: true });
+
+                // Use click for selection - works on both mobile and desktop
+                card.addEventListener('click', function(e) {
+                    const radio = this.querySelector('.payment-method-radio');
+                    if (radio && !radio.checked) {
+                        radio.checked = true;
+                        radio.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
         });
         
         // Handle payment method selection

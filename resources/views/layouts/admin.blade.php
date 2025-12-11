@@ -677,31 +677,26 @@
             const mobileOverlay = document.getElementById('mobile-overlay');
             const userInfo = document.getElementById('userInfo');
             const sidebarTexts = document.querySelectorAll('.sidebar-text');
-            
-            // Check if elements exist before proceeding
+
             if (!sidebar || !mobileMenuBtn) {
-                console.error('Required navigation elements not found');
                 return;
             }
-            
-            // Mobile detection function
+
             function isMobileView() {
                 return window.innerWidth <= 768;
             }
-            
-            // Desktop functionality
+
             if (sidebarToggle) {
-                // Check if sidebar is collapsed from localStorage
                 const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-                
+
                 if (isCollapsed && !isMobileView()) {
                     collapseSidebar();
                 }
-                
+
                 sidebarToggle.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     if (isMobileView()) {
                         toggleMobileSidebar();
                     } else {
@@ -713,82 +708,59 @@
                     }
                 });
             }
-            
-            // Mobile menu button event listener - with explicit touch handling
-            if (mobileMenuBtn) {
-                // Click event - use capture phase to ensure it fires
-                mobileMenuBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleMobileSidebar();
-                    return false;
-                }, true);
-                
-                // Also ensure onclick works
-                mobileMenuBtn.onclick = function(e) {
-                    if (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                    toggleMobileSidebar();
-                    return false;
-                };
-                
-                // Touch events for better mobile responsiveness
-                mobileMenuBtn.addEventListener('touchstart', function(e) {
-                    this.style.transform = 'scale(0.95)';
-                }, { passive: true });
-                
-                mobileMenuBtn.addEventListener('touchend', function(e) {
-                    this.style.transform = 'scale(1)';
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleMobileSidebar();
-                    return false;
-                }, { passive: false });
-                
-                // Fallback for mouse events
-                mobileMenuBtn.addEventListener('mousedown', function(e) {
-                    this.style.transform = 'scale(0.95)';
-                });
-                
-                mobileMenuBtn.addEventListener('mouseup', function(e) {
-                    this.style.transform = 'scale(1)';
-                });
-            }
-            
-            // Mobile close button event listener
+
+            // Mobile menu button - touch and click handlers
+            let touchHandled = false;
+
+            mobileMenuBtn.addEventListener('click', function(e) {
+                if (touchHandled) {
+                    touchHandled = false;
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                toggleMobileSidebar();
+            }, true);
+
+            mobileMenuBtn.addEventListener('touchstart', function(e) {
+                this.style.transform = 'scale(0.95)';
+                this.style.opacity = '0.8';
+            }, { passive: true });
+
+            mobileMenuBtn.addEventListener('touchend', function(e) {
+                this.style.transform = 'scale(1)';
+                this.style.opacity = '1';
+                touchHandled = true;
+                setTimeout(function() { touchHandled = false; }, 300);
+                toggleMobileSidebar();
+            }, { passive: true });
+
+            // Mobile close button - touch and click handlers
             const mobileCloseBtn = document.getElementById('mobileCloseBtn');
             if (mobileCloseBtn) {
+                let closeTouchHandled = false;
+
                 mobileCloseBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    closeMobileSidebar();
-                    return false;
-                }, true);
-                
-                // Also ensure onclick works
-                mobileCloseBtn.onclick = function(e) {
-                    if (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
+                    if (closeTouchHandled) {
+                        closeTouchHandled = false;
+                        return;
                     }
+                    e.preventDefault();
                     closeMobileSidebar();
-                    return false;
-                };
-                
-                // Touch events for better mobile responsiveness
+                });
+
                 mobileCloseBtn.addEventListener('touchstart', function(e) {
                     this.style.transform = 'scale(0.9)';
+                    this.style.opacity = '0.8';
                 }, { passive: true });
-                
+
                 mobileCloseBtn.addEventListener('touchend', function(e) {
                     this.style.transform = 'scale(1)';
-                    e.preventDefault();
-                    e.stopPropagation();
+                    this.style.opacity = '1';
+                    closeTouchHandled = true;
+                    setTimeout(function() { closeTouchHandled = false; }, 300);
                     closeMobileSidebar();
-                    return false;
-                }, { passive: false });
+                }, { passive: true });
             }
             
             // Mobile overlay click handler

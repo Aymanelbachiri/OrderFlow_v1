@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Touch-friendly interactions
+    // Touch-friendly interactions - UNIVERSAL MOBILE BUTTON FIX
     if ('ontouchstart' in window) {
         // Add touch classes to interactive elements
         const interactiveElements = document.querySelectorAll('button, a, input, select, textarea');
@@ -110,7 +110,37 @@ document.addEventListener('DOMContentLoaded', function() {
             // Use CSS touch-action to prevent double-tap zoom without blocking clicks
             if (el.tagName === 'BUTTON' || el.tagName === 'A') {
                 el.style.touchAction = 'manipulation';
+                // Ensure tap highlight is visible on iOS
+                el.style.webkitTapHighlightColor = 'rgba(0, 0, 0, 0.1)';
             }
+        });
+
+        // Add visual touch feedback to all buttons (passive handlers only)
+        const buttons = document.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]');
+        buttons.forEach(btn => {
+            // Skip if button already has custom touch handlers
+            if (btn.dataset.touchHandled) return;
+            btn.dataset.touchHandled = 'true';
+
+            // Store original styles
+            const originalTransform = btn.style.transform || '';
+            const originalOpacity = btn.style.opacity || '1';
+
+            btn.addEventListener('touchstart', function() {
+                this.style.opacity = '0.9';
+                this.style.transform = originalTransform ? originalTransform + ' scale(0.98)' : 'scale(0.98)';
+            }, { passive: true });
+
+            btn.addEventListener('touchend', function() {
+                this.style.opacity = originalOpacity;
+                this.style.transform = originalTransform;
+                // Don't trigger actions here - let the native click event handle it
+            }, { passive: true });
+
+            btn.addEventListener('touchcancel', function() {
+                this.style.opacity = originalOpacity;
+                this.style.transform = originalTransform;
+            }, { passive: true });
         });
     }
 

@@ -342,46 +342,65 @@
     <script>
         // Handle payment method selection visual feedback and mobile button fixes
         document.addEventListener('DOMContentLoaded', function() {
-            // Fix submit button for mobile
+            // MOBILE FIX: Universal button handler
+            // Modern mobile browsers fire click events reliably - touchend workarounds cause double-firing
             const submitBtn = document.querySelector('button[type="submit"]');
             if (submitBtn) {
+                let isSubmitting = false;
+
+                // Visual feedback only on touch/mouse
                 submitBtn.addEventListener('touchstart', function(e) {
                     this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
                 }, { passive: true });
-                
+
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
-                    
-                    // Prevent default and submit form programmatically
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const form = this.closest('form');
-                    if (form) {
-                        form.submit();
+                    this.style.transform = 'scale(1)';
+                    // Don't trigger submit here - let click handle it naturally
+                }, { passive: true });
+
+                submitBtn.addEventListener('mousedown', function(e) {
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
+                });
+
+                submitBtn.addEventListener('mouseup', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                });
+
+                // Single unified click handler prevents double submission
+                submitBtn.addEventListener('click', function(e) {
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        return;
                     }
-                    
-                    return false;
-                }, { passive: false });
+                    isSubmitting = true;
+                    setTimeout(() => { isSubmitting = false; }, 3000);
+                });
             }
-            
-            // Fix payment method cards for mobile
+
+            // Fix payment method cards for mobile - click events work reliably
             const paymentCards = document.querySelectorAll('.payment-method-card');
             paymentCards.forEach(card => {
+                // Visual feedback
                 card.addEventListener('touchstart', function(e) {
                     this.style.transform = 'scale(0.98)';
                 }, { passive: true });
-                
+
                 card.addEventListener('touchend', function(e) {
                     this.style.transform = 'scale(1)';
-                    // Trigger radio selection
+                }, { passive: true });
+
+                // Use click for selection - works on both mobile and desktop
+                card.addEventListener('click', function(e) {
                     const radio = this.querySelector('.payment-method-radio');
-                    if (radio) {
+                    if (radio && !radio.checked) {
                         radio.checked = true;
                         radio.dispatchEvent(new Event('change'));
                     }
-                    return false;
-                }, { passive: false });
+                });
             });
             
             document.querySelectorAll('.payment-method-radio').forEach((radio) => {
