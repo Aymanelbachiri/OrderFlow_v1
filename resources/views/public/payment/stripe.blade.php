@@ -140,7 +140,7 @@
 
                                 <!-- Submit Button - Separated with clear spacing -->
                                 <div style="margin-top: 32px; position: relative; z-index: 999;">
-                                    <button type="submit" id="submit"
+                                    <button type="submit" id="submit" data-custom-touch="true"
                                             class="w-full bg-gradient-to-r from-blue-500 to-blue-700/80 hover:from-blue-700/90 hover:to-blue-500 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.98]"
                                             style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); min-height: 52px; cursor: pointer; pointer-events: auto; position: relative; z-index: 999;">
                                         <span id="button-text">Complete Payment - ${{ number_format($paymentIntent->amount, 2) }}</span>
@@ -408,25 +408,35 @@ async function handlePaymentSubmit(e) {
 // Add form submit listener
 form.addEventListener('submit', handlePaymentSubmit);
 
-// MOBILE FIX: Universal click/touch handler
-// Modern mobile browsers fire click events reliably - no need for touchend workarounds
-// This approach prevents double-firing and works consistently across all devices
+// MOBILE FIX: Trigger form submit on touchend since click doesn't fire on mobile
 (function() {
     let isSubmitting = false;
+    let touchMoved = false;
 
     // Visual feedback on touch/mouse down
     submitBtn.addEventListener('touchstart', function(e) {
+        touchMoved = false;
         this.style.transform = 'scale(0.98)';
+    }, { passive: true });
+
+    submitBtn.addEventListener('touchmove', function(e) {
+        touchMoved = true;
     }, { passive: true });
 
     submitBtn.addEventListener('mousedown', function(e) {
         this.style.transform = 'scale(0.98)';
     });
 
-    // Reset visual on touch/mouse end
+    // Trigger payment on touchend (since click doesn't fire on mobile)
     submitBtn.addEventListener('touchend', function(e) {
         this.style.transform = 'scale(1)';
-        // Don't trigger submit here - let click event handle it
+
+        if (!touchMoved && !isSubmitting && !this.disabled) {
+            isSubmitting = true;
+            // Trigger the form submit which calls handlePaymentSubmit
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            setTimeout(() => { isSubmitting = false; }, 3000);
+        }
     }, { passive: true });
 
     submitBtn.addEventListener('mouseup', function(e) {
@@ -437,15 +447,13 @@ form.addEventListener('submit', handlePaymentSubmit);
         this.style.transform = 'scale(1)';
     });
 
-    // Single unified click handler for both mobile and desktop
+    // Desktop click handler
     submitBtn.addEventListener('click', function(e) {
         if (isSubmitting || this.disabled) {
             e.preventDefault();
             return;
         }
         isSubmitting = true;
-
-        // Reset after a timeout to allow retry if needed
         setTimeout(() => { isSubmitting = false; }, 3000);
     });
 })();
