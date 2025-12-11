@@ -124,34 +124,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let touchStarted = false;
             let touchMoved = false;
+            const originalTransform = el.style.transform || '';
+            const originalOpacity = el.style.opacity || '';
 
-            el.addEventListener('touchstart', function(e) {
+            function resetStyles(elem) {
+                elem.style.opacity = originalOpacity;
+                elem.style.transform = originalTransform;
+            }
+
+            el.addEventListener('touchstart', function() {
                 touchStarted = true;
                 touchMoved = false;
                 this.style.opacity = '0.8';
                 this.style.transform = 'scale(0.97)';
             }, { passive: true });
 
-            el.addEventListener('touchmove', function(e) {
+            el.addEventListener('touchmove', function() {
                 touchMoved = true;
+                // Reset immediately if user starts scrolling
+                resetStyles(this);
             }, { passive: true });
 
-            el.addEventListener('touchend', function(e) {
-                this.style.opacity = '1';
-                this.style.transform = 'scale(1)';
+            el.addEventListener('touchend', function() {
+                // Reset styles immediately
+                resetStyles(this);
 
                 // Only trigger click if it was a tap (not a scroll)
                 if (touchStarted && !touchMoved) {
-                    // Trigger the click event programmatically
                     this.click();
                 }
                 touchStarted = false;
+                touchMoved = false;
             }, { passive: true });
 
             el.addEventListener('touchcancel', function() {
-                this.style.opacity = '1';
-                this.style.transform = 'scale(1)';
+                resetStyles(this);
                 touchStarted = false;
+                touchMoved = false;
             }, { passive: true });
         });
     }
