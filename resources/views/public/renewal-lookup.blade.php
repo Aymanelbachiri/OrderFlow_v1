@@ -56,7 +56,7 @@
                 </div>
 
                 <div class="flex justify-center">
-                    <button type="submit" id="searchBtn"
+                    <button type="submit" id="searchBtn" data-custom-touch="true"
                         class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200"
                         style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);">
                         Find My Subscription
@@ -165,22 +165,39 @@
 
 @push('scripts')
 <script>
-    // MOBILE FIX: Universal button handler for search button
+    // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
     document.addEventListener('DOMContentLoaded', function() {
         const searchBtn = document.getElementById('searchBtn');
-        if (searchBtn) {
-            let isSubmitting = false;
+        const form = searchBtn ? searchBtn.closest('form') : null;
 
-            // Visual feedback only on touch
+        if (searchBtn && form) {
+            let isSubmitting = false;
+            let touchMoved = false;
+
             searchBtn.addEventListener('touchstart', function(e) {
+                touchMoved = false;
                 this.style.opacity = '0.9';
                 this.style.transform = 'scale(0.98)';
+            }, { passive: true });
+
+            searchBtn.addEventListener('touchmove', function(e) {
+                touchMoved = true;
             }, { passive: true });
 
             searchBtn.addEventListener('touchend', function(e) {
                 this.style.opacity = '1';
                 this.style.transform = 'scale(1)';
-                // Don't trigger submit here - let click handle it naturally
+
+                // Trigger form submission on touch (since click doesn't fire on mobile)
+                if (!touchMoved && !isSubmitting) {
+                    isSubmitting = true;
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
+                    setTimeout(() => { isSubmitting = false; }, 3000);
+                }
             }, { passive: true });
 
             searchBtn.addEventListener('mousedown', function(e) {
@@ -193,7 +210,7 @@
                 this.style.transform = 'scale(1)';
             });
 
-            // Prevent double submission
+            // Prevent double submission on desktop
             searchBtn.addEventListener('click', function(e) {
                 if (isSubmitting) {
                     e.preventDefault();

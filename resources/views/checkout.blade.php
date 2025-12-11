@@ -283,7 +283,7 @@
 
                             <!-- Submit -->
                             <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
-                                <button type="submit"
+                                <button type="submit" data-custom-touch="true"
                                     class="w-full py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300 flex items-center justify-center space-x-3 touch-manipulation"
                                     style="min-height: 48px;">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,18 +346,33 @@
                     }
                 });
 
-                // MOBILE FIX: Visual feedback only - let click/submit handle the action
+                // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
                 let isSubmitting = false;
+                let touchMoved = false;
 
                 submitBtn.addEventListener('touchstart', function(e) {
+                    touchMoved = false;
                     this.style.opacity = '0.9';
                     this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchmove', function(e) {
+                    touchMoved = true;
                 }, { passive: true });
 
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
                     this.style.transform = 'scale(1)';
-                    // Don't trigger submit here - let click handle it naturally
+
+                    // Trigger form submission on touch (since click doesn't fire on mobile)
+                    if (!touchMoved && !isSubmitting && validateForm()) {
+                        isSubmitting = true;
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
+                    }
                 }, { passive: true });
 
                 submitBtn.addEventListener('mousedown', function(e) {
