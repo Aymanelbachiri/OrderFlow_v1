@@ -206,10 +206,9 @@
     transform: scale(0.98) !important;
 }
 
-/* Ensure payment element doesn't overflow */
+/* Allow payment element to expand fully */
 #payment-element iframe {
-    max-height: 400px;
-    overflow: hidden;
+    min-height: 300px;
 }
 </style>
 
