@@ -722,6 +722,7 @@
 
             // Mobile menu button - touch and click handlers
             let touchHandled = false;
+            let menuTouchMoved = false;
 
             mobileMenuBtn.addEventListener('click', function(e) {
                 if (touchHandled) {
@@ -734,22 +735,32 @@
             }, true);
 
             mobileMenuBtn.addEventListener('touchstart', function(e) {
+                menuTouchMoved = false;
                 this.style.transform = 'scale(0.95)';
                 this.style.opacity = '0.8';
+            }, { passive: true });
+
+            mobileMenuBtn.addEventListener('touchmove', function(e) {
+                menuTouchMoved = true;
+                this.style.transform = 'scale(1)';
+                this.style.opacity = '1';
             }, { passive: true });
 
             mobileMenuBtn.addEventListener('touchend', function(e) {
                 this.style.transform = 'scale(1)';
                 this.style.opacity = '1';
-                touchHandled = true;
-                setTimeout(function() { touchHandled = false; }, 300);
-                toggleMobileSidebar();
+                if (!menuTouchMoved) {
+                    touchHandled = true;
+                    setTimeout(function() { touchHandled = false; }, 300);
+                    toggleMobileSidebar();
+                }
             }, { passive: true });
 
             // Mobile close button - touch and click handlers
             const mobileCloseBtn = document.getElementById('mobileCloseBtn');
             if (mobileCloseBtn) {
                 let closeTouchHandled = false;
+                let closeTouchMoved = false;
 
                 mobileCloseBtn.addEventListener('click', function(e) {
                     if (closeTouchHandled) {
@@ -761,16 +772,25 @@
                 });
 
                 mobileCloseBtn.addEventListener('touchstart', function(e) {
+                    closeTouchMoved = false;
                     this.style.transform = 'scale(0.9)';
                     this.style.opacity = '0.8';
+                }, { passive: true });
+
+                mobileCloseBtn.addEventListener('touchmove', function(e) {
+                    closeTouchMoved = true;
+                    this.style.transform = 'scale(1)';
+                    this.style.opacity = '1';
                 }, { passive: true });
 
                 mobileCloseBtn.addEventListener('touchend', function(e) {
                     this.style.transform = 'scale(1)';
                     this.style.opacity = '1';
-                    closeTouchHandled = true;
-                    setTimeout(function() { closeTouchHandled = false; }, 300);
-                    closeMobileSidebar();
+                    if (!closeTouchMoved) {
+                        closeTouchHandled = true;
+                        setTimeout(function() { closeTouchHandled = false; }, 300);
+                        closeMobileSidebar();
+                    }
                 }, { passive: true });
             }
 
@@ -779,6 +799,7 @@
             const logoutForm = document.getElementById('logout-form');
             if (logoutBtn && logoutForm) {
                 let logoutTouchMoved = false;
+                let logoutSubmitting = false;
 
                 logoutBtn.addEventListener('touchstart', function(e) {
                     logoutTouchMoved = false;
@@ -788,12 +809,15 @@
 
                 logoutBtn.addEventListener('touchmove', function(e) {
                     logoutTouchMoved = true;
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
                 }, { passive: true });
 
                 logoutBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
                     this.style.transform = 'scale(1)';
-                    if (!logoutTouchMoved) {
+                    if (!logoutTouchMoved && !logoutSubmitting) {
+                        logoutSubmitting = true;
                         logoutForm.submit();
                     }
                 }, { passive: true });

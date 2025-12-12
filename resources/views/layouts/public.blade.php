@@ -668,17 +668,28 @@
             }, true);
 
             // Touch handlers - trigger action on touchend
+            let menuTouchMoved = false;
+
             btn.addEventListener('touchstart', function(e) {
+                menuTouchMoved = false;
                 this.style.opacity = '0.8';
                 this.style.transform = 'scale(0.95)';
+            }, { passive: true });
+
+            btn.addEventListener('touchmove', function(e) {
+                menuTouchMoved = true;
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
             }, { passive: true });
 
             btn.addEventListener('touchend', function(e) {
                 this.style.opacity = '1';
                 this.style.transform = 'scale(1)';
-                touchHandled = true;
-                setTimeout(function() { touchHandled = false; }, 300);
-                toggleMenu();
+                if (!menuTouchMoved) {
+                    touchHandled = true;
+                    setTimeout(function() { touchHandled = false; }, 300);
+                    toggleMenu();
+                }
             }, { passive: true });
 
             // Close menu when clicking outside
