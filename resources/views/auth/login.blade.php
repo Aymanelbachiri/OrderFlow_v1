@@ -98,8 +98,9 @@
                         <!-- Submit Button -->
                         <button type="submit"
                                 id="login-submit-btn"
+                                data-custom-touch="true"
                                 class="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-800 dark:to-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-black hover:to-gray-900 dark:hover:from-gray-700 dark:hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8ACD00] transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] relative z-10 touch-manipulation"
-                                style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1); min-height: 44px; cursor: pointer; pointer-events: auto;">
+                                style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 44px; cursor: pointer; pointer-events: auto;">
                             <span id="btn-text">Get Started</span>
                             <span id="btn-loading" class="hidden">
                                 <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -180,6 +181,39 @@
                     submitBtn.style.opacity = '0.7';
                     submitBtn.style.cursor = 'not-allowed';
                 });
+
+                // MOBILE FIX: Trigger form submission on touchend
+                if (submitBtn && form) {
+                    let isSubmitting = false;
+                    let touchMoved = false;
+
+                    submitBtn.addEventListener('touchstart', function(e) {
+                        touchMoved = false;
+                        this.style.opacity = '0.9';
+                        this.style.transform = 'scale(0.98)';
+                    }, { passive: true });
+
+                    submitBtn.addEventListener('touchmove', function(e) {
+                        touchMoved = true;
+                    }, { passive: true });
+
+                    submitBtn.addEventListener('touchend', function(e) {
+                        this.style.opacity = '1';
+                        this.style.transform = 'scale(1)';
+
+                        if (!touchMoved && !isSubmitting && !submitBtn.disabled) {
+                            e.preventDefault();
+                            isSubmitting = true;
+
+                            if (typeof form.requestSubmit === 'function') {
+                                form.requestSubmit(submitBtn);
+                            } else {
+                                form.submit();
+                            }
+                            setTimeout(() => { isSubmitting = false; }, 3000);
+                        }
+                    });
+                }
             });
         </script>
     

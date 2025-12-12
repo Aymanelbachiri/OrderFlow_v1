@@ -102,8 +102,9 @@
         </div>
 
         <!-- Create Account Button -->
-        <button type="submit"
-                class="w-full bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200">
+        <button type="submit" id="register-submit-btn" data-custom-touch="true"
+                class="w-full bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 touch-manipulation"
+                style="-webkit-tap-highlight-color: transparent; min-height: 44px;">
             Create Account
         </button>
 
@@ -155,5 +156,43 @@
                 `;
             }
         }
+
+        // MOBILE FIX: Trigger form submission on touchend
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitBtn = document.getElementById('register-submit-btn');
+
+            if (submitBtn && form) {
+                let isSubmitting = false;
+                let touchMoved = false;
+
+                submitBtn.addEventListener('touchstart', function(e) {
+                    touchMoved = false;
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchmove', function(e) {
+                    touchMoved = true;
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchend', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+
+                    if (!touchMoved && !isSubmitting) {
+                        e.preventDefault();
+                        isSubmitting = true;
+
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(submitBtn);
+                        } else {
+                            form.submit();
+                        }
+                        setTimeout(() => { isSubmitting = false; }, 3000);
+                    }
+                });
+            }
+        });
     </script>
 </x-guest-layout>

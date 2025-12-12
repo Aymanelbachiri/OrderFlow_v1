@@ -320,8 +320,8 @@
 
                             <!-- Submit Button -->
                             <div class="pt-6">
-                                <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2 touch-manipulation"
-                                        style="min-height: 48px;">
+                                <button type="submit" data-custom-touch="true" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2 touch-manipulation"
+                                        style="min-height: 48px; -webkit-tap-highlight-color: transparent;">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                     </svg>
@@ -342,35 +342,41 @@
     <script>
         // Handle payment method selection visual feedback and mobile button fixes
         document.addEventListener('DOMContentLoaded', function() {
-            // MOBILE FIX: Universal button handler
-            // Modern mobile browsers fire click events reliably - touchend workarounds cause double-firing
+            // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
             const submitBtn = document.querySelector('button[type="submit"]');
-            if (submitBtn) {
+            const form = submitBtn?.closest('form');
+            if (submitBtn && form) {
                 let isSubmitting = false;
+                let touchMoved = false;
 
-                // Visual feedback only on touch/mouse
                 submitBtn.addEventListener('touchstart', function(e) {
+                    touchMoved = false;
                     this.style.opacity = '0.9';
                     this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchmove', function(e) {
+                    touchMoved = true;
                 }, { passive: true });
 
                 submitBtn.addEventListener('touchend', function(e) {
                     this.style.opacity = '1';
                     this.style.transform = 'scale(1)';
-                    // Don't trigger submit here - let click handle it naturally
-                }, { passive: true });
 
-                submitBtn.addEventListener('mousedown', function(e) {
-                    this.style.opacity = '0.9';
-                    this.style.transform = 'scale(0.98)';
+                    if (!touchMoved && !isSubmitting) {
+                        e.preventDefault();
+                        isSubmitting = true;
+
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(this);
+                        } else {
+                            form.submit();
+                        }
+                        setTimeout(() => { isSubmitting = false; }, 3000);
+                    }
                 });
 
-                submitBtn.addEventListener('mouseup', function(e) {
-                    this.style.opacity = '1';
-                    this.style.transform = 'scale(1)';
-                });
-
-                // Single unified click handler prevents double submission
+                // Desktop click handler
                 submitBtn.addEventListener('click', function(e) {
                     if (isSubmitting) {
                         e.preventDefault();

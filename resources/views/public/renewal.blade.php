@@ -304,8 +304,9 @@
 
                         <!-- Submit -->
                         <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
-                            <button type="submit"
-                                class="w-full py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300 flex items-center justify-center space-x-3">
+                            <button type="submit" data-custom-touch="true"
+                                class="w-full py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300 flex items-center justify-center space-x-3 touch-manipulation"
+                                style="-webkit-tap-highlight-color: transparent;">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
@@ -409,6 +410,8 @@
 
         // Form validation
         const renewalForm = document.getElementById('renewal-form');
+        const submitBtn = renewalForm?.querySelector('button[type="submit"]');
+
         if (renewalForm) {
             renewalForm.addEventListener('submit', function(e) {
                 const planId = planIdInput.value;
@@ -418,6 +421,49 @@
                     planError.classList.remove('hidden');
                     return false;
                 }
+            });
+        }
+
+        // MOBILE FIX: Trigger form submission on touchend
+        if (submitBtn && renewalForm) {
+            let isSubmitting = false;
+            let touchMoved = false;
+
+            submitBtn.addEventListener('touchstart', function(e) {
+                touchMoved = false;
+                this.style.opacity = '0.9';
+                this.style.transform = 'scale(0.98)';
+            }, { passive: true });
+
+            submitBtn.addEventListener('touchmove', function(e) {
+                touchMoved = true;
+            }, { passive: true });
+
+            submitBtn.addEventListener('touchend', function(e) {
+                this.style.opacity = '1';
+                this.style.transform = 'scale(1)';
+
+                if (!touchMoved && !isSubmitting) {
+                    e.preventDefault();
+                    isSubmitting = true;
+
+                    if (typeof renewalForm.requestSubmit === 'function') {
+                        renewalForm.requestSubmit(this);
+                    } else {
+                        renewalForm.submit();
+                    }
+                    setTimeout(() => { isSubmitting = false; }, 3000);
+                }
+            });
+
+            // Desktop click handler
+            submitBtn.addEventListener('click', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return;
+                }
+                isSubmitting = true;
+                setTimeout(() => { isSubmitting = false; }, 3000);
             });
         }
     });

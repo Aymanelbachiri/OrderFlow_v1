@@ -58,8 +58,9 @@
                         </div>
     
                         <!-- Send Reset Link Button -->
-                        <button type="submit"
-                                class="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-800 dark:to-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-black hover:to-gray-900 dark:hover:from-gray-700 dark:hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8ACD00] transition-all duration-200 shadow-lg hover:shadow-xl">
+                        <button type="submit" id="forgot-password-btn" data-custom-touch="true"
+                                class="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-800 dark:to-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-black hover:to-gray-900 dark:hover:from-gray-700 dark:hover:to-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8ACD00] transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
+                                style="-webkit-tap-highlight-color: transparent; min-height: 44px;">
                             Email Password Reset Link
                         </button>
     
@@ -84,6 +85,45 @@
                 </div>
             </div>
         </div>
-    
+
+    <script>
+        // MOBILE FIX: Trigger form submission on touchend
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitBtn = document.getElementById('forgot-password-btn');
+
+            if (submitBtn && form) {
+                let isSubmitting = false;
+                let touchMoved = false;
+
+                submitBtn.addEventListener('touchstart', function(e) {
+                    touchMoved = false;
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(0.98)';
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchmove', function(e) {
+                    touchMoved = true;
+                }, { passive: true });
+
+                submitBtn.addEventListener('touchend', function(e) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+
+                    if (!touchMoved && !isSubmitting) {
+                        e.preventDefault();
+                        isSubmitting = true;
+
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(submitBtn);
+                        } else {
+                            form.submit();
+                        }
+                        setTimeout(() => { isSubmitting = false; }, 3000);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
