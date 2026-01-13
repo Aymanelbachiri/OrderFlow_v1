@@ -14,3 +14,10 @@ Route::middleware(['auth:sanctum'])->prefix('wordpress')->name('api.wordpress.')
     Route::get('/tokens', [\App\Http\Controllers\Api\WordPressIntegrationController::class, 'getTokens'])->name('tokens');
     Route::delete('/tokens/{tokenId}', [\App\Http\Controllers\Api\WordPressIntegrationController::class, 'revokeToken'])->name('tokens.revoke');
 });
+
+// Public Affiliate API Routes (for Next.js frontend)
+Route::prefix('affiliate')->name('api.affiliate.')->group(function () {
+    Route::post('/register', [\App\Http\Controllers\Api\AffiliateController::class, 'register'])->name('register');
+    Route::get('/dashboard', [\App\Http\Controllers\Api\AffiliateController::class, 'dashboard'])->name('dashboard');
+    Route::post('/fetch-subscriptions', [\App\Http\Controllers\Api\AffiliateController::class, 'fetchSubscriptions'])->name('fetch-subscriptions');
+});

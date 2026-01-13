@@ -10,6 +10,7 @@ use App\Models\PaymentIntent;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NewOrderClientMail;
 use App\Mail\NewOrderAdminMail;
+use App\Services\AffiliateService;
 
 class CheckoutController extends Controller
 {
@@ -121,6 +122,7 @@ class CheckoutController extends Controller
             'renewal_order_number' => 'nullable|string|exists:orders,order_number',
             'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),
             'source' => $sourceRule,
+            'referral_code' => 'nullable|string|max:12',
         ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Redirect back with errors and preserve plan_id
@@ -140,6 +142,29 @@ class CheckoutController extends Controller
 
         // Determine source from request query or payload (default to 'main')
         $sourceFromRequest = $request->query('source') ?? ($validated['source'] ?? 'main');
+
+        // Validate referral code if provided
+        $referralCode = null;
+        $skipReferral = false;
+        if (!empty($validated['referral_code'])) {
+            $affiliateService = new AffiliateService();
+            $email = strtolower($validated['email']);
+            $validation = $affiliateService->validateReferralCode($validated['referral_code'], $email);
+            
+            if (!$validation['valid']) {
+                return redirect()->route('checkout.show', ['plan_id' => $planId, 'email' => $validated['email']])
+                    ->withErrors(['referral_code' => $validation['message']])
+                    ->withInput();
+            }
+            
+            // Check if we should skip the referral (already used)
+            if (isset($validation['skip_referral']) && $validation['skip_referral']) {
+                $skipReferral = true;
+                // Don't set referral code - let checkout proceed normally without referral
+            } else {
+                $referralCode = strtoupper(trim($validated['referral_code']));
+            }
+        }
 
         // Find or create client user by email (case-insensitive)
         $email = strtolower($validated['email']);
@@ -185,6 +210,11 @@ class CheckoutController extends Controller
                 'phone' => $validated['phone'],
             ],
         ];
+
+        // Add referral code if provided
+        if ($referralCode) {
+            $orderData['referral_code'] = $referralCode;
+        }
 
         // Handle renewal logic
         if ($validated['subscription_type'] === 'renewal' && !empty($validated['renewal_order_number'])) {
@@ -290,6 +320,32 @@ class CheckoutController extends Controller
         return response()->json([
             'success' => true,
             'subscriptions' => $formattedSubscriptions,
+        ]);
+    }
+
+    /**
+     * Validate referral code (AJAX endpoint)
+     */
+    public function validateReferral(Request $request)
+    {
+        $request->validate([
+            'referral_code' => 'required|string|max:12',
+            'email' => 'required|email',
+        ]);
+
+        $referralCode = strtoupper(trim($request->input('referral_code')));
+        $email = strtolower($request->input('email'));
+
+        $affiliateService = new AffiliateService();
+        $validation = $affiliateService->validateReferralCode($referralCode, $email);
+
+        return response()->json([
+            'valid' => $validation['valid'],
+            'message' => $validation['message'],
+            'affiliate' => $validation['affiliate'] ? [
+                'email' => $validation['affiliate']->email,
+                'referral_code' => $validation['affiliate']->referral_code,
+            ] : null,
         ]);
     }
 }

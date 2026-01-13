@@ -211,6 +211,31 @@
                                 </div>
                             </section>
 
+                            <!-- Referral Code (Optional) -->
+                            <section id="referral-code-section" class="border-t border-gray-200 dark:border-gray-700 pt-8">
+                                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Referral Code (Optional)</h2>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Have a referral code?
+                                    </label>
+                                    <div class="flex items-start space-x-3">
+                                        <input type="text" name="referral_code" id="referral_code" 
+                                            value="{{ old('referral_code', request('ref')) }}" 
+                                            maxlength="12"
+                                            class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white font-mono uppercase focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            placeholder="ABC123XYZ">
+                                        <button type="button" id="validate-referral-btn"
+                                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition-colors text-sm font-medium">
+                                            Validate
+                                        </button>
+                                    </div>
+                                    <div id="referral-validation-message" class="mt-2 text-sm"></div>
+                                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                        Enter a referral code if you were referred by an existing customer (new customers only)
+                                    </p>
+                                </div>
+                            </section>
+
                             <!-- Payment Method -->
                             <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
                                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Payment Method</h2>
@@ -433,6 +458,12 @@
         // Subscription Type Radio Button Functionality
         const renewalSection = document.getElementById('renewal-subscription-section');
         const renewalOrderNumberInput = document.getElementById('renewal_order_number');
+        const referralCodeSection = document.getElementById('referral-code-section');
+        
+        // Referral code elements (defined early to avoid hoisting issues)
+        const referralCodeInput = document.getElementById('referral_code');
+        const validateReferralBtn = document.getElementById('validate-referral-btn');
+        const referralValidationMessage = document.getElementById('referral-validation-message');
 
         document.querySelectorAll('.subscription-type-radio').forEach(radio => {
             radio.addEventListener('change', function() {
@@ -459,9 +490,116 @@
                             }
                         }
                     }
+
+                    // Show/hide referral code section (only for new subscriptions)
+                    if (referralCodeSection) {
+                        console.log('Subscription type changed to:', this.value);
+                        console.log('Referral section element found:', referralCodeSection);
+                        if (this.value === 'new') {
+                            console.log('Showing referral section');
+                            referralCodeSection.classList.remove('hidden');
+                        } else {
+                            console.log('Hiding referral section');
+                            referralCodeSection.classList.add('hidden');
+                            // Clear referral code when switching to renewal
+                            if (referralCodeInput) {
+                                referralCodeInput.value = '';
+                                referralCodeInput.classList.remove('border-red-500', 'border-green-500');
+                                if (referralValidationMessage) {
+                                    referralValidationMessage.innerHTML = '';
+                                }
+                            }
+                        }
+                    } else {
+                        console.log('Referral section not found');
+                    }
                 }
             });
         });
+
+        // Referral Code Validation
+        const emailInput = document.querySelector('input[name="email"]');
+
+        if (validateReferralBtn && referralCodeInput) {
+            validateReferralBtn.addEventListener('click', function() {
+                const referralCode = referralCodeInput.value.trim().toUpperCase();
+                const email = emailInput ? emailInput.value.trim() : '';
+
+                if (!referralCode) {
+                    referralValidationMessage.innerHTML = '<p class="text-yellow-600 dark:text-yellow-400">Please enter a referral code</p>';
+                    return;
+                }
+
+                if (!email) {
+                    referralValidationMessage.innerHTML = '<p class="text-yellow-600 dark:text-yellow-400">Please enter your email address first</p>';
+                    return;
+                }
+
+                // Validate format (alphanumeric, 8-12 chars)
+                if (!/^[A-Z0-9]{8,12}$/.test(referralCode)) {
+                    referralValidationMessage.innerHTML = '<p class="text-red-600 dark:text-red-400">Invalid referral code format</p>';
+                    referralCodeInput.classList.add('border-red-500');
+                    return;
+                }
+
+                // Show loading state
+                validateReferralBtn.disabled = true;
+                validateReferralBtn.textContent = 'Validating...';
+                referralValidationMessage.innerHTML = '<p class="text-gray-600 dark:text-gray-400">Validating referral code...</p>';
+
+                // Validate via AJAX to check if code exists
+                fetch('{{ route('checkout.validate-referral') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        referral_code: referralCode,
+                        email: email
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    referralCodeInput.value = referralCode;
+                    validateReferralBtn.disabled = false;
+                    validateReferralBtn.textContent = 'Validate';
+                    
+                    if (data.valid) {
+                        referralValidationMessage.innerHTML = '<p class="text-green-600 dark:text-green-400">✓ ' + data.message + '</p>';
+                        referralCodeInput.classList.remove('border-red-500');
+                        referralCodeInput.classList.add('border-green-500');
+                    } else {
+                        referralValidationMessage.innerHTML = '<p class="text-red-600 dark:text-red-400">✗ ' + data.message + '</p>';
+                        referralCodeInput.classList.remove('border-green-500');
+                        referralCodeInput.classList.add('border-red-500');
+                    }
+                })
+                .catch(error => {
+                    console.error('Validation error:', error);
+                    referralValidationMessage.innerHTML = '<p class="text-red-600 dark:text-red-400">✗ Unable to validate referral code</p>';
+                    referralCodeInput.classList.remove('border-green-500');
+                    referralCodeInput.classList.add('border-red-500');
+                    validateReferralBtn.disabled = false;
+                    validateReferralBtn.textContent = 'Validate';
+                });
+            });
+
+            // Auto-uppercase referral code input
+            referralCodeInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                referralCodeInput.classList.remove('border-red-500', 'border-green-500');
+                referralValidationMessage.innerHTML = '';
+            });
+
+            // Pre-fill from URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const refParam = urlParams.get('ref');
+            if (refParam && !referralCodeInput.value) {
+                referralCodeInput.value = refParam.toUpperCase();
+            }
+        }
 
         // Initialize both payment method and subscription type selections on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -476,11 +614,33 @@
             }
             
             const selectedSubscriptionRadio = document.querySelector('.subscription-type-radio:checked');
-            if (selectedSubscriptionRadio) selectedSubscriptionRadio.dispatchEvent(new Event('change'));
+            if (selectedSubscriptionRadio) {
+                selectedSubscriptionRadio.dispatchEvent(new Event('change'));
+            }
+
+            // Initialize referral section visibility based on initial selection
+            const initialSubscriptionType = document.querySelector('input[name="subscription_type"]:checked');
+            console.log('Initial subscription type:', initialSubscriptionType ? initialSubscriptionType.value : 'none');
+            console.log('Referral section element:', referralCodeSection);
+            
+            if (initialSubscriptionType && referralCodeSection) {
+                if (initialSubscriptionType.value === 'renewal') {
+                    console.log('Hiding referral section on page load for renewal');
+                    referralCodeSection.classList.add('hidden');
+                } else {
+                    console.log('Showing referral section on page load for new subscription');
+                    referralCodeSection.classList.remove('hidden');
+                }
+            } else {
+                console.log('Could not initialize referral section visibility');
+                // Default to visible for new subscriptions (default selection)
+                if (referralCodeSection) {
+                    referralCodeSection.classList.remove('hidden');
+                }
+            }
         });
 
         // Fetch subscriptions when email is entered and renewal is selected
-        const emailInput = document.querySelector('input[name="email"]');
         const renewalSubscriptionsContainer = document.getElementById('renewal-subscriptions-container');
         let fetchTimeout = null;
 

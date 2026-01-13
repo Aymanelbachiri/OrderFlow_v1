@@ -32,8 +32,8 @@ Route::view('/services/other-services', 'services.other-services')->name('other-
 
 // Public reseller checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-Route::get('/reseller/checkout', [ResellerCheckoutController::class, 'show'])->name('reseller.checkout.show');
-Route::post('/reseller/checkout', [ResellerCheckoutController::class, 'submit'])->name('reseller.checkout.submit');
+    Route::get('/reseller/checkout', [ResellerCheckoutController::class, 'show'])->name('reseller.checkout.show');
+    Route::post('/reseller/checkout', [ResellerCheckoutController::class, 'submit'])->name('reseller.checkout.submit');
 });
 
 
@@ -47,29 +47,38 @@ Route::get('/payment-intents/{paymentIntent}/payment/coinbase-commerce/success',
 Route::get('/payment-intents/{paymentIntent}/payment/coinbase-commerce/cancel', [\App\Http\Controllers\PublicPaymentController::class, 'coinbaseCommerceCancel'])->name('public.payment.coinbase-commerce.cancel');
 Route::get('/payment-intents/{paymentIntent}/payment/coinbase-commerce/status', [\App\Http\Controllers\PublicPaymentController::class, 'coinbaseCommerceCheckStatus'])->name('public.payment.coinbase-commerce.status');
 Route::post('/webhooks/coinbase-commerce', [\App\Http\Controllers\PublicPaymentController::class, 'coinbaseCommerceWebhook'])->name('webhooks.coinbase-commerce');
-Route::match(['get','post'],'/payment-intents/{paymentIntent}/payment/success', [\App\Http\Controllers\PublicPaymentController::class, 'paymentIntentSuccess'])->name('public.payment-intents.success');
+Route::match(['get', 'post'], '/payment-intents/{paymentIntent}/payment/success', [\App\Http\Controllers\PublicPaymentController::class, 'paymentIntentSuccess'])->name('public.payment-intents.success');
 // Thank you page
 Route::get('/thank-you/{order}', [PublicPaymentController::class, 'thankYou'])->name('public.thank-you');
 
 // Public checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
-Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
-Route::post('/checkout/fetch-subscriptions', [CheckoutController::class, 'fetchSubscriptions'])->name('checkout.fetch-subscriptions');
+    Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+    Route::post('/checkout', [CheckoutController::class, 'submit'])->name('checkout.submit');
+    Route::post('/checkout/fetch-subscriptions', [CheckoutController::class, 'fetchSubscriptions'])->name('checkout.fetch-subscriptions');
+    Route::post('/checkout/validate-referral', [CheckoutController::class, 'validateReferral'])->name('checkout.validate-referral');
 });
 
 // Public renewal routes (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-Route::get('/renew', [\App\Http\Controllers\PublicRenewalController::class, 'lookup'])->name('renewal.lookup');
-Route::get('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'show'])->name('renewal.show');
-Route::post('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'submit'])->name('renewal.submit');
-Route::get('/renew/{orderNumber}/quick', [\App\Http\Controllers\PublicRenewalController::class, 'quickRenew'])->name('renewal.quick');
+    Route::get('/renew', [\App\Http\Controllers\PublicRenewalController::class, 'lookup'])->name('renewal.lookup');
+    Route::get('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'show'])->name('renewal.show');
+    Route::post('/renew/{orderNumber}', [\App\Http\Controllers\PublicRenewalController::class, 'submit'])->name('renewal.submit');
+    Route::get('/renew/{orderNumber}/quick', [\App\Http\Controllers\PublicRenewalController::class, 'quickRenew'])->name('renewal.quick');
 });
 
 // Custom product checkout (no auth) - iframe only from authorized sources
 Route::middleware(['require.iframe.source'])->group(function () {
-Route::get('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'show'])->name('custom-product.checkout.show');
-Route::post('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'submit'])->name('custom-product.checkout.submit');
+    Route::get('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'show'])->name('custom-product.checkout.show');
+    Route::post('/products/{product:slug}/checkout', [\App\Http\Controllers\CustomProductCheckoutController::class, 'submit'])->name('custom-product.checkout.submit');
+});
+
+// Public affiliate routes (no auth) - iframe compatible
+Route::middleware(['require.iframe.source'])->group(function () {
+    Route::get('/affiliate', [\App\Http\Controllers\AffiliateController::class, 'register'])->name('affiliate.register');
+    Route::post('/affiliate', [\App\Http\Controllers\AffiliateController::class, 'store'])->name('affiliate.store');
+    Route::get('/affiliate/dashboard', [\App\Http\Controllers\AffiliateController::class, 'dashboard'])->name('affiliate.dashboard');
+    Route::post('/affiliate/fetch-subscriptions', [\App\Http\Controllers\AffiliateController::class, 'fetchSubscriptions'])->name('affiliate.fetch-subscriptions');
 });
 
 // Authenticated dashboard -> only admin kept
@@ -97,7 +106,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     // Pricing management
     Route::resource('pricing', \App\Http\Controllers\Admin\PricingController::class);
-    
+
     // Payment configuration
     Route::get('/payment-config', [\App\Http\Controllers\Admin\PricingController::class, 'paymentConfig'])->name('payment.config');
     Route::post('/payment-config', [\App\Http\Controllers\Admin\PricingController::class, 'updatePaymentConfig'])->name('payment.update-config');
@@ -120,6 +129,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::resource('custom-products', \App\Http\Controllers\Admin\CustomProductController::class);
     Route::post('/custom-products/{customProduct}/toggle-status', [\App\Http\Controllers\Admin\CustomProductController::class, 'toggleStatus'])->name('custom-products.toggle-status');
 
+    // Affiliate management
+    Route::resource('affiliates', \App\Http\Controllers\Admin\AffiliateController::class);
+    Route::post('/affiliates/{affiliate}/referrals/{referral}/approve', [\App\Http\Controllers\Admin\AffiliateController::class, 'approveReward'])->name('affiliates.referrals.approve');
+    Route::post('/affiliates/{affiliate}/referrals/{referral}/reject', [\App\Http\Controllers\Admin\AffiliateController::class, 'rejectReward'])->name('affiliates.referrals.reject');
+    Route::post('/affiliates/{affiliate}/grant-reward', [\App\Http\Controllers\Admin\AffiliateController::class, 'grantDirectReward'])->name('affiliates.grant-reward');
+
     // Analytics
     Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
 
@@ -139,7 +154,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/settings/run-migrations', [\App\Http\Controllers\Admin\SettingsController::class, 'runMigrations'])->name('settings.run-migrations');
     Route::post('/settings/backup-database', [\App\Http\Controllers\Admin\SettingsController::class, 'backupDatabase'])->name('settings.backup-database');
     Route::post('/settings/test-renewals', [\App\Http\Controllers\Admin\SettingsController::class, 'testRenewalReminders'])->name('settings.test-renewals');
-
 });
 
 // Profile routes (admin only)
@@ -153,4 +167,4 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
