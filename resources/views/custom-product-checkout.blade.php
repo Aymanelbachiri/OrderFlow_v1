@@ -93,7 +93,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('custom-product.checkout.submit', $product) }}" class="space-y-4 touch-manipulation">
+                        <form method="POST" action="{{ route('custom-product.checkout.submit', $product) }}" class="space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled=true">
                             @csrf
                             <input type="hidden" name="source" value="{{ $source ?? request('source', 'custom_product') }}">
 
@@ -320,8 +320,7 @@
 
                             <!-- Submit Button -->
                             <div class="pt-6">
-                                <button type="submit" data-custom-touch="true" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2 touch-manipulation"
-                                        style="min-height: 48px; -webkit-tap-highlight-color: transparent;">
+                                <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                     </svg>
@@ -340,84 +339,15 @@
 
     @push('scripts')
     <script>
-        // Handle payment method selection visual feedback and mobile button fixes
-        document.addEventListener('DOMContentLoaded', function() {
-            // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
-            const submitBtn = document.querySelector('button[type="submit"]');
-            const form = submitBtn?.closest('form');
-            if (submitBtn && form) {
-                let isSubmitting = false;
-                let touchMoved = false;
-
-                submitBtn.addEventListener('touchstart', function(e) {
-                    touchMoved = false;
-                    this.style.opacity = '0.9';
-                    this.style.transform = 'scale(0.98)';
-                }, { passive: true });
-
-                submitBtn.addEventListener('touchmove', function(e) {
-                    touchMoved = true;
-                }, { passive: true });
-
-                submitBtn.addEventListener('touchend', function(e) {
-                    this.style.opacity = '1';
-                    this.style.transform = 'scale(1)';
-
-                    if (!touchMoved && !isSubmitting) {
-                        e.preventDefault();
-                        isSubmitting = true;
-
-                        if (typeof form.requestSubmit === 'function') {
-                            form.requestSubmit(this);
-                        } else {
-                            form.submit();
-                        }
-                        setTimeout(() => { isSubmitting = false; }, 3000);
-                    }
-                });
-
-                // Desktop click handler
-                submitBtn.addEventListener('click', function(e) {
-                    if (isSubmitting) {
-                        e.preventDefault();
-                        return;
-                    }
-                    isSubmitting = true;
-                    setTimeout(() => { isSubmitting = false; }, 3000);
-                });
-            }
-
-            // Fix payment method cards for mobile - click events work reliably
-            const paymentCards = document.querySelectorAll('.payment-method-card');
-            paymentCards.forEach(card => {
-                // Visual feedback
-                card.addEventListener('touchstart', function(e) {
-                    this.style.transform = 'scale(0.98)';
-                }, { passive: true });
-
-                card.addEventListener('touchend', function(e) {
-                    this.style.transform = 'scale(1)';
-                }, { passive: true });
-
-                // Use click for selection - works on both mobile and desktop
-                card.addEventListener('click', function(e) {
-                    const radio = this.querySelector('.payment-method-radio');
-                    if (radio && !radio.checked) {
-                        radio.checked = true;
-                        radio.dispatchEvent(new Event('change'));
-                    }
-                });
-            });
-            
-            document.querySelectorAll('.payment-method-radio').forEach((radio) => {
-                radio.addEventListener('change', function() {
-                    // Remove active styling from all cards
-                    document.querySelectorAll('.payment-method-card').forEach(card => {
-                        const div = card.querySelector('div');
-                        div.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
-                        div.classList.add('border-gray-200', 'dark:border-gray-700');
-                        
-                        // Hide indicators on all cards
+        // Payment method selection
+        document.querySelectorAll('.payment-method-radio').forEach((radio) => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.payment-method-card').forEach(card => {
+                    const div = card.querySelector('div');
+                    div.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+                    div.classList.add('border-gray-200', 'dark:border-gray-700');
+                    
+                    // Hide indicators on all cards
                         const indicator = card.querySelector('.payment-method-indicator');
                         if (indicator) {
                             indicator.classList.add('opacity-0');

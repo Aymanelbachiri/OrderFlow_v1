@@ -4,6 +4,18 @@
 
 @section('content')
 <div class="space-y-6">
+    @if(session('success'))
+    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline">{{ session('success') }}</span>
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline">{{ session('error') }}</span>
+    </div>
+    @endif
+
     <div class="bg-white rounded-xl border shadow p-6 max-w-4xl">
         <h1 class="text-2xl font-bold mb-4">Edit Source</h1>
         <form method="POST" action="{{ route('admin.sources.update', $source) }}" class="space-y-6">
@@ -41,7 +53,17 @@
 
             <!-- SMTP Configuration -->
             <div class="border-b pb-4">
-                <h2 class="text-lg font-semibold mb-4">SMTP Configuration</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">SMTP Configuration</h2>
+                    @if($source->smtp_host && $source->smtp_from_address)
+                    <button type="button" onclick="document.getElementById('testSmtpModal').classList.remove('hidden')" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Test SMTP
+                    </button>
+                    @endif
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Mailer Type</label>
@@ -130,6 +152,32 @@
             <div class="pt-2">
                 <button type="submit" class="px-4 py-2 bg-[#D63613] text-white rounded hover:bg-[#b42f11]">Save</button>
                 <a href="{{ route('admin.sources.index') }}" class="ml-2 px-4 py-2 border rounded">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Test SMTP Modal -->
+<div id="testSmtpModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Send Test Email</h3>
+            <button type="button" onclick="document.getElementById('testSmtpModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('admin.sources.test-smtp', $source) }}">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Email Address</label>
+                <input type="email" name="test_email" class="w-full px-3 py-2 border rounded" placeholder="test@example.com" required>
+                <p class="text-xs text-gray-500 mt-1">Enter the email address to send a test email to.</p>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('testSmtpModal').classList.add('hidden')" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Send Test</button>
             </div>
         </form>
     </div>

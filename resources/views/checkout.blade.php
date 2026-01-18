@@ -118,7 +118,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('checkout.submit') }}" class="space-y-4 touch-manipulation" id="checkoutForm">
+                        <form method="POST" action="{{ route('checkout.submit') }}" class="space-y-4" id="checkoutForm" onsubmit="this.querySelector('button[type=submit]').disabled=true">
                             @csrf
                             <input type="hidden" name="source" value="{{ request('source', 'main') }}">
                             <input type="hidden" name="pricing_plan_id"
@@ -283,9 +283,8 @@
 
                             <!-- Submit -->
                             <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
-                                <button type="submit" data-custom-touch="true"
-                                    class="w-full py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300 flex items-center justify-center space-x-3 touch-manipulation"
-                                    style="min-height: 48px;">
+                                <button type="submit"
+                                    class="w-full py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300 flex items-center justify-center space-x-3">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
@@ -302,105 +301,9 @@
     </div>
 
     <script>
-        // Mobile button fixes
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fix submit button for mobile
-            const submitBtn = document.querySelector('button[type="submit"]');
-            const form = document.getElementById('checkoutForm');
-            
-            if (submitBtn && form) {
-                // Validation function
-                function validateForm() {
-                    // Check if required fields are filled
-                    const requiredFields = form.querySelectorAll('[required]');
-                    let isValid = true;
-                    
-                    requiredFields.forEach(field => {
-                        if (!field.value.trim()) {
-                            isValid = false;
-                            field.classList.add('border-red-500');
-                            // Remove error class after user starts typing
-                            field.addEventListener('input', function() {
-                                this.classList.remove('border-red-500');
-                            }, { once: true });
-                        }
-                    });
-                    
-                    // Check if pricing plan is selected
-                    const planId = form.querySelector('input[name="pricing_plan_id"]');
-                    if (planId && !planId.value) {
-                        isValid = false;
-                        alert('Please select a pricing plan first.');
-                    }
-                    
-                    return isValid;
-                }
-                
-                // Add form validation before submit
-                form.addEventListener('submit', function(e) {
-                    if (!validateForm()) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        alert('Please fill in all required fields before continuing.');
-                        return false;
-                    }
-                });
-
-                // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
-                let isSubmitting = false;
-                let touchMoved = false;
-
-                submitBtn.addEventListener('touchstart', function(e) {
-                    touchMoved = false;
-                    this.style.opacity = '0.9';
-                    this.style.transform = 'scale(0.98)';
-                }, { passive: true });
-
-                submitBtn.addEventListener('touchmove', function(e) {
-                    touchMoved = true;
-                }, { passive: true });
-
-                submitBtn.addEventListener('touchend', function(e) {
-                    this.style.opacity = '1';
-                    this.style.transform = 'scale(1)';
-
-                    // Trigger form submission on touch (since click doesn't fire on mobile)
-                    if (!touchMoved && !isSubmitting && validateForm()) {
-                        isSubmitting = true;
-                        if (typeof form.requestSubmit === 'function') {
-                            form.requestSubmit();
-                        } else {
-                            form.submit();
-                        }
-                    }
-                }, { passive: true });
-
-                submitBtn.addEventListener('mousedown', function(e) {
-                    this.style.opacity = '0.9';
-                    this.style.transform = 'scale(0.98)';
-                });
-
-                submitBtn.addEventListener('mouseup', function(e) {
-                    this.style.opacity = '1';
-                    this.style.transform = 'scale(1)';
-                });
-
-                // Prevent double submission
-                submitBtn.addEventListener('click', function(e) {
-                    if (isSubmitting) {
-                        e.preventDefault();
-                        return;
-                    }
-                    isSubmitting = true;
-                    setTimeout(() => { isSubmitting = false; }, 3000);
-                });
-            }
-        });
-        
         // Payment method selection styling and form target handling
         const checkoutForm = document.getElementById('checkoutForm');
         const isInIframe = window.self !== window.top;
-        // Get app domain from config (APP_URL in .env)
         const appUrl = '{{ config("app.url") }}';
         const appHost = appUrl ? new URL(appUrl).hostname : null;
         const currentHost = window.location.hostname;

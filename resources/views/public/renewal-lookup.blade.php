@@ -29,7 +29,7 @@
             @endif
 
             <!-- Lookup Form -->
-            <form method="GET" action="{{ route('renewal.lookup') }}" class="space-y-6">
+            <form method="GET" action="{{ route('renewal.lookup') }}" class="space-y-6" onsubmit="this.querySelector('button[type=submit]').disabled=true">
                 @if($source ?? null)
                     <input type="hidden" name="source" value="{{ $source }}">
                 @endif
@@ -56,9 +56,8 @@
                 </div>
 
                 <div class="flex justify-center">
-                    <button type="submit" id="searchBtn" data-custom-touch="true"
-                        class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200"
-                        style="touch-action: manipulation; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);">
+                    <button type="submit"
+                        class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200">
                         Find My Subscription
                     </button>
                 </div>
@@ -163,65 +162,5 @@
     </div>
 </div>
 
-@push('scripts')
-<script>
-    // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchBtn = document.getElementById('searchBtn');
-        const form = searchBtn ? searchBtn.closest('form') : null;
-
-        if (searchBtn && form) {
-            let isSubmitting = false;
-            let touchMoved = false;
-
-            searchBtn.addEventListener('touchstart', function(e) {
-                touchMoved = false;
-                this.style.opacity = '0.9';
-                this.style.transform = 'scale(0.98)';
-            }, { passive: true });
-
-            searchBtn.addEventListener('touchmove', function(e) {
-                touchMoved = true;
-            }, { passive: true });
-
-            searchBtn.addEventListener('touchend', function(e) {
-                this.style.opacity = '1';
-                this.style.transform = 'scale(1)';
-
-                // Trigger form submission on touch (since click doesn't fire on mobile)
-                if (!touchMoved && !isSubmitting) {
-                    isSubmitting = true;
-                    if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit();
-                    } else {
-                        form.submit();
-                    }
-                    setTimeout(() => { isSubmitting = false; }, 3000);
-                }
-            }, { passive: true });
-
-            searchBtn.addEventListener('mousedown', function(e) {
-                this.style.opacity = '0.9';
-                this.style.transform = 'scale(0.98)';
-            });
-
-            searchBtn.addEventListener('mouseup', function(e) {
-                this.style.opacity = '1';
-                this.style.transform = 'scale(1)';
-            });
-
-            // Prevent double submission on desktop
-            searchBtn.addEventListener('click', function(e) {
-                if (isSubmitting) {
-                    e.preventDefault();
-                    return;
-                }
-                isSubmitting = true;
-                setTimeout(() => { isSubmitting = false; }, 3000);
-            });
-        }
-    });
-</script>
-@endpush
 @endsection
 

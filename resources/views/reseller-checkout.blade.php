@@ -170,7 +170,7 @@
                                 </div>
                             @endif
 
-                            <form method="POST" action="{{ route('reseller.checkout.submit') }}" class="space-y-4 touch-manipulation">
+                            <form method="POST" action="{{ route('reseller.checkout.submit') }}" class="space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled=true">
                                 @csrf
                                 <input type="hidden" name="reseller_credit_pack_id" value="{{ $planId }}" />
                                 <input type="hidden" name="source" value="{{ request('source', 'reseller') }}" />
@@ -297,9 +297,8 @@
 
                                 <!-- Submit Button -->
                                 <div class="mt-8">
-                                    <button type="submit" data-custom-touch="true"
-                                        class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
-                                        style="min-height: 48px; -webkit-tap-highlight-color: transparent;">
+                                    <button type="submit"
+                                        class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg hover:shadow-xl">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                         </svg>
@@ -317,113 +316,9 @@
     </div>
 
     <script>
-        // Mobile button fixes - Universal handler approach
-        document.addEventListener('DOMContentLoaded', function() {
-            const submitBtn = document.querySelector('button[type="submit"]');
-            const form = submitBtn?.closest('form');
-
-            if (submitBtn && form) {
-                let isSubmitting = false;
-
-                // Validation function
-                function validateForm() {
-                    const requiredFields = form.querySelectorAll('[required]');
-                    let isValid = true;
-
-                    requiredFields.forEach(field => {
-                        if (!field.value.trim()) {
-                            isValid = false;
-                            field.classList.add('border-red-500');
-                            field.addEventListener('input', function() {
-                                this.classList.remove('border-red-500');
-                            }, { once: true });
-                        }
-                    });
-
-                    return isValid;
-                }
-
-                // Form validation on submit
-                form.addEventListener('submit', function(e) {
-                    if (!validateForm()) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        alert('Please fill in all required fields before continuing.');
-                        return false;
-                    }
-                });
-
-                // MOBILE FIX: Trigger form submission on touchend since click doesn't fire
-                let touchMoved = false;
-
-                submitBtn.addEventListener('touchstart', function(e) {
-                    touchMoved = false;
-                    this.style.opacity = '0.9';
-                    this.style.transform = 'scale(0.98)';
-                }, { passive: true });
-
-                submitBtn.addEventListener('touchmove', function(e) {
-                    touchMoved = true;
-                }, { passive: true });
-
-                submitBtn.addEventListener('touchend', function(e) {
-                    this.style.opacity = '1';
-                    this.style.transform = 'scale(1)';
-
-                    if (!touchMoved && !isSubmitting) {
-                        e.preventDefault();
-                        isSubmitting = true;
-
-                        if (validateForm()) {
-                            if (typeof form.requestSubmit === 'function') {
-                                form.requestSubmit(this);
-                            } else {
-                                form.submit();
-                            }
-                        } else {
-                            isSubmitting = false;
-                        }
-                        setTimeout(() => { isSubmitting = false; }, 3000);
-                    }
-                });
-
-                // Desktop click handler
-                submitBtn.addEventListener('click', function(e) {
-                    if (isSubmitting) {
-                        e.preventDefault();
-                        return;
-                    }
-                    isSubmitting = true;
-                    setTimeout(() => { isSubmitting = false; }, 3000);
-                });
-            }
-
-            // Fix payment method cards - click events work on mobile too
-            const paymentCards = document.querySelectorAll('.payment-method-card');
-            paymentCards.forEach(card => {
-                card.addEventListener('touchstart', function(e) {
-                    this.style.transform = 'scale(0.98)';
-                }, { passive: true });
-
-                card.addEventListener('touchend', function(e) {
-                    this.style.transform = 'scale(1)';
-                }, { passive: true });
-
-                // Use click for selection - works on both mobile and desktop
-                card.addEventListener('click', function(e) {
-                    const radio = this.querySelector('.payment-method-radio');
-                    if (radio && !radio.checked) {
-                        radio.checked = true;
-                        radio.dispatchEvent(new Event('change'));
-                    }
-                });
-            });
-        });
-        
-        // Handle payment method selection
+        // Payment method selection
         document.querySelectorAll('.payment-method-radio').forEach(radio => {
             radio.addEventListener('change', function() {
-                // Remove active state from all cards
                 document.querySelectorAll('.payment-method-card').forEach(card => {
                     const div = card.querySelector('div');
                     div.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');

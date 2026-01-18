@@ -7,6 +7,8 @@ use App\Models\Source;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Mail\Message;
 
 class SourceController extends Controller
 {
@@ -129,6 +131,46 @@ class SourceController extends Controller
         
         return redirect()->route('admin.sources.index')
             ->with('success', 'Source deleted successfully.');
+    }
+
+    public function testSmtp(Request $request, Source $source)
+    {
+        $request->validate([
+            'test_email' => 'required|email',
+        ]);
+
+        // Check if SMTP is configured
+        if (empty($source->smtp_host) || empty($source->smtp_from_address)) {
+            return back()->with('error', 'SMTP is not configured for this source. Please fill in SMTP host and from address.');
+        }
+
+        try {
+            // Configure mailer dynamically
+            config([
+                'mail.mailers.source_test' => [
+                    'transport' => $source->smtp_mailer ?? 'smtp',
+                    'host' => $source->smtp_host,
+                    'port' => $source->smtp_port ?? 587,
+                    'encryption' => $source->smtp_encryption ?: null,
+                    'username' => $source->smtp_username,
+                    'password' => $source->smtp_password,
+                    'timeout' => 30,
+                ],
+            ]);
+
+            Mail::mailer('source_test')->raw(
+                "This is a test email from {$source->name} source.\n\nSMTP Configuration:\n- Host: {$source->smtp_host}\n- Port: {$source->smtp_port}\n- Encryption: " . ($source->smtp_encryption ?: 'None') . "\n\nIf you received this email, your SMTP settings are working correctly!",
+                function (Message $message) use ($source, $request) {
+                    $message->to($request->test_email)
+                        ->from($source->smtp_from_address, $source->smtp_from_name ?? $source->name)
+                        ->subject("SMTP Test - {$source->name}");
+                }
+            );
+
+            return back()->with('success', "Test email sent successfully to {$request->test_email}");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to send test email: ' . $e->getMessage());
+        }
     }
 }
 

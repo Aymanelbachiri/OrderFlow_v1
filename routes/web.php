@@ -104,6 +104,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     // Source management
     Route::resource('sources', \App\Http\Controllers\Admin\SourceController::class);
+    Route::post('/sources/{source}/test-smtp', [\App\Http\Controllers\Admin\SourceController::class, 'testSmtp'])->name('sources.test-smtp');
 
 
     // Reseller management
