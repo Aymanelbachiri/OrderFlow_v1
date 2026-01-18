@@ -11,6 +11,7 @@ use App\Models\Source;
 use App\Models\CustomProduct;
 use App\Mail\ResellerCredentialsMail;
 use App\Events\ResellerOrderActivated;
+use App\Services\AffiliateService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -21,7 +22,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'pricingPlan', 'resellerCreditPack', 'payments']);
+        $query = Order::with(['user', 'pricingPlan', 'resellerCreditPack', 'payments', 'affiliateReferral.affiliate']);
 
         // Filter by status
         if ($request->filled('status')) {
@@ -31,14 +32,14 @@ class OrderController extends Controller
         // Filter expiring soon (<= 7 days from now)
         if ($request->filter === 'expiring') {
             $query->whereNotNull('expires_at')
-                  ->where('expires_at', '>=', now())
-                  ->where('expires_at', '<=', now()->addDays(7));
+                ->where('expires_at', '>=', now())
+                ->where('expires_at', '<=', now()->addDays(7));
         }
 
         // Filter expired orders (past date)
         if ($request->filter === 'expired') {
             $query->whereNotNull('expires_at')
-                  ->where('expires_at', '<', now());
+                ->where('expires_at', '<', now());
         }
 
         // Filter by payment method
@@ -51,35 +52,44 @@ class OrderController extends Controller
             if ($request->plan_type === 'regular') {
                 // Regular orders: have pricing_plan_id but not reseller_credit_pack_id
                 $query->whereNotNull('pricing_plan_id')
-                      ->whereNull('reseller_credit_pack_id');
+                    ->whereNull('reseller_credit_pack_id');
             } elseif ($request->plan_type === 'reseller') {
                 // Reseller orders: either have reseller pricing plans OR credit packs
-                $query->where(function($q) {
-                    $q->whereHas('pricingPlan', function($planQuery) {
+                $query->where(function ($q) {
+                    $q->whereHas('pricingPlan', function ($planQuery) {
                         $planQuery->where('plan_type', 'reseller');
                     })->orWhereNotNull('reseller_credit_pack_id');
                 });
             }
         }
 
+        // Filter by traffic source (Referred vs Organic)
+        if ($request->filled('traffic_source')) {
+            if ($request->traffic_source === 'referred') {
+                $query->whereNotNull('referral_code');
+            } elseif ($request->traffic_source === 'organic') {
+                $query->whereNull('referral_code');
+            }
+        }
+
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhere('subscription_username', 'like', "%{$search}%")
-                  ->orWhere('subscription_password', 'like', "%{$search}%")
-                  ->orWhere('subscription_url', 'like', "%{$search}%")
-                  ->orWhere('reseller_username', 'like', "%{$search}%")
-                  ->orWhere('reseller_password', 'like', "%{$search}%")
-                  ->orWhere('reseller_login_url', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%")
-                  // Search in devices JSON array (for multi-device credentials)
-                  ->orWhereRaw("devices LIKE ?", ["%{$search}%"])
-                  ->orWhereHas('user', function($userQuery) use ($search) {
-                      $userQuery->where('name', 'like', "%{$search}%")
-                               ->orWhere('email', 'like', "%{$search}%");
-                  });
+                    ->orWhere('subscription_username', 'like', "%{$search}%")
+                    ->orWhere('subscription_password', 'like', "%{$search}%")
+                    ->orWhere('subscription_url', 'like', "%{$search}%")
+                    ->orWhere('reseller_username', 'like', "%{$search}%")
+                    ->orWhere('reseller_password', 'like', "%{$search}%")
+                    ->orWhere('reseller_login_url', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    // Search in devices JSON array (for multi-device credentials)
+                    ->orWhereRaw("devices LIKE ?", ["%{$search}%"])
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -96,8 +106,8 @@ class OrderController extends Controller
             ->where('expires_at', '>=', now())
             ->where('expires_at', '<=', now()->addDays(7))
             ->count();
-        $resellerOrdersCount = Order::where(function($q) {
-            $q->whereHas('pricingPlan', function($planQuery) {
+        $resellerOrdersCount = Order::where(function ($q) {
+            $q->whereHas('pricingPlan', function ($planQuery) {
                 $planQuery->where('plan_type', 'reseller');
             })->orWhereNotNull('reseller_credit_pack_id');
         })->count();
@@ -158,29 +168,30 @@ class OrderController extends Controller
             'reseller_username' => 'nullable|string|max:255',
             'reseller_password' => 'nullable|string|max:255',
             'reseller_login_url' => 'nullable|url|max:255',
+            'referral_code' => 'nullable|string|max:12',
             'send_order_confirmation' => 'boolean',
             'send_payment_instructions' => 'boolean',
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        
+
         // Determine order type: custom product, reseller credit pack, or regular pricing plan
         $isCustomProductOrder = !empty($validated['custom_product_id']);
         $isResellerOrder = !empty($validated['reseller_credit_pack_id']);
-        
+
         // Validate that only one product type is selected
         $selectedTypes = array_filter([
             'custom_product' => $isCustomProductOrder,
             'reseller_credit_pack' => $isResellerOrder,
             'pricing_plan' => !empty($validated['pricing_plan_id']),
         ]);
-        
+
         if (count($selectedTypes) > 1) {
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['pricing_plan_id' => 'Please select only one: pricing plan, reseller credit pack, or custom product.']);
         }
-        
+
         if ($isCustomProductOrder) {
             // Validate that other product types are not set
             if (!empty($validated['pricing_plan_id']) || !empty($validated['reseller_credit_pack_id'])) {
@@ -188,7 +199,7 @@ class OrderController extends Controller
                     ->withInput()
                     ->withErrors(['custom_product_id' => 'Cannot select custom product with pricing plan or credit pack.']);
             }
-            
+
             $customProduct = CustomProduct::findOrFail($validated['custom_product_id']);
             $amount = $validated['amount'] ?? $customProduct->price;
             $expiresAt = $validated['expires_at'] ?? null; // Custom products may or may not expire
@@ -200,7 +211,7 @@ class OrderController extends Controller
                     ->withInput()
                     ->withErrors(['pricing_plan_id' => 'Cannot select both pricing plan and reseller credit pack.']);
             }
-            
+
             $creditPack = \App\Models\ResellerCreditPack::findOrFail($validated['reseller_credit_pack_id']);
             $amount = $validated['amount'] ?? $creditPack->price;
             $expiresAt = null; // Credit pack orders don't expire
@@ -212,16 +223,16 @@ class OrderController extends Controller
                     ->withInput()
                     ->withErrors(['reseller_credit_pack_id' => 'Cannot select both pricing plan and reseller credit pack.']);
             }
-            
+
             if (empty($validated['pricing_plan_id'])) {
                 return redirect()->back()
                     ->withInput()
                     ->withErrors(['pricing_plan_id' => 'Please select either a pricing plan, reseller credit pack, or custom product.']);
             }
-            
+
             $pricingPlan = PricingPlan::findOrFail($validated['pricing_plan_id']);
             $amount = $validated['amount'] ?? $pricingPlan->price;
-            
+
             // Calculate expiry date if not provided
             $expiresAt = $validated['expires_at'] ?? null;
             if (!$expiresAt && $validated['starts_at']) {
@@ -230,12 +241,12 @@ class OrderController extends Controller
             } elseif (!$expiresAt) {
                 $expiresAt = now()->addMonths($pricingPlan->duration_months);
             }
-            
+
             $orderType = 'subscription';
         }
 
         // Generate unique order number
-        $orderNumber = match($orderType) {
+        $orderNumber = match ($orderType) {
             'credit_pack' => 'CP-' . strtoupper(uniqid()),
             'custom_product' => 'CUST-' . strtoupper(uniqid()),
             default => 'ORD-' . strtoupper(uniqid())
@@ -252,8 +263,9 @@ class OrderController extends Controller
             'notes' => $validated['admin_notes'] ?? null,
             'order_type' => $orderType,
             'source' => $validated['source'] ?? null,
+            'referral_code' => $validated['referral_code'] ?? null,
         ];
-        
+
         // Set product type based on order type
         if ($isCustomProductOrder) {
             $orderData['custom_product_id'] = $validated['custom_product_id'];
@@ -273,7 +285,7 @@ class OrderController extends Controller
                 $pricingPlan = $isResellerOrder ? null : PricingPlan::find($validated['pricing_plan_id'] ?? null);
                 $deviceCount = $pricingPlan ? $pricingPlan->device_count : 1;
                 $inputDevices = $request->input('devices');
-                
+
                 // Prepare devices data
                 $devices = [];
                 foreach ($inputDevices as $deviceIndex => $deviceData) {
@@ -286,16 +298,16 @@ class OrderController extends Controller
                         ];
                     }
                 }
-                
+
                 // For backward compatibility, set the first device as main subscription
                 $firstDevice = $devices[0] ?? null;
-                
+
                 if ($firstDevice) {
                     $orderData['subscription_username'] = $firstDevice['username'] ?? null;
                     $orderData['subscription_password'] = $firstDevice['password'] ?? null;
                     $orderData['subscription_url'] = $firstDevice['url'] ?? null;
                 }
-                
+
                 // Set devices array
                 $orderData['devices'] = $devices;
             } elseif ($user->role === 'client' && ($validated['subscription_username'] ?? null)) {
@@ -304,7 +316,7 @@ class OrderController extends Controller
                 $orderData['subscription_password'] = $validated['subscription_password'] ?? null;
                 $orderData['subscription_url'] = $validated['subscription_url'] ?? null;
             }
-            
+
             // Handle reseller credentials
             if (($user->role === 'reseller' || $isResellerOrder) && ($validated['reseller_username'] ?? null)) {
                 $orderData['reseller_username'] = $validated['reseller_username'] ?? null;
@@ -368,7 +380,7 @@ class OrderController extends Controller
             'has_devices' => $request->has('devices'),
             'devices_input' => $request->input('devices'),
         ]);
-        
+
         $validationRules = [
             'status' => 'required|in:pending,active,expired,cancelled,completed',
             'amount' => 'required|numeric|min:0',
@@ -391,9 +403,9 @@ class OrderController extends Controller
             'reseller_password' => 'nullable|string|max:255',
             'reseller_login_url' => 'nullable|url|max:255',
         ];
-        
+
         $validated = $request->validate($validationRules);
-        
+
         Log::info('Order update validated', [
             'validated_data' => $validated,
             'has_devices_in_validated' => isset($validated['devices']),
@@ -408,12 +420,12 @@ class OrderController extends Controller
         // Handle pricing plan change
         if (isset($validated['pricing_plan_id']) && $validated['pricing_plan_id'] != $order->pricing_plan_id) {
             $newPlan = \App\Models\PricingPlan::find($validated['pricing_plan_id']);
-            
+
             // Update amount to match new plan price
             if ($newPlan) {
                 $validated['amount'] = $newPlan->price;
             }
-            
+
             // Log the plan change
             Log::info('Order pricing plan changed', [
                 'order_id' => $order->id,
@@ -429,13 +441,13 @@ class OrderController extends Controller
         // Handle credit pack change
         if (isset($validated['reseller_credit_pack_id']) && $validated['reseller_credit_pack_id'] != $order->pricing_plan_id) {
             $newCreditPack = \App\Models\ResellerCreditPack::find($validated['reseller_credit_pack_id']);
-            
+
             // Update amount to match new credit pack price
             if ($newCreditPack) {
                 $validated['amount'] = $newCreditPack->price;
                 $validated['pricing_plan_id'] = $newCreditPack->id; // Map to pricing_plan_id for database
             }
-            
+
             // Log the credit pack change
             Log::info('Order credit pack changed', [
                 'order_id' => $order->id,
@@ -452,7 +464,7 @@ class OrderController extends Controller
         if ($request->has('devices') && is_array($request->input('devices'))) {
             $deviceCount = $order->pricingPlan ? $order->pricingPlan->device_count : 1;
             $inputDevices = $request->input('devices');
-            
+
             // Prepare devices data (same as activate method)
             $devices = [];
             foreach ($inputDevices as $deviceIndex => $deviceData) {
@@ -465,19 +477,19 @@ class OrderController extends Controller
                     ];
                 }
             }
-            
+
             // For backward compatibility, set the first device as main subscription
             $firstDevice = $devices[0] ?? null;
-            
+
             if ($firstDevice) {
                 $validated['subscription_username'] = $firstDevice['username'] ?? null;
                 $validated['subscription_password'] = $firstDevice['password'] ?? null;
                 $validated['subscription_url'] = $firstDevice['url'] ?? null;
             }
-            
+
             // Set devices array
             $validated['devices'] = $devices;
-            
+
             Log::info('Devices processed for update', [
                 'devices' => $devices,
                 'device_count' => count($devices),
@@ -490,35 +502,43 @@ class OrderController extends Controller
             'current_devices' => $order->devices,
             'validated_keys' => array_keys($validated),
         ]);
-        
+
         // Filter out non-fillable fields and ensure all validated data is included
         $updateData = [];
         $fillable = $order->getFillable();
-        
+
         foreach ($validated as $key => $value) {
             if (in_array($key, $fillable)) {
                 $updateData[$key] = $value;
             }
         }
-        
+
         Log::info('Filtered update data', [
             'update_data' => $updateData,
             'update_data_keys' => array_keys($updateData),
             'fillable_fields' => $fillable,
         ]);
-        
+
         // Update the order - Laravel will only update changed fields
         $order->fill($updateData);
+        $wasStatusChanged = $order->isDirty('status');
+        $newStatus = $order->status;
         $order->save();
-        
+
+        // Create affiliate referral if order status was changed to active and has referral code
+        if ($wasStatusChanged && $newStatus === 'active' && !empty($order->referral_code)) {
+            $affiliateService = new AffiliateService();
+            $affiliateService->createReferral($order);
+        }
+
         Log::info('Update result', [
             'order_was_changed' => $order->wasChanged(),
             'order_changes' => $order->getChanges(),
         ]);
-        
+
         // Refresh order to get updated data
         $order->refresh();
-        
+
         Log::info('After order update', [
             'order_id' => $order->id,
             'updated_devices' => $order->devices,
@@ -533,19 +553,23 @@ class OrderController extends Controller
         }
 
         // If credentials are provided and not sent yet, send them
-        if ($request->boolean('send_credentials') &&
+        if (
+            $request->boolean('send_credentials') &&
             ($order->subscription_username || $order->reseller_username || $order->user->reseller_panel_url) &&
-            $order->status === 'active') {
+            $order->status === 'active'
+        ) {
             $this->sendCredentials($order);
         }
 
         // Auto-send credentials for reseller orders when activated
         // Skip for custom product orders as they don't have credentials
-        if ($order->order_type !== 'custom_product' &&
+        if (
+            $order->order_type !== 'custom_product' &&
             $order->status === 'active' &&
             (($order->pricingPlan && $order->pricingPlan->plan_type === 'reseller') || $order->user->role === 'reseller') &&
             !$order->credentials_sent &&
-            $order->user->reseller_panel_url) {
+            $order->user->reseller_panel_url
+        ) {
             $this->sendCredentials($order);
         }
 
@@ -564,9 +588,9 @@ class OrderController extends Controller
                 return redirect()->back()
                     ->with('error', 'Custom product orders do not have credentials to send.');
             }
-            
+
             if ($order->user->role === 'reseller' || ($order->pricingPlan && $order->pricingPlan->plan_type === 'reseller')) {
-            // Use the new ResellerCredentialsMail for reseller orders
+                // Use the new ResellerCredentialsMail for reseller orders
                 $resellerMail = new ResellerCredentialsMail($order, $order->user);
                 if ($resellerMail->mailerName) {
                     Mail::mailer($resellerMail->mailerName)->to($order->user->email)->send($resellerMail);
@@ -574,27 +598,27 @@ class OrderController extends Controller
                     Mail::to($order->user->email)->send($resellerMail);
                 }
 
-            // Trigger the reseller order activated event
-            ResellerOrderActivated::dispatch($order);
-        } else {
-            // Send credentials email for regular orders
-            $processedOrders = collect();
+                // Trigger the reseller order activated event
+                ResellerOrderActivated::dispatch($order);
+            } else {
+                // Send credentials email for regular orders
+                $processedOrders = collect();
 
-            if ($order->devices && is_array($order->devices) && count($order->devices) > 0) {
-                foreach ($order->devices as $device) {
+                if ($order->devices && is_array($order->devices) && count($order->devices) > 0) {
+                    foreach ($order->devices as $device) {
+                        $processedOrders->push((object)[
+                            'subscription_username' => $device['username'] ?? null,
+                            'subscription_password' => $device['password'] ?? null,
+                            'subscription_url' => $device['url'] ?? null,
+                        ]);
+                    }
+                } else {
                     $processedOrders->push((object)[
-                        'subscription_username' => $device['username'] ?? null,
-                        'subscription_password' => $device['password'] ?? null,
-                        'subscription_url' => $device['url'] ?? null,
+                        'subscription_username' => $order->subscription_username,
+                        'subscription_password' => $order->subscription_password,
+                        'subscription_url' => $order->subscription_url,
                     ]);
                 }
-            } else {
-                $processedOrders->push((object)[
-                    'subscription_username' => $order->subscription_username,
-                    'subscription_password' => $order->subscription_password,
-                    'subscription_url' => $order->subscription_url,
-                ]);
-            }
 
                 $clientMail = new ClientCredentialsMail($order->user, $processedOrders);
                 if ($clientMail->mailerName) {
@@ -602,15 +626,15 @@ class OrderController extends Controller
                 } else {
                     Mail::to($order->user->email)->send($clientMail);
                 }
-        }
+            }
 
-        $order->update([
-            'credentials_sent' => true,
-            'credentials_sent_at' => now(),
-        ]);
+            $order->update([
+                'credentials_sent' => true,
+                'credentials_sent_at' => now(),
+            ]);
 
-        return redirect()->back()
-            ->with('success', 'Credentials sent successfully.');
+            return redirect()->back()
+                ->with('success', 'Credentials sent successfully.');
         } catch (\Exception $e) {
             Log::error('Failed to send credentials email', [
                 'order_id' => $order->id,
@@ -671,7 +695,7 @@ class OrderController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($orders) {
+        $callback = function () use ($orders) {
             $file = fopen('php://output', 'w');
             fputcsv($file, ['Order Number', 'Customer', 'Email', 'Plan', 'Amount', 'Status', 'Created', 'Expires']);
 
@@ -718,6 +742,12 @@ class OrderController extends Controller
                 'status' => 'active',
                 'completed_at' => now(),
             ]);
+
+            // Create affiliate referral if order has referral code
+            if (!empty($order->referral_code)) {
+                $affiliateService = new AffiliateService();
+                $affiliateService->createReferral($order);
+            }
 
             // Send custom composed email if requested
             if ($request->boolean('send_email', true)) {
@@ -773,6 +803,12 @@ class OrderController extends Controller
                 'credentials_sent' => false, // Will be set to true after email is sent
             ]);
 
+            // Create affiliate referral if order has referral code
+            if (!empty($order->referral_code)) {
+                $affiliateService = new AffiliateService();
+                $affiliateService->createReferral($order);
+            }
+
             // Send credentials email if requested
             if ($request->boolean('send_credentials_email', true)) {
                 try {
@@ -818,6 +854,12 @@ class OrderController extends Controller
                 'reseller_login_url' => $validated['reseller_panel_url'],
                 'credentials_sent' => false, // Will be set to true after email is sent
             ]);
+
+            // Create affiliate referral if order has referral code
+            if (!empty($order->referral_code)) {
+                $affiliateService = new AffiliateService();
+                $affiliateService->createReferral($order);
+            }
 
             // Send credentials email if requested
             if ($request->boolean('send_credentials_email', true)) {
@@ -892,6 +934,12 @@ class OrderController extends Controller
                 'credentials_sent' => false, // Will be set to true after email is sent
             ]);
 
+            // Create affiliate referral if order has referral code
+            if (!empty($order->referral_code)) {
+                $affiliateService = new AffiliateService();
+                $affiliateService->createReferral($order);
+            }
+
             // Send credentials email if requested
             if ($request->boolean('send_credentials_email', true)) {
                 try {
@@ -905,7 +953,7 @@ class OrderController extends Controller
                                 $originalOrder = Order::find($paymentIntent->order_data['renewal_of_order_id']);
                             }
                         }
-                        
+
                         // Send renewal email
                         $renewalMail = new \App\Mail\AccountRenewedMail($order, $originalOrder);
                         if ($renewalMail->mailerName) {
@@ -928,7 +976,7 @@ class OrderController extends Controller
                         'credentials_sent_at' => now(),
                     ]);
 
-                    $successMessage = $order->subscription_type === 'renewal' 
+                    $successMessage = $order->subscription_type === 'renewal'
                         ? 'Renewal activated successfully! Account renewed email has been sent to the customer.'
                         : 'Order activated successfully! Multi-device IPTV credentials have been sent to the customer via email.';
 
@@ -948,6 +996,23 @@ class OrderController extends Controller
 
             return redirect()->back()
                 ->with('success', 'Order activated successfully. You can send the multi-device credentials manually if needed.');
+        }
+
+        // Create affiliate referral if order has referral code (after activation)
+        if (!empty($order->referral_code) && $order->order_type === 'subscription') {
+            try {
+                $affiliateService = new AffiliateService();
+                $affiliateService->createReferral($order);
+            } catch (\Exception $e) {
+                Log::error('Failed to create affiliate referral after order activation', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'referral_code' => $order->referral_code,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                // Don't fail the activation if referral creation fails, just log it
+            }
         }
     }
 

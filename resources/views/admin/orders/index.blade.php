@@ -181,6 +181,17 @@
                     </select>
                 </div>
 
+                <!-- Traffic Source Filter -->
+                <div>
+                    <label for="traffic_source" class="block text-sm font-medium text-[#201E1F]/70 mb-1">Traffic Source</label>
+                    <select name="traffic_source" id="traffic_source"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#D63613] focus:border-[#D63613]">
+                        <option value="">All</option>
+                        <option value="referred" {{ request('traffic_source') === 'referred' ? 'selected' : '' }}>Referred</option>
+                        <option value="organic" {{ request('traffic_source') === 'organic' ? 'selected' : '' }}>Organic</option>
+                    </select>
+                </div>
+
                 <!-- Filter type -->
                 <div>
                     <label for="filter" class="block text-sm font-medium text-[#201E1F]/70 mb-1">Filter</label>
@@ -267,6 +278,8 @@
                             <th class="px-3 py-4 text-left text-xs font-semibold text-[#201E1F] uppercase tracking-wider">
                                 Source</th>
                             <th class="px-3 py-4 text-left text-xs font-semibold text-[#201E1F] uppercase tracking-wider">
+                                Traffic Source</th>
+                            <th class="px-3 py-4 text-left text-xs font-semibold text-[#201E1F] uppercase tracking-wider">
                                 Status</th>
                             <th class="px-3 py-4 text-left text-xs font-semibold text-[#201E1F] uppercase tracking-wider">
                                 Created</th>
@@ -343,6 +356,18 @@
                                     <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full border">
                                         {{ $order->source ?? '—' }}
                                     </span>
+                                </td>
+                                <td class="px-3 py-4 whitespace-nowrap text-sm text-[#201E1F]">
+                                    @if($order->referral_code)
+                                        <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                            Referred
+                                        </span>
+                                        <div class="text-xs text-gray-500 mt-1 font-mono">{{ $order->referral_code }}</div>
+                                    @else
+                                        <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+                                            Organic
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-4 whitespace-nowrap">
                                     <span

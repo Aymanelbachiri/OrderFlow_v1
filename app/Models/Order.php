@@ -40,6 +40,8 @@ class Order extends Model
         'credentials_sent_at',
         'completed_at',
         'notes',
+        'referral_code',
+        'affiliate_referral_id',
     ];
 
     protected function casts(): array
@@ -95,6 +97,11 @@ class Order extends Model
         return $this->belongsTo(CustomProduct::class);
     }
 
+    public function affiliateReferral()
+    {
+        return $this->belongsTo(AffiliateReferral::class);
+    }
+
     // Helper methods
     public function isActive()
     {
@@ -128,6 +135,11 @@ class Order extends Model
     public function daysUntilExpiry()
     {
         return $this->expires_at ? now()->diffInDays($this->expires_at, false) : null;
+    }
+
+    public function getTrafficSourceAttribute()
+    {
+        return !empty($this->referral_code) ? 'Referred' : 'Organic';
     }
 
     public function generateOrderNumber()

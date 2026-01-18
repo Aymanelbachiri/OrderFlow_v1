@@ -139,6 +139,52 @@
                         </div>
                     </div>
                     @endif
+
+                    @if($order->referral_code)
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#201E1F]/60">Traffic Source</label>
+                        <div class="bg-white rounded-lg px-4 py-3 border border-gray-200">
+                            <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                Referred
+                            </span>
+                            <div class="mt-2">
+                                <p class="text-xs text-gray-500 mb-1">Referral Code:</p>
+                                <p class="text-sm font-mono text-[#201E1F]">{{ $order->referral_code }}</p>
+                                @if($order->affiliateReferral)
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Affiliate: 
+                                        <a href="{{ route('admin.affiliates.show', $order->affiliateReferral->affiliate) }}" 
+                                           class="text-[#D63613] hover:underline">
+                                            {{ $order->affiliateReferral->affiliate->email }}
+                                        </a>
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        Status: 
+                                        @if($order->affiliateReferral->status === 'pending')
+                                            <span class="text-yellow-600">Pending</span>
+                                        @elseif($order->affiliateReferral->status === 'approved')
+                                            <span class="text-green-600">Approved</span>
+                                            @if($order->affiliateReferral->reward_granted)
+                                                <span class="text-green-600">(Reward Granted)</span>
+                                            @endif
+                                        @else
+                                            <span class="text-red-600">Rejected</span>
+                                        @endif
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @else
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#201E1F]/60">Traffic Source</label>
+                        <div class="bg-white rounded-lg px-4 py-3 border border-gray-200">
+                            <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+                                Organic
+                            </span>
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 @if($order->admin_notes)
