@@ -54,6 +54,7 @@ class SourceMailService
                 'password' => $source->smtp_password,
                 'timeout' => env('MAIL_TIMEOUT', 60),
                 'local_domain' => env('MAIL_EHLO_DOMAIN'),
+                'verify_peer' => env('MAIL_VERIFY_PEER', true),
             ]);
 
             return $mailerName;
