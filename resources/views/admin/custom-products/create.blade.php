@@ -61,13 +61,29 @@
                     <label class="block text-sm font-medium text-[#201E1F] mb-2">
                         Product Type <span class="text-red-500">*</span>
                     </label>
-                    <select name="product_type" required
+                    <select name="product_type" id="product_type" required
                             class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613] @error('product_type') border-red-500 @enderror">
                         <option value="service" {{ old('product_type') === 'service' ? 'selected' : '' }}>Service</option>
                         <option value="digital" {{ old('product_type') === 'digital' ? 'selected' : '' }}>Digital</option>
+                        <option value="hotplayer_activation" {{ old('product_type') === 'hotplayer_activation' ? 'selected' : '' }}>HotPlayer Activation</option>
                         <option value="other" {{ old('product_type') === 'other' ? 'selected' : '' }}>Other</option>
                     </select>
                     @error('product_type')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- HotPlayer Activation Plan (shown only for hotplayer_activation type) -->
+                <div id="hotplayer_plan_container" style="display: none;">
+                    <label class="block text-sm font-medium text-[#201E1F] mb-2">
+                        Activation Plan <span class="text-red-500">*</span>
+                    </label>
+                    <select name="hotplayer_plan" id="hotplayer_plan"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D63613]/20 focus:border-[#D63613] @error('hotplayer_plan') border-red-500 @enderror">
+                        <option value="YEAR_1" {{ old('hotplayer_plan') === 'YEAR_1' ? 'selected' : '' }}>1 Year</option>
+                        <option value="FOREVER" {{ old('hotplayer_plan') === 'FOREVER' ? 'selected' : '' }}>Lifetime</option>
+                    </select>
+                    @error('hotplayer_plan')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
@@ -185,6 +201,24 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // HotPlayer plan toggle
+    const productTypeSelect = document.getElementById('product_type');
+    const hotplayerPlanContainer = document.getElementById('hotplayer_plan_container');
+    const hotplayerPlanSelect = document.getElementById('hotplayer_plan');
+
+    function toggleHotplayerPlan() {
+        if (productTypeSelect.value === 'hotplayer_activation') {
+            hotplayerPlanContainer.style.display = 'block';
+            hotplayerPlanSelect.required = true;
+        } else {
+            hotplayerPlanContainer.style.display = 'none';
+            hotplayerPlanSelect.required = false;
+        }
+    }
+
+    productTypeSelect.addEventListener('change', toggleHotplayerPlan);
+    toggleHotplayerPlan(); // Initial state
+
     const container = document.getElementById('custom-fields-container');
     const addButton = document.getElementById('add-custom-field');
     let fieldIndex = 0;

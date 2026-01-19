@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\CustomProduct;
 use App\Models\User;
 use App\Models\PaymentIntent;
+use App\Services\HotPlayerService;
 use Illuminate\Support\Facades\Schema;
 
 class CustomProductCheckoutController extends Controller
@@ -50,6 +51,11 @@ class CustomProductCheckoutController extends Controller
             'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),
             'source' => $sourceRule,
         ];
+
+        // Add MAC address validation for HotPlayer activation products
+        if ($product->product_type === 'hotplayer_activation') {
+            $validationRules['mac_address'] = 'required|string|max:50';
+        }
 
         // Add validation for custom fields
         if ($product->custom_fields && is_array($product->custom_fields)) {
@@ -104,6 +110,35 @@ class CustomProductCheckoutController extends Controller
 
         $sourceFromRequest = $request->query('source') ?? ($validated['source'] ?? 'custom_product');
 
+        // Validate MAC address with HotPlayer API for activation products
+        if ($product->product_type === 'hotplayer_activation') {
+            $macAddress = $validated['mac_address'];
+            
+            // Validate MAC format
+            if (!HotPlayerService::isValidMacFormat($macAddress)) {
+                return back()->withInput()->withErrors([
+                    'mac_address' => 'Invalid MAC address format. Use format: XX:XX:XX:XX:XX:XX'
+                ]);
+            }
+
+            // Check device with HotPlayer API
+            $hotPlayerService = HotPlayerService::forSource($sourceFromRequest);
+            $deviceCheck = $hotPlayerService->checkDevice($macAddress);
+
+            if (!$deviceCheck['success']) {
+                return back()->withInput()->withErrors([
+                    'mac_address' => $deviceCheck['error'] ?? 'Failed to verify device with HotPlayer'
+                ]);
+            }
+
+            // Check if device already has lifetime activation
+            if (isset($deviceCheck['plan']) && $deviceCheck['plan'] === 'FOREVER') {
+                return back()->withInput()->withErrors([
+                    'mac_address' => 'This device is already activated with a Lifetime plan'
+                ]);
+            }
+        }
+
         // Find or create client user by email (case-insensitive)
         $email = strtolower($validated['email']);
         $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
@@ -136,6 +171,26 @@ class CustomProductCheckoutController extends Controller
         }
 
         // Create a payment intent for the custom product
+        $orderData = [
+            'user_id' => $user->id,
+            'custom_product_id' => $product->id,
+            'source' => $sourceFromRequest,
+            'order_type' => 'custom_product',
+            'customer' => [
+                'name' => $validated['full_name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+            ],
+            'custom_fields' => $request->has('custom_fields') ? $request->custom_fields : [],
+        ];
+
+        // Add MAC address for HotPlayer activation products
+        if ($product->product_type === 'hotplayer_activation' && isset($validated['mac_address'])) {
+            $orderData['mac_address'] = $validated['mac_address'];
+            $orderData['activation_plan'] = $product->metadata['hotplayer_plan'] ?? 'YEAR_1';
+            $orderData['hotplayer_device_info'] = $deviceCheck['data'] ?? null;
+        }
+
         $paymentIntent = PaymentIntent::create([
             'user_id' => $user->id,
             'pricing_plan_id' => null, // No pricing plan for custom products
@@ -145,18 +200,7 @@ class CustomProductCheckoutController extends Controller
             'currency' => 'USD',
             'status' => 'pending',
             'order_type' => 'subscription', // Use 'subscription' as it's allowed in the ENUM constraint
-            'order_data' => [
-                'user_id' => $user->id,
-                'custom_product_id' => $product->id,
-                'source' => $sourceFromRequest,
-                'order_type' => 'custom_product',
-                'customer' => [
-                    'name' => $validated['full_name'],
-                    'email' => $validated['email'],
-                    'phone' => $validated['phone'],
-                ],
-                'custom_fields' => $request->has('custom_fields') ? $request->custom_fields : [],
-            ],
+            'order_data' => $orderData,
             'expires_at' => now()->addHour(),
         ]);
 

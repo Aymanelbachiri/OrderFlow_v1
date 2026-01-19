@@ -136,6 +136,13 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/affiliates/{affiliate}/referrals/{referral}/reject', [\App\Http\Controllers\Admin\AffiliateController::class, 'rejectReward'])->name('affiliates.referrals.reject');
     Route::post('/affiliates/{affiliate}/grant-reward', [\App\Http\Controllers\Admin\AffiliateController::class, 'grantDirectReward'])->name('affiliates.grant-reward');
 
+    // Trial requests management
+    Route::get('/trial-requests', [\App\Http\Controllers\Admin\TrialRequestController::class, 'index'])->name('trial-requests.index');
+    Route::get('/trial-requests/{trialRequest}', [\App\Http\Controllers\Admin\TrialRequestController::class, 'show'])->name('trial-requests.show');
+    Route::post('/trial-requests/{trialRequest}/approve', [\App\Http\Controllers\Admin\TrialRequestController::class, 'approve'])->name('trial-requests.approve');
+    Route::post('/trial-requests/{trialRequest}/reject', [\App\Http\Controllers\Admin\TrialRequestController::class, 'reject'])->name('trial-requests.reject');
+    Route::delete('/trial-requests/{trialRequest}', [\App\Http\Controllers\Admin\TrialRequestController::class, 'destroy'])->name('trial-requests.destroy');
+
     // Analytics
     Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
 

@@ -113,6 +113,16 @@ class PaymentIntent extends Model
         if (isset($this->order_data['custom_fields']) && !empty($this->order_data['custom_fields'])) {
             $paymentDetails['custom_fields'] = $this->order_data['custom_fields'];
         }
+        // Store HotPlayer activation data
+        if (isset($this->order_data['mac_address']) && !empty($this->order_data['mac_address'])) {
+            $paymentDetails['mac_address'] = $this->order_data['mac_address'];
+        }
+        if (isset($this->order_data['activation_plan']) && !empty($this->order_data['activation_plan'])) {
+            $paymentDetails['activation_plan'] = $this->order_data['activation_plan'];
+        }
+        if (isset($this->order_data['hotplayer_device_info']) && !empty($this->order_data['hotplayer_device_info'])) {
+            $paymentDetails['hotplayer_device_info'] = $this->order_data['hotplayer_device_info'];
+        }
         if (!empty($paymentDetails)) {
             $orderData['payment_details'] = $paymentDetails;
         }

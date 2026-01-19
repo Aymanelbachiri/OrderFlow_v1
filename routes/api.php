@@ -21,3 +21,9 @@ Route::prefix('affiliate')->name('api.affiliate.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Api\AffiliateController::class, 'dashboard'])->name('dashboard');
     Route::post('/fetch-subscriptions', [\App\Http\Controllers\Api\AffiliateController::class, 'fetchSubscriptions'])->name('fetch-subscriptions');
 });
+
+// Trial Request API (public endpoint)
+Route::post('/trial-requests', [\App\Http\Controllers\Api\TrialRequestController::class, 'store'])->name('api.trial-requests.store');
+
+// HotPlayer API (public endpoint for MAC validation)
+Route::post('/hotplayer/check-device', [\App\Http\Controllers\Api\HotPlayerController::class, 'checkDevice'])->name('api.hotplayer.check-device');

@@ -63,7 +63,8 @@ class CustomProductController extends Controller
             'short_description' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'product_type' => 'required|in:service,digital,other',
+            'product_type' => 'required|in:service,digital,hotplayer_activation,other',
+            'hotplayer_plan' => 'required_if:product_type,hotplayer_activation|nullable|in:YEAR_1,FOREVER',
             'is_active' => 'boolean',
             'allow_direct_checkout' => 'boolean',
             'stock_quantity' => 'nullable|integer|min:0',
@@ -82,6 +83,12 @@ class CustomProductController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+
+        // Store hotplayer_plan in metadata
+        if ($validated['product_type'] === 'hotplayer_activation' && !empty($validated['hotplayer_plan'])) {
+            $validated['metadata'] = ['hotplayer_plan' => $validated['hotplayer_plan']];
+        }
+        unset($validated['hotplayer_plan']);
 
         // Process custom fields
         if ($request->has('custom_fields') && is_array($request->custom_fields)) {
@@ -137,7 +144,8 @@ class CustomProductController extends Controller
             'short_description' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'product_type' => 'required|in:service,digital,other',
+            'product_type' => 'required|in:service,digital,hotplayer_activation,other',
+            'hotplayer_plan' => 'required_if:product_type,hotplayer_activation|nullable|in:YEAR_1,FOREVER',
             'is_active' => 'boolean',
             'allow_direct_checkout' => 'boolean',
             'stock_quantity' => 'nullable|integer|min:0',
@@ -152,6 +160,14 @@ class CustomProductController extends Controller
 
         $validated['is_active'] = $request->has('is_active');
         $validated['allow_direct_checkout'] = $request->has('allow_direct_checkout');
+
+        // Store hotplayer_plan in metadata
+        if ($validated['product_type'] === 'hotplayer_activation' && !empty($validated['hotplayer_plan'])) {
+            $metadata = $customProduct->metadata ?? [];
+            $metadata['hotplayer_plan'] = $validated['hotplayer_plan'];
+            $validated['metadata'] = $metadata;
+        }
+        unset($validated['hotplayer_plan']);
 
         // Process custom fields
         if ($request->has('custom_fields') && is_array($request->custom_fields)) {

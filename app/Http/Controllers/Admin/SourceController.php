@@ -62,6 +62,8 @@ class SourceController extends Controller
             'website' => 'nullable|url|max:255',
             'phone_number' => 'nullable|string|max:255',
             'team_name' => 'nullable|string|max:255',
+            // HotPlayer Integration
+            'hotplayer_api_key' => 'nullable|string|max:500',
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
@@ -103,6 +105,8 @@ class SourceController extends Controller
             'website' => 'nullable|url|max:255',
             'phone_number' => 'nullable|string|max:255',
             'team_name' => 'nullable|string|max:255',
+            // HotPlayer Integration
+            'hotplayer_api_key' => 'nullable|string|max:500',
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? $source->is_active);

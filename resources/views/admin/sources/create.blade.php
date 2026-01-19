@@ -125,6 +125,18 @@
                 </div>
             </div>
 
+            <!-- HotPlayer Integration -->
+            <div class="border-b pb-4">
+                <h2 class="text-lg font-semibold mb-4">HotPlayer Integration</h2>
+                <p class="text-sm text-gray-600 mb-4">Configure HotPlayer API for device activation products.</p>
+                <div>
+                    <label class="block text-sm font-medium mb-1">HotPlayer API Key</label>
+                    <input type="text" name="hotplayer_api_key" value="{{ old('hotplayer_api_key') }}" class="w-full px-3 py-2 border rounded font-mono text-sm" placeholder="Enter your HotPlayer reseller API key">
+                    <p class="text-xs text-gray-500 mt-1">Used for validating MAC addresses in HotPlayer activation products.</p>
+                    @error('hotplayer_api_key')<div class="text-sm text-red-600 mt-1">{{ $message }}</div>@enderror
+                </div>
+            </div>
+
             <div class="pt-2">
                 <button type="submit" class="px-4 py-2 bg-[#D63613] text-white rounded hover:bg-[#b42f11]">Save</button>
                 <a href="{{ route('admin.sources.index') }}" class="ml-2 px-4 py-2 border rounded">Cancel</a>

@@ -308,8 +308,9 @@
                             <span class="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full 
                                 {{ $order->customProduct->product_type === 'service' ? 'bg-blue-100 text-blue-700' : '' }}
                                 {{ $order->customProduct->product_type === 'digital' ? 'bg-purple-100 text-purple-700' : '' }}
+                                {{ $order->customProduct->product_type === 'hotplayer_activation' ? 'bg-orange-100 text-orange-700' : '' }}
                                 {{ $order->customProduct->product_type === 'other' ? 'bg-gray-100 text-gray-700' : '' }}">
-                                {{ ucfirst($order->customProduct->product_type) }}
+                                {{ $order->customProduct->product_type === 'hotplayer_activation' ? 'HotPlayer Activation' : ucfirst($order->customProduct->product_type) }}
                             </span>
                         </p>
                     </div>
@@ -338,6 +339,44 @@
                         </p>
                     </div>
                 </div>
+
+                @php
+                    // Get HotPlayer data from payment_details or payment intent
+                    $macAddress = null;
+                    $activationPlan = null;
+                    if ($order->payment_details) {
+                        $macAddress = $order->payment_details['mac_address'] ?? null;
+                        $activationPlan = $order->payment_details['activation_plan'] ?? null;
+                    }
+                    if (!$macAddress) {
+                        $paymentIntent = \App\Models\PaymentIntent::where('payment_intent_id', $order->payment_id)->first();
+                        if ($paymentIntent && $paymentIntent->order_data) {
+                            $macAddress = $paymentIntent->order_data['mac_address'] ?? null;
+                            $activationPlan = $paymentIntent->order_data['activation_plan'] ?? null;
+                        }
+                    }
+                @endphp
+
+                @if($order->customProduct->product_type === 'hotplayer_activation' && $macAddress)
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-semibold text-[#201E1F] mb-4">HotPlayer Activation Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-[#201E1F]/60">MAC Address</label>
+                            <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200 font-mono">{{ $macAddress }}</p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-[#201E1F]/60">Activation Plan</label>
+                            <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200">
+                                <span class="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full 
+                                    {{ $activationPlan === 'FOREVER' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
+                                    {{ $activationPlan === 'FOREVER' ? 'Lifetime' : '1 Year' }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 @php
                     // Get custom fields from payment_details or order_data

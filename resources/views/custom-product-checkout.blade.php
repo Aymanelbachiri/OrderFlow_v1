@@ -40,8 +40,9 @@
                                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium
                                                     {{ $product->product_type === 'service' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : '' }}
                                                     {{ $product->product_type === 'digital' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : '' }}
+                                                    {{ $product->product_type === 'hotplayer_activation' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' : '' }}
                                                     {{ $product->product_type === 'other' ? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' : '' }}">
-                                                    {{ ucfirst($product->product_type) }}
+                                                    {{ $product->product_type === 'hotplayer_activation' ? 'HotPlayer Activation' : ucfirst($product->product_type) }}
                                                 </span>
                                             </p>
                                             @if($product->short_description)
@@ -93,7 +94,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('custom-product.checkout.submit', $product) }}" class="space-y-4" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+                        <form method="POST" action="{{ route('custom-product.checkout.submit', $product) }}" class="space-y-4" id="checkout-form" @if($product->product_type !== 'hotplayer_activation') onsubmit="this.querySelector('button[type=submit]').disabled=true" @endif>
                             @csrf
                             <input type="hidden" name="source" value="{{ $source ?? request('source', 'custom_product') }}">
 
@@ -262,6 +263,36 @@
                             </section>
                             @endif
 
+                            <!-- HotPlayer MAC Address Input -->
+                            @if($product->product_type === 'hotplayer_activation')
+                            <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
+                                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Device Information</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            MAC Address <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="flex gap-3">
+                                            <input type="text" name="mac_address" id="mac_address" value="{{ old('mac_address') }}" required
+                                                placeholder="XX:XX:XX:XX:XX:XX"
+                                                class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 uppercase"
+                                                pattern="([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}">
+                                            <button type="button" id="verify-mac-btn"
+                                                class="px-4 py-3 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors font-medium">
+                                                Verify
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                            Enter your device MAC address (format: XX:XX:XX:XX:XX:XX)
+                                        </p>
+                                        <div id="mac-status" class="mt-3 hidden"></div>
+                                        <input type="hidden" name="mac_verified" id="mac_verified" value="0">
+                                        <input type="hidden" name="device_plan" id="device_plan" value="">
+                                    </div>
+                                </div>
+                            </section>
+                            @endif
+
                             <!-- Payment Method -->
                             <section class="border-t border-gray-200 dark:border-gray-700 pt-8">
                                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Payment Method</h2>
@@ -348,33 +379,165 @@
                     div.classList.add('border-gray-200', 'dark:border-gray-700');
                     
                     // Hide indicators on all cards
-                        const indicator = card.querySelector('.payment-method-indicator');
-                        if (indicator) {
-                            indicator.classList.add('opacity-0');
-                        }
-                    });
-                    
-                    // Add active styling to selected card
-                    if (this.checked) {
-                        const card = this.closest('.payment-method-card');
-                        const div = card.querySelector('div');
-                        div.classList.remove('border-gray-200', 'dark:border-gray-700');
-                        div.classList.add('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
-                        
-                        // Show indicator on selected card
-                        const indicator = card.querySelector('.payment-method-indicator');
-                        if (indicator) {
-                            indicator.classList.remove('opacity-0');
-                        }
+                    const indicator = card.querySelector('.payment-method-indicator');
+                    if (indicator) {
+                        indicator.classList.add('opacity-0');
                     }
                 });
                 
-                // Initialize visual state for pre-selected radio buttons
-                if (radio.checked) {
-                    radio.dispatchEvent(new Event('change'));
+                // Add active styling to selected card
+                if (this.checked) {
+                    const card = this.closest('.payment-method-card');
+                    const div = card.querySelector('div');
+                    div.classList.remove('border-gray-200', 'dark:border-gray-700');
+                    div.classList.add('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+                    
+                    // Show indicator on selected card
+                    const indicator = card.querySelector('.payment-method-indicator');
+                    if (indicator) {
+                        indicator.classList.remove('opacity-0');
+                    }
                 }
             });
+            
+            // Initialize visual state for pre-selected radio buttons
+            if (radio.checked) {
+                radio.dispatchEvent(new Event('change'));
+            }
         });
+
+        // HotPlayer MAC Address verification
+        @if($product->product_type === 'hotplayer_activation')
+        (function() {
+            const macInput = document.getElementById('mac_address');
+            const verifyBtn = document.getElementById('verify-mac-btn');
+            const statusDiv = document.getElementById('mac-status');
+            const macVerifiedInput = document.getElementById('mac_verified');
+            const devicePlanInput = document.getElementById('device_plan');
+            const form = macInput.closest('form');
+            const source = '{{ $source ?? request("source", "main") }}';
+            let isVerifying = false;
+
+            // Auto-format MAC address as user types
+            if (macInput) {
+                macInput.addEventListener('keyup', function() {
+                    let val = this.value.toUpperCase().replace(/[^0-9A-F]/g, '').substring(0, 12);
+                    this.value = (val.match(/.{1,2}/g) || []).join(':');
+                    // Reset verification when MAC changes
+                    macVerifiedInput.value = '0';
+                    devicePlanInput.value = '';
+                });
+            }
+
+            function verifyMac(callback) {
+                const mac = macInput.value.trim();
+                if (!mac || mac.length !== 17) {
+                    showStatus('error', 'Please enter a valid MAC address');
+                    if (callback) callback(false);
+                    return;
+                }
+
+                isVerifying = true;
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = 'Checking...';
+
+                fetch('/api/hotplayer/check-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ mac: mac, source: source })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const plan = data.plan || '';
+                        devicePlanInput.value = plan;
+
+                        // Check if device already has lifetime activation
+                        if (plan === 'FOREVER') {
+                            showStatus('error', 'This device is already activated with a Lifetime plan');
+                            macVerifiedInput.value = '0';
+                            if (callback) callback(false);
+                        } else {
+                            // TRIAL or YEAR_1 can proceed
+                            let message = 'Device verified! ';
+                            if (data.expiration) {
+                                const expDate = new Date(data.expiration);
+                                message += 'Current expiry: ' + expDate.toLocaleDateString();
+                            }
+                            if (plan) {
+                                message += ' | Current plan: ' + (plan === 'YEAR_1' ? '1 Year' : plan);
+                            }
+                            showStatus('success', message);
+                            macVerifiedInput.value = '1';
+                            if (callback) callback(true);
+                        }
+                    } else {
+                        showStatus('error', data.error || 'Device not found');
+                        macVerifiedInput.value = '0';
+                        if (callback) callback(false);
+                    }
+                })
+                .catch(error => {
+                    showStatus('error', 'Failed to verify device');
+                    macVerifiedInput.value = '0';
+                    if (callback) callback(false);
+                })
+                .finally(() => {
+                    isVerifying = false;
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify';
+                });
+            }
+
+            if (verifyBtn) {
+                verifyBtn.addEventListener('click', function() {
+                    verifyMac(null);
+                });
+            }
+
+            // Intercept form submission
+            if (form) {
+                const submitBtn = form.querySelector('button[type=submit]');
+                
+                form.addEventListener('submit', function(e) {
+                    // If already verified, allow submission
+                    if (macVerifiedInput.value === '1') {
+                        submitBtn.disabled = true;
+                        return true;
+                    }
+
+                    // Prevent submission and verify first
+                    e.preventDefault();
+                    submitBtn.disabled = true;
+                    
+                    verifyMac(function(success) {
+                        if (success) {
+                            // Re-submit the form
+                            macVerifiedInput.value = '1';
+                            form.submit();
+                        } else {
+                            // Re-enable button on failure
+                            submitBtn.disabled = false;
+                        }
+                    });
+                });
+            }
+
+            function showStatus(type, message) {
+                statusDiv.classList.remove('hidden');
+                if (type === 'success') {
+                    statusDiv.className = 'mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 text-sm';
+                } else {
+                    statusDiv.className = 'mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 text-sm';
+                }
+                statusDiv.textContent = message;
+            }
+        })();
+        @endif
     </script>
     @endpush
 @endsection

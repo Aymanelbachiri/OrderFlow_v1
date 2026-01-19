@@ -533,6 +533,16 @@
                             </a>
                         </li>
 
+                        <!-- Trial Requests -->
+                        <li>
+                            <a href="{{ route('admin.trial-requests.index') }}"
+                                class="nav-link flex items-center px-4 py-3 text-white hover:bg-[#DC4822]/10 hover:text-[#DC4822] rounded-lg transition-all duration-200 font-medium group {{ request()->routeIs('admin.trial-requests.*') ? 'bg-[#DC4822]/10 text-[#DC4822] border-r-4 border-[#DC4822]' : '' }}"
+                                title="Trial Requests">
+                                <i class="fas fa-clock mr-3 group-hover:scale-110 transition-transform duration-200"></i>
+                                <span class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Trials</span>
+                            </a>
+                        </li>
+
                         <!-- Resellers -->
                         <li>
                             <a href="{{ route('admin.resellers.index') }}"

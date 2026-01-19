@@ -29,6 +29,8 @@ class Source extends Model
         'website',
         'phone_number',
         'team_name',
+        // HotPlayer Integration
+        'hotplayer_api_key',
     ];
 
     protected function casts(): array
