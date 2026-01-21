@@ -78,6 +78,25 @@
                         </div>
                     </div>
 
+                     <!-- 5. Statuses -->
+                     <div>
+                        <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-2">Reward Status Legend</h4>
+                        <div class="space-y-2 text-xs flex justify-between items-center">
+                            <div class="flex flex-col items-center space-y-2">
+                                <span class=" font-semibold px-4 py-1 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-center mr-3">Pending</span>
+                                <span class="text-gray-600 dark:text-gray-400">Referral recorded, waiting for activation</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-2">
+                                <span class=" font-semibold px-4 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-900 text-center mr-3">Applied</span>
+                                <span class="text-gray-600 dark:text-gray-400">Reward month added to your account</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-2">
+                                <span class=" font-semibold px-4 py-1 rounded bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-900 text-center mr-3">Revoked</span>
+                                <span class="text-gray-600 dark:text-gray-400">Cancelled (fraud, refund, or abuse)</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Referral Code -->
                     <div
                         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
@@ -125,7 +144,7 @@
                                             <div class="text-right">
                                                 @if ($affiliate->selectedOrder->isActive())
                                                     <span
-                                                        class="inline-block px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded">
+                                                        class="inline-block px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-900 rounded">
                                                         Active
                                                     </span>
                                                 @else
@@ -175,15 +194,15 @@
                                                 <td class="px-4 py-3 whitespace-nowrap">
                                                     @if ($referral->status === 'pending')
                                                         <span
-                                                            class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded">Pending</span>
+                                                            class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-900 rounded">Pending</span>
                                                     @elseif($referral->status === 'approved')
                                                         <span
-                                                            class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded">
+                                                            class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-900 rounded">
                                                             {{ $referral->reward_granted ? 'Rewarded' : 'Approved' }}
                                                         </span>
                                                     @else
                                                         <span
-                                                            class="px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded">Rejected</span>
+                                                            class="px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-900 rounded">Rejected</span>
                                                     @endif
                                                 </td>
                                                 <td
