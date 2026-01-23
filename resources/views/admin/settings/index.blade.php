@@ -205,6 +205,46 @@
                         </div>
                     </div>
 
+                    <!-- Activation Panel API Configuration -->
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 mb-6">
+                        <h3 class="text-lg font-semibold text-[#201E1F] mb-4 flex items-center space-x-2">
+                            <div class="w-6 h-6 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-md flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                                </svg>
+                            </div>
+                            <span>Activation Panel API</span>
+                        </h3>
+                        
+                        <div>
+                            <label for="activation_panel_api_key" class="block text-sm font-semibold text-[#201E1F] mb-2">API Key</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="w-5 h-5 text-[#201E1F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                                    </svg>
+                                </div>
+                                <input type="password" id="activation_panel_api_key" name="activation_panel_api_key" value="{{ $settings['activation_panel_api_key'] }}"
+                                       class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                       placeholder="Your Activation Panel API Key">
+                            </div>
+                            <p class="mt-2 text-sm text-[#201E1F]/60 flex items-center space-x-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>Used for generating trial M3U credentials from activationpanel.net</span>
+                            </p>
+                            @error('activation_panel_api_key')
+                                <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span>{{ $message }}</span>
+                                </p>
+                            @enderror
+                        </div>
+                    </div>
+
                     <!-- Submit Button -->
                     <div class="flex justify-end pt-6 border-t border-[#D63613]/10">
                         <button type="submit" 

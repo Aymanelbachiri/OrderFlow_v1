@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\TrialRequest;
 use App\Models\Source;
+use App\Models\SystemSetting;
 use App\Mail\TrialCredentialsMail;
 use App\Services\SourceMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
 
 class TrialRequestController extends Controller
 {
@@ -162,5 +164,102 @@ class TrialRequestController extends Controller
 
         // Default to 24 hours
         return now()->addHours(24);
+    }
+
+    /**
+     * Generate trial M3U credentials via external API
+     */
+    public function generateTrialM3u(Request $request)
+    {
+        $apiKey = SystemSetting::get('activation_panel_api_key');
+        
+        if (empty($apiKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Activation Panel API key is not configured. Please add it in Settings.'
+            ], 400);
+        }
+
+        try {
+            // Call the external API to create a trial M3U (sub=99 for demo)
+            $response = Http::timeout(30)->get('https://activationpanel.net/api/api.php', [
+                'action' => 'new',
+                'type' => 'm3u',
+                'sub' => '99', // Demo subscription
+                'pack' => 'all',
+                'api_key' => $apiKey,
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to connect to Activation Panel API. Status: ' . $response->status()
+                ], 500);
+            }
+
+            $responseData = $response->json();
+
+            // Handle both array and object responses
+            // API might return [{ status, url, ... }] or { status, url, ... }
+            $data = is_array($responseData) && isset($responseData[0]) ? $responseData[0] : $responseData;
+
+            // Check if the API returned success
+            if (!isset($data['status']) || $data['status'] !== 'true') {
+                return response()->json([
+                    'success' => false,
+                    'message' => $data['message'] ?? 'Unknown error from Activation Panel API'
+                ], 400);
+            }
+
+            // Parse the URL to extract username, password, and base URL
+            // Expected format: http://example-tt.cc/get.php?username=username&password=password&type=m3u_plus&output=ts
+            $url = $data['url'] ?? '';
+            
+            // Fix malformed URL if API returns "http://http://..."
+            $url = preg_replace('/^(https?:\/\/)+/', '$1', $url);
+            
+            $parsedUrl = parse_url($url);
+            $baseUrl = '';
+            $username = '';
+            $password = '';
+
+            if ($parsedUrl && isset($parsedUrl['host'])) {
+                // Build base URL (scheme + host + port if present)
+                $scheme = $parsedUrl['scheme'] ?? 'http';
+                $baseUrl = $scheme . '://' . $parsedUrl['host'];
+                if (isset($parsedUrl['port'])) {
+                    $baseUrl .= ':' . $parsedUrl['port'];
+                }
+
+                // Parse query string for username and password
+                if (isset($parsedUrl['query'])) {
+                    parse_str($parsedUrl['query'], $queryParams);
+                    $username = $queryParams['username'] ?? '';
+                    $password = $queryParams['password'] ?? '';
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $data['message'] ?? 'Trial M3U created successfully',
+                'data' => [
+                    'username' => $username,
+                    'password' => $password,
+                    'url' => $baseUrl,
+                    'full_url' => $url,
+                    'user_id' => $data['user_id'] ?? null,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Trial M3U generation failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate trial M3U: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

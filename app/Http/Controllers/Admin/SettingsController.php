@@ -26,6 +26,7 @@ class SettingsController extends Controller
             'support_phone' => SystemSetting::get('support_phone', ''),
             'renewal_reminder_days' => SystemSetting::get('renewal_reminder_days', '7,3,0'),
             'renewal_link_url' => SystemSetting::get('renewal_link_url', ''),
+            'activation_panel_api_key' => SystemSetting::get('activation_panel_api_key', ''),
         ];
 
         return view('admin.settings.index', compact('settings'));
@@ -43,6 +44,7 @@ class SettingsController extends Controller
             'support_phone' => 'nullable|string|max:20',
             'renewal_reminder_days' => 'required|string',
             'renewal_link_url' => 'nullable|url',
+            'activation_panel_api_key' => 'nullable|string|max:255',
         ]);
 
         foreach ($validated as $key => $value) {

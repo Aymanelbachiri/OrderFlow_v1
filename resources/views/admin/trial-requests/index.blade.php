@@ -241,23 +241,35 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-[#201E1F]/70 mb-1">Username *</label>
-                        <input type="text" name="trial_username" required
+                        <input type="text" name="trial_username" id="trial_username" required
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#D63613] focus:border-[#D63613]"
                             placeholder="trial_user123">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-[#201E1F]/70 mb-1">Password *</label>
-                        <input type="text" name="trial_password" required
+                        <input type="text" name="trial_password" id="trial_password" required
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#D63613] focus:border-[#D63613]"
                             placeholder="secure_password">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-[#201E1F]/70 mb-1">URL *</label>
-                        <input type="url" name="trial_url" required
+                        <input type="url" name="trial_url" id="trial_url" required
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-[#D63613] focus:border-[#D63613]"
                             placeholder="http://server.example.com:8080">
+                    </div>
+
+                    <!-- Generate Trial M3U Button -->
+                    <div>
+                        <button type="button" id="generateM3uBtn" onclick="generateTrialM3u()"
+                            class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center justify-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            <span>Generate Trial M3U</span>
+                        </button>
+                        <p class="mt-1 text-xs text-gray-500">Auto-fill credentials from Activation Panel API</p>
                     </div>
 
                     <div>
@@ -332,5 +344,69 @@
                 closeApproveModal();
             }
         });
+
+        // Generate Trial M3U from Activation Panel API
+        async function generateTrialM3u() {
+            const btn = document.getElementById('generateM3uBtn');
+            const originalContent = btn.innerHTML;
+            
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Generating...</span>
+            `;
+
+            try {
+                const response = await fetch('{{ route("admin.trial-requests.generate-m3u") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Fill the form fields with the response data
+                    document.getElementById('trial_username').value = data.data.username || '';
+                    document.getElementById('trial_password').value = data.data.password || '';
+                    document.getElementById('trial_url').value = data.data.url || '';
+                    
+                    // Show success message
+                    btn.classList.remove('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
+                    btn.classList.add('from-green-500', 'to-green-600');
+                    btn.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Credentials Filled!</span>
+                    `;
+                    
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        btn.classList.remove('from-green-500', 'to-green-600');
+                        btn.classList.add('from-blue-500', 'to-blue-600', 'hover:from-blue-600', 'hover:to-blue-700');
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    // Show error
+                    alert('Error: ' + (data.message || 'Failed to generate trial M3U'));
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to connect to the server. Please try again.');
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
     </script>
 @endsection
