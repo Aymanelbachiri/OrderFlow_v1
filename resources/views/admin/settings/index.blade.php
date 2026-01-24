@@ -115,6 +115,7 @@
                                            class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
                                            placeholder="contact@yoursite.com">
                                 </div>
+                                <p class="mt-1 text-xs text-[#201E1F]/60">Public contact email for customers</p>
                                 @error('contact_email')
                                     <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -125,6 +126,31 @@
                                 @enderror
                             </div>
 
+                            <div>
+                                <label for="admin_email" class="block text-sm font-semibold text-[#201E1F] mb-2">Admin Email (Order Notifications)</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-[#201E1F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="email" id="admin_email" name="admin_email" value="{{ $settings['admin_email'] }}"
+                                           class="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                           placeholder="admin@yoursite.com">
+                                </div>
+                                <p class="mt-1 text-xs text-[#201E1F]/60">Receives new order notifications (leave empty to use all admin accounts)</p>
+                                @error('admin_email')
+                                    <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span>{{ $message }}</span>
+                                    </p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                             <div>
                                 <label for="support_phone" class="block text-sm font-semibold text-[#201E1F] mb-2">Support Phone</label>
                                 <div class="relative">
