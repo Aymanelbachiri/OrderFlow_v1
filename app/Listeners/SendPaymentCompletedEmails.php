@@ -105,6 +105,7 @@ class SendPaymentCompletedEmails
 
                 // Send standard new order notification email to admin(s)
                 // Admin emails should use default mailer (not source-specific)
+                // Note: If you get SSL certificate errors, add MAIL_VERIFY_PEER=false to .env
                 try {
                 $adminEmails = $emailService->getAdminEmails();
                     Log::info('Attempting to send admin emails', [
@@ -137,6 +138,7 @@ class SendPaymentCompletedEmails
                                     'admin_email' => $adminEmail,
                                     'error' => $singleAdminEmailError->getMessage(),
                                     'trace' => $singleAdminEmailError->getTraceAsString(),
+                                    'hint' => 'If SSL certificate error, add MAIL_VERIFY_PEER=false to .env',
                                 ]);
                             }
                         }
@@ -147,6 +149,7 @@ class SendPaymentCompletedEmails
                         'order_number' => $order->order_number,
                         'error' => $adminEmailError->getMessage(),
                         'trace' => $adminEmailError->getTraceAsString(),
+                        'hint' => 'If SSL certificate error, add MAIL_VERIFY_PEER=false to .env',
                     ]);
                 }
             }
