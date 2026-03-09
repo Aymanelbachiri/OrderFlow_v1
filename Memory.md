@@ -33,7 +33,7 @@
 - SMTP SSL hostname mismatch: When host (e.g. mail.smarters-proiptv.com) uses a cert with different CN (e.g. *.web-hosting.com), set MAIL_VERIFY_PEER=false in .env
 
 ## 8. Current State
-- Subscription activation: "Fill All" fills all devices from one M3U; each device has its own "Fill from M3U" for per-device URLs
+- Subscription activation: each device has its own "Fill from M3U" for per-device URLs
 - Emails (client-credentials, account-renewed): M3U link per device, built from device url+username+password
 - Order model: getM3uUrl(), buildM3uUrl() helpers
 - Order edit: all fields editable; per-device Fill from M3U for subscription credentials

@@ -575,21 +575,6 @@
                 </div>
 
                 @if($order->user->role === 'client')
-                    <!-- Fill from M3U (fills all devices when same server) -->
-                    <div class="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                        <h4 class="text-sm font-medium text-indigo-800 mb-3">Fill All Devices from M3U URL</h4>
-                        <p class="text-xs text-indigo-600 mb-3">Paste an M3U URL to auto-fill Server URL, Username, and Password for all devices (use when all share the same server). Each device also has its own Fill from M3U below.</p>
-                        <div class="flex gap-2">
-                            <input type="url" id="m3u_url_input_edit"
-                                   class="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                   placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus&output=ts">
-                            <button type="button" id="fillFromM3uBtnEdit"
-                                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
-                                Fill All
-                            </button>
-                        </div>
-                    </div>
-
                     <!-- Device Credentials Container -->
                     <div id="deviceCredentialsContainer">
                         @php
@@ -855,37 +840,6 @@ function parseM3uUrlEdit(m3uUrl) {
     }
 }
 
-function fillFromM3uEdit() {
-    const m3uInput = document.getElementById('m3u_url_input_edit');
-    const m3uUrl = (m3uInput?.value || '').trim();
-    if (!m3uUrl) {
-        alert('Please enter an M3U URL first.');
-        return;
-    }
-    const parsed = parseM3uUrlEdit(m3uUrl);
-    if (!parsed || !parsed.username || !parsed.password) {
-        alert('Could not parse M3U URL. Make sure it contains username and password parameters.');
-        return;
-    }
-    // Fill single device fields
-    const usernameEl = document.getElementById('subscription_username');
-    const passwordEl = document.getElementById('subscription_password');
-    const urlEl = document.getElementById('subscription_url');
-    if (usernameEl) usernameEl.value = parsed.username;
-    if (passwordEl) passwordEl.value = parsed.password;
-    if (urlEl) urlEl.value = parsed.url;
-    // Fill device fields (existing or dynamic)
-    document.querySelectorAll('[id^="device_"]').forEach(function(input) {
-        const match = input.id.match(/device_(\d+)_(username|password|url|m3u_url)/);
-        if (match) {
-            if (match[2] === 'username') input.value = parsed.username;
-            else if (match[2] === 'password') input.value = parsed.password;
-            else if (match[2] === 'url') input.value = parsed.url;
-            else if (match[2] === 'm3u_url') input.value = parsed.m3uUrl;
-        }
-    });
-}
-
 function fillDeviceFromM3uEdit(deviceIndex) {
     const m3uInput = document.getElementById('device_edit_' + deviceIndex + '_m3u_input');
     if (!m3uInput) return;
@@ -910,8 +864,6 @@ function fillDeviceFromM3uEdit(deviceIndex) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const fillBtn = document.getElementById('fillFromM3uBtnEdit');
-    if (fillBtn) fillBtn.addEventListener('click', fillFromM3uEdit);
     document.getElementById('deviceCredentialsContainer')?.addEventListener('click', function(e) {
         const btn = e.target.closest('.device-fill-m3u-btn-edit');
         if (btn) {

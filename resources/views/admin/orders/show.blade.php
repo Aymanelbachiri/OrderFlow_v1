@@ -820,20 +820,6 @@
                     <div class="space-y-6">
                         <!-- Device Credentials Section (for regular orders) -->
                         <div id="devicesContainer">
-                            <!-- Fill from M3U - all devices (when same server) -->
-                            <div id="fillFromM3uSection" class="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                <h4 class="text-sm font-medium text-indigo-800 mb-3">Fill All Devices from M3U URL</h4>
-                                <p class="text-xs text-indigo-600 mb-3">Paste an M3U URL to auto-fill Server URL, Username, and Password for all devices (use when all devices share the same server). Each device also has its own Fill from M3U below.</p>
-                                <div class="flex gap-2">
-                                    <input type="url" id="m3u_url_input"
-                                           class="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
-                                           placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus&output=ts">
-                                    <button type="button" id="fillFromM3uBtn"
-                                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
-                                        Fill All
-                                    </button>
-                                </div>
-                            </div>
                             <div id="deviceFieldsContainer">
                                 <!-- Device fields will be dynamically generated here -->
                             </div>
@@ -1156,10 +1142,6 @@ function openActivateModal(orderId, orderNumber, customerName, serviceName, devi
         // Show device credentials section
         devicesContainer.classList.remove('hidden');
 
-        // Clear Fill from M3U fields
-        const m3uInput = document.getElementById('m3u_url_input');
-        if (m3uInput) m3uInput.value = '';
-
         // Generate device fields
         generateDeviceFields(deviceCount);
     }
@@ -1182,33 +1164,6 @@ function parseM3uUrl(m3uUrl) {
     } catch (e) {
         return null;
     }
-}
-
-function fillFromM3u() {
-    const m3uInput = document.getElementById('m3u_url_input');
-    const m3uUrl = (m3uInput?.value || '').trim();
-    if (!m3uUrl) {
-        alert('Please enter an M3U URL first.');
-        return;
-    }
-    const parsed = parseM3uUrl(m3uUrl);
-    if (!parsed || !parsed.username || !parsed.password) {
-        alert('Could not parse M3U URL. Make sure it contains username and password parameters.');
-        return;
-    }
-    const deviceFieldsContainer = document.getElementById('deviceFieldsContainer');
-    const deviceInputs = deviceFieldsContainer ? deviceFieldsContainer.querySelectorAll('input[id^="device_"]') : [];
-    deviceInputs.forEach(function(input) {
-        const id = input.id;
-        const match = id.match(/device_(\d+)_(username|password|url|m3u_url)/);
-        if (match) {
-            const field = match[2];
-            if (field === 'username') input.value = parsed.username;
-            else if (field === 'password') input.value = parsed.password;
-            else if (field === 'url') input.value = parsed.url;
-            else if (field === 'm3u_url') input.value = parsed.m3uUrl;
-        }
-    });
 }
 
 function fillDeviceFromM3u(deviceIndex) {
@@ -1302,10 +1257,6 @@ function generateDeviceFields(deviceCount) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const fillFromM3uBtn = document.getElementById('fillFromM3uBtn');
-    if (fillFromM3uBtn) {
-        fillFromM3uBtn.addEventListener('click', fillFromM3u);
-    }
     document.getElementById('deviceFieldsContainer')?.addEventListener('click', function(e) {
         const btn = e.target.closest('.device-fill-m3u-btn');
         if (btn) {
