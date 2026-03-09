@@ -123,7 +123,11 @@
                                         <p style="margin: 0 0 8px 0; font-size: 14px; color: #075985;"><strong>Password:</strong> {{ $order->subscription_password }}</p>
                                         @endif
                                         @if($order->subscription_url)
-                                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #075985;"><strong>Server URL:</strong> <a href="{{ $order->subscription_url }}" style="color: #0369a1; text-decoration: underline;">{{ $order->subscription_url }}</a></p>
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #075985;"><strong>Server URL:</strong> <a href="{{ $order->subscription_url }}" style="color: #0369a1; text-decoration: underline;">{{ $order->subscription_url }}</a></p>
+                                        @endif
+                                        @php $renewalM3uUrl = $order->getM3uUrl(); @endphp
+                                        @if($renewalM3uUrl)
+                                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #075985;"><strong>M3U Link:</strong> <a href="{{ $renewalM3uUrl }}" style="color: #0369a1; word-break: break-all; text-decoration: underline;">{{ $renewalM3uUrl }}</a></p>
                                         @endif
                                         <p style="margin: 0; font-size: 13px; color: #0c4a6e; line-height: 1.6;">Please keep these credentials secure. Use them to access your IPTV service.</p>
                                     </td>

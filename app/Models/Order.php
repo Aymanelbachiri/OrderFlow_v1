@@ -32,6 +32,7 @@ class Order extends Model
         'subscription_username',
         'subscription_password',
         'subscription_url',
+        'subscription_m3u_url',
         'devices',
         'reseller_username',
         'reseller_password',
@@ -145,6 +146,35 @@ class Order extends Model
     public function generateOrderNumber()
     {
         return 'ORD-' . date('Y') . '-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get the M3U URL for this order.
+     * Returns stored subscription_m3u_url if set, otherwise builds from url + username + password.
+     */
+    public function getM3uUrl(?string $url = null, ?string $username = null, ?string $password = null): ?string
+    {
+        $url = $url ?? $this->subscription_url;
+        $username = $username ?? $this->subscription_username;
+        $password = $password ?? $this->subscription_password;
+
+        if ($this->subscription_m3u_url) {
+            return $this->subscription_m3u_url;
+        }
+        if ($url && $username && $password) {
+            return self::buildM3uUrl($url, $username, $password);
+        }
+        return null;
+    }
+
+    /**
+     * Build M3U URL from base URL, username, and password.
+     * Format: {base_url}get.php?username={u}&password={p}&type=m3u_plus&output=ts
+     */
+    public static function buildM3uUrl(string $baseUrl, string $username, string $password): string
+    {
+        $base = rtrim($baseUrl, '/');
+        return $base . '/get.php?username=' . urlencode($username) . '&password=' . urlencode($password) . '&type=m3u_plus&output=ts';
     }
 
     /**

@@ -795,7 +795,24 @@
                     <div class="space-y-6">
                         <!-- Device Credentials Section (for regular orders) -->
                         <div id="devicesContainer">
-                            <!-- Device fields will be dynamically generated here -->
+                            <!-- Fill from M3U (subscription orders only) -->
+                            <div id="fillFromM3uSection" class="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                <h4 class="text-sm font-medium text-indigo-800 mb-3">Fill from M3U URL</h4>
+                                <p class="text-xs text-indigo-600 mb-3">Paste an M3U URL to auto-fill Server URL, Username, and Password for all devices.</p>
+                                <div class="flex gap-2">
+                                    <input type="url" id="m3u_url_input"
+                                           class="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                           placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus&output=ts">
+                                    <button type="button" id="fillFromM3uBtn"
+                                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                        Fill from M3U
+                                    </button>
+                                </div>
+                                <input type="hidden" id="subscription_m3u_url" name="subscription_m3u_url" value="">
+                            </div>
+                            <div id="deviceFieldsContainer">
+                                <!-- Device fields will be dynamically generated here -->
+                            </div>
                         </div>
 
                         <!-- Reseller Credentials Section (for reseller orders) -->
@@ -1115,6 +1132,12 @@ function openActivateModal(orderId, orderNumber, customerName, serviceName, devi
         // Show device credentials section
         devicesContainer.classList.remove('hidden');
 
+        // Clear Fill from M3U fields
+        const m3uInput = document.getElementById('m3u_url_input');
+        const m3uHidden = document.getElementById('subscription_m3u_url');
+        if (m3uInput) m3uInput.value = '';
+        if (m3uHidden) m3uHidden.value = '';
+
         // Generate device fields
         generateDeviceFields(deviceCount);
     }
@@ -1127,8 +1150,49 @@ function openActivateModal(orderId, orderNumber, customerName, serviceName, devi
     document.body.style.overflow = 'hidden';
 }
 
+function parseM3uUrl(m3uUrl) {
+    try {
+        const url = new URL(m3uUrl);
+        const username = url.searchParams.get('username') || '';
+        const password = url.searchParams.get('password') || '';
+        const baseUrl = url.origin + url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+        return { url: baseUrl, username, password, m3uUrl: m3uUrl };
+    } catch (e) {
+        return null;
+    }
+}
+
+function fillFromM3u() {
+    const m3uInput = document.getElementById('m3u_url_input');
+    const m3uUrl = (m3uInput?.value || '').trim();
+    if (!m3uUrl) {
+        alert('Please enter an M3U URL first.');
+        return;
+    }
+    const parsed = parseM3uUrl(m3uUrl);
+    if (!parsed || !parsed.username || !parsed.password) {
+        alert('Could not parse M3U URL. Make sure it contains username and password parameters.');
+        return;
+    }
+    const deviceFieldsContainer = document.getElementById('deviceFieldsContainer');
+    const deviceInputs = deviceFieldsContainer ? deviceFieldsContainer.querySelectorAll('input[id^="device_"]') : [];
+    deviceInputs.forEach(function(input) {
+        const id = input.id;
+        const match = id.match(/device_(\d+)_(username|password|url)/);
+        if (match) {
+            const field = match[2];
+            if (field === 'username') input.value = parsed.username;
+            else if (field === 'password') input.value = parsed.password;
+            else if (field === 'url') input.value = parsed.url;
+        }
+    });
+    const subscriptionM3uInput = document.getElementById('subscription_m3u_url');
+    if (subscriptionM3uInput) subscriptionM3uInput.value = parsed.m3uUrl;
+}
+
 function generateDeviceFields(deviceCount) {
-    const container = document.getElementById('devicesContainer');
+    const container = document.getElementById('deviceFieldsContainer');
+    if (!container) return;
     container.innerHTML = '';
 
     for (let i = 0; i < deviceCount; i++) {
@@ -1181,6 +1245,13 @@ function generateDeviceFields(deviceCount) {
         container.appendChild(deviceDiv);
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const fillFromM3uBtn = document.getElementById('fillFromM3uBtn');
+    if (fillFromM3uBtn) {
+        fillFromM3uBtn.addEventListener('click', fillFromM3u);
+    }
+});
 
 function closeActivateModal() {
     document.getElementById('activateModal').classList.add('hidden');

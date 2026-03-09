@@ -82,6 +82,22 @@
                                                                     <span style="font-size: 13px; color: #1e293b; font-family: 'Courier New', monospace; background-color: #ffffff; padding: 6px 10px; display: inline-block; border-radius: 4px; margin-top: 4px; word-break: break-all;">{{ $device['password'] }}</span>
                                                                 </td>
                                                             </tr>
+                                                            @php
+                                                                $deviceM3uUrl = null;
+                                                                if (($device['device_number'] ?? 0) === 0 && $order->subscription_m3u_url) {
+                                                                    $deviceM3uUrl = $order->subscription_m3u_url;
+                                                                } elseif (!empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
+                                                                    $deviceM3uUrl = \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']);
+                                                                }
+                                                            @endphp
+                                                            @if($deviceM3uUrl)
+                                                            <tr>
+                                                                <td style="padding: 8px 0;">
+                                                                    <span style="font-size: 13px; color: #6366f1; font-weight: 600; font-family: 'Courier New', monospace;">M3U Link:</span><br>
+                                                                    <a href="{{ $deviceM3uUrl }}" style="font-size: 12px; color: #0369a1; word-break: break-all; text-decoration: underline;">{{ $deviceM3uUrl }}</a>
+                                                                </td>
+                                                            </tr>
+                                                            @endif
                                                         </table>
                                                     </td>
                                                 </tr>
@@ -113,6 +129,17 @@
                                                                     <span style="font-size: 13px; color: #1e293b; font-family: 'Courier New', monospace; background-color: #ffffff; padding: 6px 10px; display: inline-block; border-radius: 4px; margin-top: 4px; word-break: break-all;">{{ $order->subscription_password ?? strtoupper(substr(md5($order->order_number), 0, 8)) }}</span>
                                                                 </td>
                                                             </tr>
+                                                            @php
+                                                                $singleM3uUrl = $order->getM3uUrl();
+                                                            @endphp
+                                                            @if($singleM3uUrl)
+                                                            <tr>
+                                                                <td style="padding: 8px 0;">
+                                                                    <span style="font-size: 13px; color: #6366f1; font-weight: 600; font-family: 'Courier New', monospace;">M3U Link:</span><br>
+                                                                    <a href="{{ $singleM3uUrl }}" style="font-size: 12px; color: #0369a1; word-break: break-all; text-decoration: underline;">{{ $singleM3uUrl }}</a>
+                                                                </td>
+                                                            </tr>
+                                                            @endif
                                                         </table>
                                                     </td>
                                                 </tr>
