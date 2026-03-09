@@ -34,3 +34,4 @@
 - Subscription activation: "Fill from M3U" button in popup parses URL and fills url/username/password for all devices
 - Emails (client-credentials, account-renewed) include M3U link
 - Order model: getM3uUrl(), buildM3uUrl() helpers
+- Order edit: all fields editable including customer, referral code, custom product, MAC address, custom fields (stored in payment_details)

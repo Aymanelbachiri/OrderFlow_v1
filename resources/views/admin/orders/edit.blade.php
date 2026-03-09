@@ -240,7 +240,7 @@
                 </div>
             </div>
 
-            <!-- Customer Information (Read-only) -->
+            <!-- Customer (Editable) -->
             <div class="border-t border-gray-200 pt-8">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
@@ -249,44 +249,218 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
                         </div>
-                        <h3 class="text-xl font-semibold text-[#201E1F]">Customer Information</h3>
+                        <h3 class="text-xl font-semibold text-[#201E1F]">Customer</h3>
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-[#201E1F]/60">Customer Name</label>
-                        <input type="text" 
-                               value="{{ $order->user->name }}"
-                               class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-[#201E1F]"
-                               readonly>
+                    <div class="md:col-span-2 space-y-2">
+                        <label for="user_id" class="block text-sm font-medium text-[#201E1F]/60">Customer</label>
+                        <select id="user_id" 
+                                name="user_id" 
+                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 @error('user_id') border-red-300 @enderror"
+                                required>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}" {{ old('user_id', $order->user_id) == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }} ({{ $user->email }}) - {{ ucfirst($user->role) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('user_id')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="space-y-2">
-                        <label class="block text-sm font-medium text-[#201E1F]/60">Email Address</label>
+                        <label for="referral_code" class="block text-sm font-medium text-[#201E1F]/60">Referral Code</label>
                         <input type="text" 
-                               value="{{ $order->user->email }}"
-                               class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-[#201E1F]"
-                               readonly>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-[#201E1F]/60">Customer Role</label>
-                        <input type="text" 
-                               value="{{ ucfirst($order->user->role) }}"
-                               class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-[#201E1F]"
-                               readonly>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-[#201E1F]/60">Phone Number</label>
-                        <input type="text" 
-                               value="{{ $order->user->phone ?: 'Not provided' }}"
-                               class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-[#201E1F]"
-                               readonly>
+                               id="referral_code"
+                               name="referral_code"
+                               value="{{ old('referral_code', $order->referral_code) }}"
+                               maxlength="12"
+                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 @error('referral_code') border-red-300 @enderror"
+                               placeholder="Affiliate referral code">
+                        @error('referral_code')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
             </div>
+
+            <!-- Custom Product (for custom product orders) -->
+            @if($order->order_type === 'custom_product')
+            <div class="border-t border-gray-200 pt-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-[#201E1F]">Custom Product</h3>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label for="custom_product_id" class="block text-sm font-medium text-[#201E1F]/60">Product</label>
+                    <select id="custom_product_id" 
+                            name="custom_product_id" 
+                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 @error('custom_product_id') border-red-300 @enderror">
+                        @foreach($customProducts as $product)
+                            <option value="{{ $product->id }}" 
+                                    data-price="{{ $product->price }}"
+                                    {{ old('custom_product_id', $order->custom_product_id) == $product->id ? 'selected' : '' }}>
+                                {{ $product->name }} - ${{ number_format($product->price, 2) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('custom_product_id')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Changing the product will update the order amount to match the new product's price.</p>
+                </div>
+            </div>
+
+            <!-- Custom Fields (MAC address, custom field responses) for custom product orders -->
+            @if($order->order_type === 'custom_product' && $order->customProduct)
+            @php
+                $paymentDetails = $order->payment_details ?? [];
+                $macAddress = $paymentDetails['mac_address'] ?? null;
+                $activationPlan = $paymentDetails['activation_plan'] ?? null;
+                if (!$macAddress && $order->payment_id) {
+                    $paymentIntent = \App\Models\PaymentIntent::where('payment_intent_id', $order->payment_id)->first();
+                    if ($paymentIntent && $paymentIntent->order_data) {
+                        $macAddress = $macAddress ?? ($paymentIntent->order_data['mac_address'] ?? null);
+                        $activationPlan = $activationPlan ?? ($paymentIntent->order_data['activation_plan'] ?? null);
+                    }
+                }
+                $customFieldsData = $paymentDetails['custom_fields'] ?? [];
+                if (empty($customFieldsData) && $order->payment_id) {
+                    $paymentIntent = $paymentIntent ?? \App\Models\PaymentIntent::where('payment_intent_id', $order->payment_id)->first();
+                    if ($paymentIntent && isset($paymentIntent->order_data['custom_fields'])) {
+                        $customFieldsData = $paymentIntent->order_data['custom_fields'];
+                    }
+                }
+            @endphp
+            <div class="border-t border-gray-200 pt-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-[#201E1F]">Custom Fields</h3>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @if($order->customProduct->product_type === 'hotplayer_activation')
+                    <div class="space-y-2">
+                        <label for="mac_address" class="block text-sm font-medium text-[#201E1F]/60">MAC Address</label>
+                        <input type="text" id="mac_address" name="mac_address"
+                               value="{{ old('mac_address', $macAddress) }}"
+                               placeholder="XX:XX:XX:XX:XX:XX"
+                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 font-mono">
+                        @error('mac_address')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="text-xs text-gray-500">Format: XX:XX:XX:XX:XX:XX</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="activation_plan" class="block text-sm font-medium text-[#201E1F]/60">Activation Plan</label>
+                        <select id="activation_plan" name="activation_plan"
+                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300">
+                            <option value="YEAR_1" {{ old('activation_plan', $activationPlan) === 'YEAR_1' ? 'selected' : '' }}>1 Year</option>
+                            <option value="FOREVER" {{ old('activation_plan', $activationPlan) === 'FOREVER' ? 'selected' : '' }}>Lifetime</option>
+                        </select>
+                    </div>
+                    @endif
+
+                    @if($order->customProduct->custom_fields && count($order->customProduct->custom_fields) > 0)
+                        @foreach($order->customProduct->custom_fields as $index => $field)
+                        @php
+                            $fieldType = $field['type'] ?? 'text';
+                            $fieldName = "custom_fields[{$index}]";
+                            $fieldValue = $customFieldsData[$index] ?? '';
+                            if (is_array($fieldValue)) {
+                                $fieldValue = $fieldType === 'checkbox' ? $fieldValue : implode(', ', $fieldValue);
+                            }
+                            $options = $field['options'] ?? [];
+                            if (is_string($options)) {
+                                $options = array_filter(array_map('trim', explode("\n", $options)));
+                            }
+                        @endphp
+                        <div class="space-y-2 {{ ($field['width'] ?? 'full') === 'half' ? 'md:col-span-1' : 'md:col-span-2' }}">
+                            <label for="custom_field_{{ $index }}" class="block text-sm font-medium text-[#201E1F]/60">{{ $field['label'] }}</label>
+                            @if($fieldType === 'textarea')
+                                <textarea id="custom_field_{{ $index }}" name="{{ $fieldName }}" rows="3"
+                                          class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300">{{ old('custom_fields.' . $index, $fieldValue) }}</textarea>
+                            @elseif($fieldType === 'select' && !empty($options))
+                                <select id="custom_field_{{ $index }}" name="{{ $fieldName }}"
+                                        class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300">
+                                    <option value="">— Select —</option>
+                                    @foreach($options as $option)
+                                        <option value="{{ $option }}" {{ old('custom_fields.' . $index, $fieldValue) === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif($fieldType === 'radio' && !empty($options))
+                                <div class="flex flex-wrap gap-4">
+                                    @foreach($options as $option)
+                                        <label class="flex items-center">
+                                            <input type="radio" name="{{ $fieldName }}" value="{{ $option }}"
+                                                   {{ old('custom_fields.' . $index, $fieldValue) === $option ? 'checked' : '' }}
+                                                   class="w-4 h-4 text-[#D63613] border-gray-300 focus:ring-[#D63613]">
+                                            <span class="ml-2 text-sm text-[#201E1F]">{{ $option }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            @elseif($fieldType === 'checkbox')
+                                @if(!empty($options))
+                                <div class="flex flex-wrap gap-4">
+                                    @foreach($options as $option)
+                                        @php
+                                            $checkedValues = is_array($fieldValue) ? $fieldValue : (is_string($fieldValue) ? array_map('trim', explode(',', $fieldValue)) : []);
+                                            $isChecked = in_array($option, $checkedValues);
+                                            $oldVal = old('custom_fields.' . $index);
+                                            if ($oldVal !== null) {
+                                                $isChecked = is_array($oldVal) ? in_array($option, $oldVal) : ($oldVal === $option);
+                                            }
+                                        @endphp
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="{{ $fieldName }}[]" value="{{ $option }}"
+                                                   {{ $isChecked ? 'checked' : '' }}
+                                                   class="w-4 h-4 text-[#D63613] border-gray-300 rounded focus:ring-[#D63613]">
+                                            <span class="ml-2 text-sm text-[#201E1F]">{{ $option }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @else
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="{{ $fieldName }}" value="1"
+                                           {{ old('custom_fields.' . $index, $fieldValue) ? 'checked' : '' }}
+                                           class="w-4 h-4 text-[#D63613] border-gray-300 rounded focus:ring-[#D63613]">
+                                    <span class="ml-2 text-sm text-[#201E1F]">Yes</span>
+                                </label>
+                                @endif
+                            @elseif($fieldType === 'number')
+                                <input type="number" id="custom_field_{{ $index }}" name="{{ $fieldName }}"
+                                       value="{{ old('custom_fields.' . $index, $fieldValue) }}"
+                                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300">
+                            @elseif($fieldType === 'email')
+                                <input type="email" id="custom_field_{{ $index }}" name="{{ $fieldName }}"
+                                       value="{{ old('custom_fields.' . $index, $fieldValue) }}"
+                                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300">
+                            @else
+                                <input type="text" id="custom_field_{{ $index }}" name="{{ $fieldName }}"
+                                       value="{{ old('custom_fields.' . $index, $fieldValue) }}"
+                                       class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300">
+                            @endif
+                        </div>
+                        @endforeach
+                    @endif
+                </div>
+            </div>
+            @endif
 
             <!-- Credit Pack Information (Read-only) for Reseller Orders -->
             @if($order->order_type === 'credit_pack' && $order->resellerCreditPack)
@@ -400,6 +574,22 @@
                 </div>
 
                 @if($order->user->role === 'client')
+                    <!-- Fill from M3U (subscription orders) -->
+                    <div class="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <h4 class="text-sm font-medium text-indigo-800 mb-3">Fill from M3U URL</h4>
+                        <p class="text-xs text-indigo-600 mb-3">Paste an M3U URL to auto-fill Server URL, Username, and Password.</p>
+                        <div class="flex gap-2">
+                            <input type="url" id="m3u_url_input_edit"
+                                   class="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                   placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus&output=ts">
+                            <button type="button" id="fillFromM3uBtnEdit"
+                                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                Fill from M3U
+                            </button>
+                        </div>
+                        <input type="hidden" id="subscription_m3u_url_edit" name="subscription_m3u_url" value="{{ old('subscription_m3u_url', $order->subscription_m3u_url) }}">
+                    </div>
+
                     <!-- Device Credentials Container -->
                     <div id="deviceCredentialsContainer">
                         @php
@@ -639,6 +829,56 @@
 </div>
 
 <script>
+// Fill from M3U - parse URL and populate credential fields
+function parseM3uUrlEdit(m3uUrl) {
+    try {
+        const url = new URL(m3uUrl);
+        const username = url.searchParams.get('username') || '';
+        const password = url.searchParams.get('password') || '';
+        const baseUrl = url.origin + url.pathname.substring(0, url.pathname.lastIndexOf('/') + 1);
+        return { url: baseUrl, username, password, m3uUrl: m3uUrl };
+    } catch (e) {
+        return null;
+    }
+}
+
+function fillFromM3uEdit() {
+    const m3uInput = document.getElementById('m3u_url_input_edit');
+    const m3uUrl = (m3uInput?.value || '').trim();
+    if (!m3uUrl) {
+        alert('Please enter an M3U URL first.');
+        return;
+    }
+    const parsed = parseM3uUrlEdit(m3uUrl);
+    if (!parsed || !parsed.username || !parsed.password) {
+        alert('Could not parse M3U URL. Make sure it contains username and password parameters.');
+        return;
+    }
+    // Fill single device fields
+    const usernameEl = document.getElementById('subscription_username');
+    const passwordEl = document.getElementById('subscription_password');
+    const urlEl = document.getElementById('subscription_url');
+    if (usernameEl) usernameEl.value = parsed.username;
+    if (passwordEl) passwordEl.value = parsed.password;
+    if (urlEl) urlEl.value = parsed.url;
+    // Fill device fields (existing or dynamic)
+    document.querySelectorAll('[id^="device_"]').forEach(function(input) {
+        const match = input.id.match(/device_(\d+)_(username|password|url)/);
+        if (match) {
+            if (match[2] === 'username') input.value = parsed.username;
+            else if (match[2] === 'password') input.value = parsed.password;
+            else if (match[2] === 'url') input.value = parsed.url;
+        }
+    });
+    const m3uHidden = document.getElementById('subscription_m3u_url_edit');
+    if (m3uHidden) m3uHidden.value = parsed.m3uUrl;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const fillBtn = document.getElementById('fillFromM3uBtnEdit');
+    if (fillBtn) fillBtn.addEventListener('click', fillFromM3uEdit);
+});
+
 // Get pricing plan device counts for dynamic field generation
 const pricingPlans = @json(\App\Models\PricingPlan::where('is_active', true)->get()->mapWithKeys(function($plan) {
     return [$plan->id => $plan->device_count];

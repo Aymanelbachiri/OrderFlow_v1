@@ -529,11 +529,9 @@ class PaymentService
 
             // Get or create Stripe Customer for the user (lowers risk score)
             $stripeCustomerId = null;
-            $receiptEmail = null;
             
             if ($internalIntent->user) {
                 $user = $internalIntent->user;
-                $receiptEmail = $user->email;
                 
                 // Get existing Stripe customer ID or create new one
                 if ($user->stripe_id) {
@@ -629,11 +627,6 @@ class PaymentService
                         'error' => $e->getMessage(),
                     ]);
                 }
-            }
-
-            // Add receipt email if available (lowers risk score)
-            if ($receiptEmail) {
-                $paymentIntentParams['receipt_email'] = $receiptEmail;
             }
 
             $stripeIntent = \Stripe\PaymentIntent::create($paymentIntentParams);

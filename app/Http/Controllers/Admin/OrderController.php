@@ -372,7 +372,11 @@ class OrderController extends Controller
     public function edit(Order $order)
     {
         $sources = Source::orderBy('name')->get();
-        return view('admin.orders.edit', compact('order', 'sources'));
+        $users = User::whereIn('role', ['client', 'reseller'])->orderBy('name')->get();
+        $pricingPlans = PricingPlan::where('is_active', true)->orderBy('display_name')->get();
+        $resellerCreditPacks = \App\Models\ResellerCreditPack::where('is_active', true)->orderBy('name')->get();
+        $customProducts = CustomProduct::where('is_active', true)->orderBy('name')->get();
+        return view('admin.orders.edit', compact('order', 'sources', 'users', 'pricingPlans', 'resellerCreditPacks', 'customProducts'));
     }
 
     /**
@@ -389,11 +393,14 @@ class OrderController extends Controller
         ]);
 
         $validationRules = [
+            'user_id' => 'required|exists:users,id',
             'status' => 'required|in:pending,active,expired,cancelled,completed',
             'amount' => 'required|numeric|min:0',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
             'reseller_credit_pack_id' => 'nullable|exists:reseller_credit_packs,id',
+            'custom_product_id' => 'nullable|exists:custom_products,id',
             'source' => 'nullable|string|max:255',
+            'referral_code' => 'nullable|string|max:12',
             'subscription_type' => 'nullable|in:new,renewal',
             'payment_method' => 'required|in:email_link,stripe,paypal,crypto,manual',
             'starts_at' => 'nullable|date',
@@ -410,9 +417,28 @@ class OrderController extends Controller
             'reseller_username' => 'nullable|string|max:255',
             'reseller_password' => 'nullable|string|max:255',
             'reseller_login_url' => 'nullable|url|max:255',
+            'mac_address' => 'nullable|string|max:50',
+            'activation_plan' => 'nullable|string|in:YEAR_1,FOREVER',
+            'custom_fields' => 'nullable|array',
+            'custom_fields.*' => 'nullable',
         ];
 
         $validated = $request->validate($validationRules);
+
+        // Merge custom product fields (mac_address, activation_plan, custom_fields) into payment_details
+        if ($order->order_type === 'custom_product') {
+            $paymentDetails = $order->payment_details ?? [];
+            if ($request->has('mac_address')) {
+                $paymentDetails['mac_address'] = $request->filled('mac_address') ? $request->mac_address : null;
+            }
+            if ($request->has('activation_plan')) {
+                $paymentDetails['activation_plan'] = $request->filled('activation_plan') ? $request->activation_plan : null;
+            }
+            if ($request->has('custom_fields') && is_array($request->custom_fields)) {
+                $paymentDetails['custom_fields'] = $request->custom_fields;
+            }
+            $validated['payment_details'] = $paymentDetails;
+        }
 
         Log::info('Order update validated', [
             'validated_data' => $validated,
@@ -466,6 +492,16 @@ class OrderController extends Controller
                 'new_amount' => $validated['amount'],
                 'changed_by' => auth()->user()->email,
             ]);
+        }
+
+        // Handle custom product change / ensure custom product orders have correct structure
+        if (!empty($validated['custom_product_id'])) {
+            $newCustomProduct = CustomProduct::find($validated['custom_product_id']);
+            if ($newCustomProduct) {
+                $validated['amount'] = $newCustomProduct->price;
+            }
+            $validated['pricing_plan_id'] = null;
+            $validated['reseller_credit_pack_id'] = null;
         }
 
         // Process multi-device data if present (same logic as activate method)
