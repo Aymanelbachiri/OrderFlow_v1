@@ -433,6 +433,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     @if($order->devices && count($order->devices) > 0)
                         @foreach($order->devices as $device)
+                        @php
+                            $deviceM3u = $device['m3u_url'] ?? null;
+                            if (!$deviceM3u && !empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
+                                $deviceM3u = \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']);
+                            }
+                        @endphp
                         <div class="col-span-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-4 p-4 bg-white rounded-lg border border-gray-200">
                             <div class="space-y-2">
                                 <label class="block text-sm font-medium text-[#201E1F]/60">Device {{ $loop->iteration }} Username</label>
@@ -446,6 +452,12 @@
                                 <label class="block text-sm font-medium text-[#201E1F]/60">Device {{ $loop->iteration }} URL</label>
                                 <p class="text-sm text-[#201E1F] bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 font-medium">{{ $device['url'] ?? 'N/A' }}</p>
                             </div>
+                            @if($deviceM3u)
+                            <div class="md:col-span-3 space-y-2">
+                                <label class="block text-sm font-medium text-[#201E1F]/60">Device {{ $loop->iteration }} M3U Link</label>
+                                <p class="text-sm text-[#201E1F] bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 break-all"><a href="{{ $deviceM3u }}" target="_blank" rel="noopener" class="text-[#D63613] hover:underline">{{ $deviceM3u }}</a></p>
+                            </div>
+                            @endif
                         </div>
                         @endforeach
                     @else
@@ -1175,12 +1187,13 @@ function fillFromM3u() {
     const deviceInputs = deviceFieldsContainer ? deviceFieldsContainer.querySelectorAll('input[id^="device_"]') : [];
     deviceInputs.forEach(function(input) {
         const id = input.id;
-        const match = id.match(/device_(\d+)_(username|password|url)/);
+        const match = id.match(/device_(\d+)_(username|password|url|m3u_url)/);
         if (match) {
             const field = match[2];
             if (field === 'username') input.value = parsed.username;
             else if (field === 'password') input.value = parsed.password;
             else if (field === 'url') input.value = parsed.url;
+            else if (field === 'm3u_url') input.value = parsed.m3uUrl;
         }
     });
 }
@@ -1200,9 +1213,11 @@ function fillDeviceFromM3u(deviceIndex) {
     const usernameInput = document.getElementById('device_' + deviceIndex + '_username');
     const passwordInput = document.getElementById('device_' + deviceIndex + '_password');
     const urlInput = document.getElementById('device_' + deviceIndex + '_url');
+    const m3uUrlInput = document.getElementById('device_' + deviceIndex + '_m3u_url');
     if (usernameInput) usernameInput.value = parsed.username;
     if (passwordInput) passwordInput.value = parsed.password;
     if (urlInput) urlInput.value = parsed.url;
+    if (m3uUrlInput) m3uUrlInput.value = parsed.m3uUrl;
 }
 
 function generateDeviceFields(deviceCount) {
@@ -1265,6 +1280,7 @@ function generateDeviceFields(deviceCount) {
                            class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
                            placeholder="http://server${deviceNumber}.example.com:8080">
                 </div>
+                <input type="hidden" name="devices[${deviceIndex}][m3u_url]" id="device_${deviceIndex}_m3u_url" value="">
             </div>
         `;
 

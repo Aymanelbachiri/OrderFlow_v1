@@ -126,7 +126,12 @@
                                         @if(!empty($device['url']))
                                         <p style="margin: 0 0 8px 0; font-size: 14px; color: #075985;"><strong>Server URL:</strong> <a href="{{ $device['url'] }}" style="color: #0369a1; text-decoration: underline;">{{ $device['url'] }}</a></p>
                                         @endif
-                                        @php $deviceM3uUrl = !empty($device['url']) && !empty($device['username']) && !empty($device['password']) ? \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']) : null; @endphp
+                                        @php
+                                            $deviceM3uUrl = $device['m3u_url'] ?? null;
+                                            if (!$deviceM3uUrl && !empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
+                                                $deviceM3uUrl = \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']);
+                                            }
+                                        @endphp
                                         @if($deviceM3uUrl)
                                         <p style="margin: 0 0 15px 0; font-size: 14px; color: #075985;"><strong>M3U Link:</strong> <a href="{{ $deviceM3uUrl }}" style="color: #0369a1; word-break: break-all; text-decoration: underline;">{{ $deviceM3uUrl }}</a></p>
                                         @endif

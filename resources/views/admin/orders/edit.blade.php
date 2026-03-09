@@ -607,7 +607,8 @@
                                         <div class="flex gap-2">
                                             <input type="url" id="device_edit_{{ $device['device_number'] ?? $index }}_m3u_input"
                                                    class="flex-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg"
-                                                   placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus">
+                                                   placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus"
+                                                   value="{{ old('devices.' . ($device['device_number'] ?? $index) . '.m3u_url', $device['m3u_url'] ?? '') }}">
                                             <button type="button" class="device-fill-m3u-btn-edit px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg" data-device-index="{{ $device['device_number'] ?? $index }}">
                                                 Fill from M3U
                                             </button>
@@ -652,6 +653,7 @@
                                                 <p class="text-sm text-red-600">{{ $message }}</p>
                                             @enderror
                                         </div>
+                                        <input type="hidden" name="devices[{{ $device['device_number'] ?? $index }}][m3u_url]" id="device_{{ $device['device_number'] ?? $index }}_m3u_url" value="{{ old('devices.' . ($device['device_number'] ?? $index) . '.m3u_url', $device['m3u_url'] ?? '') }}">
                                     </div>
                                 </div>
                                 @endforeach
@@ -874,11 +876,12 @@ function fillFromM3uEdit() {
     if (urlEl) urlEl.value = parsed.url;
     // Fill device fields (existing or dynamic)
     document.querySelectorAll('[id^="device_"]').forEach(function(input) {
-        const match = input.id.match(/device_(\d+)_(username|password|url)/);
+        const match = input.id.match(/device_(\d+)_(username|password|url|m3u_url)/);
         if (match) {
             if (match[2] === 'username') input.value = parsed.username;
             else if (match[2] === 'password') input.value = parsed.password;
             else if (match[2] === 'url') input.value = parsed.url;
+            else if (match[2] === 'm3u_url') input.value = parsed.m3uUrl;
         }
     });
 }
@@ -899,9 +902,11 @@ function fillDeviceFromM3uEdit(deviceIndex) {
     const usernameInput = document.getElementById('device_' + deviceIndex + '_username');
     const passwordInput = document.getElementById('device_' + deviceIndex + '_password');
     const urlInput = document.getElementById('device_' + deviceIndex + '_url');
+    const m3uUrlInput = document.getElementById('device_' + deviceIndex + '_m3u_url');
     if (usernameInput) usernameInput.value = parsed.username;
     if (passwordInput) passwordInput.value = parsed.password;
     if (urlInput) urlInput.value = parsed.url;
+    if (m3uUrlInput) m3uUrlInput.value = parsed.m3uUrl;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -982,6 +987,7 @@ function generateDeviceFields(deviceCount) {
         const existingUsername = existingDevice ? (existingDevice.username || '') : '';
         const existingPassword = existingDevice ? (existingDevice.password || '') : '';
         const existingUrl = existingDevice ? (existingDevice.url || '') : '';
+        const existingM3uUrl = existingDevice ? (existingDevice.m3u_url || '') : '';
         
         const deviceDiv = document.createElement('div');
         deviceDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-6';
@@ -993,7 +999,8 @@ function generateDeviceFields(deviceCount) {
                 <div class="flex gap-2">
                     <input type="url" id="device_edit_${deviceIndex}_m3u_input"
                            class="flex-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg"
-                           placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus">
+                           placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus"
+                           value="${escapeHtml(existingM3uUrl)}">
                     <button type="button" class="device-fill-m3u-btn-edit px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg" data-device-index="${deviceIndex}">
                         Fill from M3U
                     </button>
@@ -1029,9 +1036,10 @@ function generateDeviceFields(deviceCount) {
                            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
                            placeholder="http://server${deviceNumber}.example.com:8080">
                 </div>
+                <input type="hidden" name="devices[${deviceIndex}][m3u_url]" id="device_${deviceIndex}_m3u_url" value="${escapeHtml(existingM3uUrl)}">
             </div>
         `;
-        
+
         container.appendChild(deviceDiv);
     }
 }

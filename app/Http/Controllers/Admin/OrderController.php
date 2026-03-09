@@ -166,6 +166,7 @@ class OrderController extends Controller
             'devices.*.username' => 'nullable|string|max:255',
             'devices.*.password' => 'nullable|string|max:255',
             'devices.*.url' => 'nullable|string|max:255',
+            'devices.*.m3u_url' => 'nullable|string|max:500',
             'reseller_username' => 'nullable|string|max:255',
             'reseller_password' => 'nullable|string|max:255',
             'reseller_login_url' => 'nullable|url|max:255',
@@ -296,6 +297,7 @@ class OrderController extends Controller
                             'username' => $deviceData['username'] ?? '',
                             'password' => $deviceData['password'] ?? '',
                             'url' => $deviceData['url'] ?? '',
+                            'm3u_url' => $deviceData['m3u_url'] ?? null,
                         ];
                     }
                 }
@@ -308,9 +310,6 @@ class OrderController extends Controller
                     $orderData['subscription_password'] = $firstDevice['password'] ?? null;
                     $orderData['subscription_url'] = $firstDevice['url'] ?? null;
                 }
-                if (!empty($validated['subscription_m3u_url'])) {
-                    $orderData['subscription_m3u_url'] = $validated['subscription_m3u_url'];
-                }
 
                 // Set devices array
                 $orderData['devices'] = $devices;
@@ -319,9 +318,6 @@ class OrderController extends Controller
                 $orderData['subscription_username'] = $validated['subscription_username'] ?? null;
                 $orderData['subscription_password'] = $validated['subscription_password'] ?? null;
                 $orderData['subscription_url'] = $validated['subscription_url'] ?? null;
-                if (!empty($validated['subscription_m3u_url'])) {
-                    $orderData['subscription_m3u_url'] = $validated['subscription_m3u_url'];
-                }
             }
 
             // Handle reseller credentials
@@ -414,6 +410,7 @@ class OrderController extends Controller
             'devices.*.username' => 'nullable|string|max:255',
             'devices.*.password' => 'nullable|string|max:255',
             'devices.*.url' => 'nullable|string|max:255',
+            'devices.*.m3u_url' => 'nullable|string|max:500',
             'reseller_username' => 'nullable|string|max:255',
             'reseller_password' => 'nullable|string|max:255',
             'reseller_login_url' => 'nullable|url|max:255',
@@ -518,6 +515,7 @@ class OrderController extends Controller
                         'username' => $deviceData['username'] ?? '',
                         'password' => $deviceData['password'] ?? '',
                         'url' => $deviceData['url'] ?? '',
+                        'm3u_url' => $deviceData['m3u_url'] ?? null,
                     ];
                 }
             }
@@ -950,6 +948,7 @@ class OrderController extends Controller
                 'devices.*.username' => 'required|string|max:255',
                 'devices.*.password' => 'required|string|max:255',
                 'devices.*.url' => 'required|url|max:255',
+                'devices.*.m3u_url' => 'nullable|string|max:500',
                 'send_credentials_email' => 'boolean',
             ]);
 
@@ -961,6 +960,7 @@ class OrderController extends Controller
                     'username' => $deviceData['username'],
                     'password' => $deviceData['password'],
                     'url' => $deviceData['url'],
+                    'm3u_url' => $deviceData['m3u_url'] ?? null,
                 ];
             }
 
@@ -968,7 +968,7 @@ class OrderController extends Controller
             $firstDevice = $devices[0] ?? null;
 
             // Update order with credentials and activate
-            $updateData = [
+            $order->update([
                 'status' => 'active',
                 'starts_at' => $order->starts_at ?? now(),
                 'subscription_username' => $firstDevice['username'] ?? null,
@@ -976,11 +976,7 @@ class OrderController extends Controller
                 'subscription_url' => $firstDevice['url'] ?? null,
                 'devices' => $devices,
                 'credentials_sent' => false, // Will be set to true after email is sent
-            ];
-            if ($request->filled('subscription_m3u_url')) {
-                $updateData['subscription_m3u_url'] = $request->subscription_m3u_url;
-            }
-            $order->update($updateData);
+            ]);
 
             // Create affiliate referral if order has referral code
             if (!empty($order->referral_code)) {

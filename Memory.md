@@ -19,7 +19,7 @@
 
 ## 4. Database Schema
 - Orders table: subscription_username, subscription_password, subscription_url, subscription_m3u_url (legacy), devices (JSON)
-- M3U URL is per device: built from each device's url+username+password. Emails show M3U link per device.
+- M3U URL is per device: stored when pasted via Fill from M3U, or built from url+username+password. Emails include stored/built M3U link per device.
 
 ## 5. API Contracts
 - (Web routes for admin order management)

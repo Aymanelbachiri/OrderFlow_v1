@@ -83,8 +83,8 @@
                                                                 </td>
                                                             </tr>
                                                             @php
-                                                                $deviceM3uUrl = null;
-                                                                if (!empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
+                                                                $deviceM3uUrl = $device['m3u_url'] ?? null;
+                                                                if (!$deviceM3uUrl && !empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
                                                                     $deviceM3uUrl = \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']);
                                                                 }
                                                             @endphp
