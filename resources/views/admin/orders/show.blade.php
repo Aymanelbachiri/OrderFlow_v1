@@ -453,9 +453,9 @@
                                 <p class="text-sm text-[#201E1F] bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 font-medium">{{ $device['url'] ?? 'N/A' }}</p>
                             </div>
                             @if($deviceM3u)
-                            <div class="md:col-span-3 space-y-2">
+                            <div class="col-span-full w-full space-y-2">
                                 <label class="block text-sm font-medium text-[#201E1F]/60">Device {{ $loop->iteration }} M3U Link</label>
-                                <p class="text-sm text-[#201E1F] bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 break-all"><a href="{{ $deviceM3u }}" target="_blank" rel="noopener" class="text-[#D63613] hover:underline">{{ $deviceM3u }}</a></p>
+                                <p class="text-sm text-[#201E1F] bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 break-all w-full"><a href="{{ $deviceM3u }}" target="_blank" rel="noopener" class="text-[#D63613] hover:underline">{{ $deviceM3u }}</a></p>
                             </div>
                             @endif
                         </div>
