@@ -52,6 +52,7 @@ class MailConfigServiceProvider extends ServiceProvider
                 'password' => $smtpSetting->password,
             'timeout' => env('MAIL_TIMEOUT', 60),
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
+            'verify_peer' => env('MAIL_VERIFY_PEER', true),
         ]);
 
             Config::set('mail.from', [
@@ -78,6 +79,7 @@ class MailConfigServiceProvider extends ServiceProvider
                     'password' => env('MAIL_PASSWORD'),
                     'timeout' => env('MAIL_TIMEOUT', 60),
                     'local_domain' => env('MAIL_EHLO_DOMAIN'),
+                    'verify_peer' => env('MAIL_VERIFY_PEER', true),
                 ]);
             }
         }

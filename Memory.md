@@ -10,6 +10,7 @@
 - Package manager: Composer
 - Key dependencies: Laravel, Stripe, PayPal, Spatie packages
 - Environment variables: DB_*, MAIL_*, STRIPE_*, PAYPAL_*, etc.
+- MAIL_VERIFY_PEER: set to `false` when SMTP host uses a certificate with different CN (e.g. shared hosting with *.web-hosting.com)
 
 ## 3. Architecture Decisions
 - Decision: Subscription activation with M3U URL parsing
@@ -29,6 +30,7 @@
 
 ## 7. Known Issues / Constraints
 - M3U URL parsing expects format: ...?username=xxx&password=yyy (get.php style)
+- SMTP SSL hostname mismatch: When host (e.g. mail.smarters-proiptv.com) uses a cert with different CN (e.g. *.web-hosting.com), set MAIL_VERIFY_PEER=false in .env
 
 ## 8. Current State
 - Subscription activation: "Fill from M3U" button in popup parses URL and fills url/username/password for all devices
