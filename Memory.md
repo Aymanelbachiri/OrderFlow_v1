@@ -18,8 +18,8 @@
   Date: 2026-03-09
 
 ## 4. Database Schema
-- Orders table: subscription_username, subscription_password, subscription_url, subscription_m3u_url (added 2026-03-09)
-- subscription_m3u_url: stores full M3U link when parsed from "Fill from M3U"; otherwise built from url+username+password
+- Orders table: subscription_username, subscription_password, subscription_url, subscription_m3u_url (legacy), devices (JSON)
+- M3U URL is per device: built from each device's url+username+password. Emails show M3U link per device.
 
 ## 5. API Contracts
 - (Web routes for admin order management)
@@ -33,7 +33,7 @@
 - SMTP SSL hostname mismatch: When host (e.g. mail.smarters-proiptv.com) uses a cert with different CN (e.g. *.web-hosting.com), set MAIL_VERIFY_PEER=false in .env
 
 ## 8. Current State
-- Subscription activation: "Fill from M3U" button in popup parses URL and fills url/username/password for all devices
-- Emails (client-credentials, account-renewed) include M3U link
+- Subscription activation: "Fill All" fills all devices from one M3U; each device has its own "Fill from M3U" for per-device URLs
+- Emails (client-credentials, account-renewed): M3U link per device, built from device url+username+password
 - Order model: getM3uUrl(), buildM3uUrl() helpers
-- Order edit: all fields editable including customer, referral code, custom product, MAC address, custom fields (stored in payment_details)
+- Order edit: all fields editable; per-device Fill from M3U for subscription credentials

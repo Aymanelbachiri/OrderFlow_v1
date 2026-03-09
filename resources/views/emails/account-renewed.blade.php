@@ -110,8 +110,33 @@
                                 </tr>
                             </table>
                             
-                            @if($order->subscription_username || $order->subscription_password || $order->subscription_url)
-                            <!-- Credentials Box -->
+                            @if($order->devices && count($order->devices) > 0)
+                            <!-- Per-device credentials (M3U URL per device) -->
+                            @foreach($order->devices as $device)
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 25px 0; background-color: #f0f9ff; border: 2px solid #bae6fd; border-radius: 6px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="margin: 0 0 15px 0; font-size: 18px; color: #0369a1; font-weight: bold;">Device {{ ($device['device_number'] ?? 0) + 1 }} Credentials</p>
+                                        @if(!empty($device['username']))
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #075985;"><strong>Username:</strong> {{ $device['username'] }}</p>
+                                        @endif
+                                        @if(!empty($device['password']))
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #075985;"><strong>Password:</strong> {{ $device['password'] }}</p>
+                                        @endif
+                                        @if(!empty($device['url']))
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #075985;"><strong>Server URL:</strong> <a href="{{ $device['url'] }}" style="color: #0369a1; text-decoration: underline;">{{ $device['url'] }}</a></p>
+                                        @endif
+                                        @php $deviceM3uUrl = !empty($device['url']) && !empty($device['username']) && !empty($device['password']) ? \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']) : null; @endphp
+                                        @if($deviceM3uUrl)
+                                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #075985;"><strong>M3U Link:</strong> <a href="{{ $deviceM3uUrl }}" style="color: #0369a1; word-break: break-all; text-decoration: underline;">{{ $deviceM3uUrl }}</a></p>
+                                        @endif
+                                        <p style="margin: 0; font-size: 13px; color: #0c4a6e; line-height: 1.6;">Use these credentials for this device.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            @endforeach
+                            @elseif($order->subscription_username || $order->subscription_password || $order->subscription_url)
+                            <!-- Single credentials (no devices array) -->
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 25px 0; background-color: #f0f9ff; border: 2px solid #bae6fd; border-radius: 6px;">
                                 <tr>
                                     <td style="padding: 20px;">

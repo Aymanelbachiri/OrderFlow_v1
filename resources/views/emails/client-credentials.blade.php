@@ -84,9 +84,7 @@
                                                             </tr>
                                                             @php
                                                                 $deviceM3uUrl = null;
-                                                                if (($device['device_number'] ?? 0) === 0 && $order->subscription_m3u_url) {
-                                                                    $deviceM3uUrl = $order->subscription_m3u_url;
-                                                                } elseif (!empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
+                                                                if (!empty($device['url']) && !empty($device['username']) && !empty($device['password'])) {
                                                                     $deviceM3uUrl = \App\Models\Order::buildM3uUrl($device['url'], $device['username'], $device['password']);
                                                                 }
                                                             @endphp

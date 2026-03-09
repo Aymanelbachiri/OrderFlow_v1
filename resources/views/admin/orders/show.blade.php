@@ -795,20 +795,19 @@
                     <div class="space-y-6">
                         <!-- Device Credentials Section (for regular orders) -->
                         <div id="devicesContainer">
-                            <!-- Fill from M3U (subscription orders only) -->
+                            <!-- Fill from M3U - all devices (when same server) -->
                             <div id="fillFromM3uSection" class="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                <h4 class="text-sm font-medium text-indigo-800 mb-3">Fill from M3U URL</h4>
-                                <p class="text-xs text-indigo-600 mb-3">Paste an M3U URL to auto-fill Server URL, Username, and Password for all devices.</p>
+                                <h4 class="text-sm font-medium text-indigo-800 mb-3">Fill All Devices from M3U URL</h4>
+                                <p class="text-xs text-indigo-600 mb-3">Paste an M3U URL to auto-fill Server URL, Username, and Password for all devices (use when all devices share the same server). Each device also has its own Fill from M3U below.</p>
                                 <div class="flex gap-2">
                                     <input type="url" id="m3u_url_input"
                                            class="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
                                            placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus&output=ts">
                                     <button type="button" id="fillFromM3uBtn"
                                             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
-                                        Fill from M3U
+                                        Fill All
                                     </button>
                                 </div>
-                                <input type="hidden" id="subscription_m3u_url" name="subscription_m3u_url" value="">
                             </div>
                             <div id="deviceFieldsContainer">
                                 <!-- Device fields will be dynamically generated here -->
@@ -1134,9 +1133,7 @@ function openActivateModal(orderId, orderNumber, customerName, serviceName, devi
 
         // Clear Fill from M3U fields
         const m3uInput = document.getElementById('m3u_url_input');
-        const m3uHidden = document.getElementById('subscription_m3u_url');
         if (m3uInput) m3uInput.value = '';
-        if (m3uHidden) m3uHidden.value = '';
 
         // Generate device fields
         generateDeviceFields(deviceCount);
@@ -1186,8 +1183,26 @@ function fillFromM3u() {
             else if (field === 'url') input.value = parsed.url;
         }
     });
-    const subscriptionM3uInput = document.getElementById('subscription_m3u_url');
-    if (subscriptionM3uInput) subscriptionM3uInput.value = parsed.m3uUrl;
+}
+
+function fillDeviceFromM3u(deviceIndex) {
+    const m3uInput = document.getElementById('device_' + deviceIndex + '_m3u_input');
+    const m3uUrl = (m3uInput?.value || '').trim();
+    if (!m3uUrl) {
+        alert('Please enter an M3U URL for this device first.');
+        return;
+    }
+    const parsed = parseM3uUrl(m3uUrl);
+    if (!parsed || !parsed.username || !parsed.password) {
+        alert('Could not parse M3U URL. Make sure it contains username and password parameters.');
+        return;
+    }
+    const usernameInput = document.getElementById('device_' + deviceIndex + '_username');
+    const passwordInput = document.getElementById('device_' + deviceIndex + '_password');
+    const urlInput = document.getElementById('device_' + deviceIndex + '_url');
+    if (usernameInput) usernameInput.value = parsed.username;
+    if (passwordInput) passwordInput.value = parsed.password;
+    if (urlInput) urlInput.value = parsed.url;
 }
 
 function generateDeviceFields(deviceCount) {
@@ -1203,6 +1218,17 @@ function generateDeviceFields(deviceCount) {
 
         deviceDiv.innerHTML = `
             <h4 class="text-lg font-medium text-[#201E1F] mb-4">Device ${deviceNumber} Credentials</h4>
+            <div class="mb-3 p-2 bg-indigo-50/50 rounded border border-indigo-100">
+                <p class="text-xs text-indigo-600 mb-2">Fill this device from M3U URL (each device has its own URL):</p>
+                <div class="flex gap-2">
+                    <input type="url" id="device_${deviceIndex}_m3u_input"
+                           class="flex-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg"
+                           placeholder="http://server.com/get.php?username=xxx&password=yyy&type=m3u_plus">
+                    <button type="button" class="device-fill-m3u-btn px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg" data-device-index="${deviceIndex}">
+                        Fill from M3U
+                    </button>
+                </div>
+            </div>
             <div class="space-y-4">
                 <div>
                     <label for="device_${deviceIndex}_username" class="block text-sm font-medium text-[#201E1F] mb-2">
@@ -1251,6 +1277,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fillFromM3uBtn) {
         fillFromM3uBtn.addEventListener('click', fillFromM3u);
     }
+    document.getElementById('deviceFieldsContainer')?.addEventListener('click', function(e) {
+        const btn = e.target.closest('.device-fill-m3u-btn');
+        if (btn) {
+            e.preventDefault();
+            const deviceIndex = btn.getAttribute('data-device-index');
+            if (deviceIndex !== null) fillDeviceFromM3u(parseInt(deviceIndex, 10));
+        }
+    });
 });
 
 function closeActivateModal() {
