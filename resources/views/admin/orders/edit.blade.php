@@ -461,6 +461,7 @@
                 </div>
             </div>
             @endif
+            @endif
 
             <!-- Credit Pack Information (Read-only) for Reseller Orders -->
             @if($order->order_type === 'credit_pack' && $order->resellerCreditPack)
