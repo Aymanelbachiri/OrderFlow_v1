@@ -102,6 +102,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::resource('orders', \App\Http\Controllers\Admin\OrderController::class);
     Route::post('/orders/{order}/send-credentials', [\App\Http\Controllers\Admin\OrderController::class, 'sendCredentials'])->name('orders.send-credentials');
     Route::post('/orders/{order}/activate', [\App\Http\Controllers\Admin\OrderController::class, 'activate'])->name('orders.activate');
+    Route::post('/orders/{order}/activate-renewal', [\App\Http\Controllers\Admin\OrderController::class, 'activateRenewal'])->name('orders.activate-renewal');
     Route::get('/orders/export', [\App\Http\Controllers\Admin\OrderController::class, 'export'])->name('orders.export');
 
     // Pricing management

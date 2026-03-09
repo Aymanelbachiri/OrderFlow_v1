@@ -37,3 +37,4 @@
 - Emails (client-credentials, account-renewed): M3U link per device, built from device url+username+password
 - Order model: getM3uUrl(), buildM3uUrl() helpers
 - Order edit: all fields editable; per-device Fill from M3U for subscription credentials
+- Renewal activation: Activate button uses existing credentials (no modal); POST to orders.activate-renewal

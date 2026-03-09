@@ -1061,6 +1061,119 @@ class OrderController extends Controller
     }
 
     /**
+     * Activate a renewal order using existing credentials (no modal).
+     */
+    public function activateRenewal(Request $request, Order $order)
+    {
+        if ($order->status !== 'pending') {
+            return redirect()->back()
+                ->with('error', 'Only pending orders can be activated.');
+        }
+
+        if ($order->subscription_type !== 'renewal') {
+            return redirect()->back()
+                ->with('error', 'This action is only for renewal orders.');
+        }
+
+        // Get devices from order or from original order
+        $devices = $order->devices;
+        $originalOrder = null;
+
+        if ((!$devices || count($devices) === 0) && $order->payment_id) {
+            $paymentIntent = \App\Models\PaymentIntent::where('payment_intent_id', $order->payment_id)->first();
+            if ($paymentIntent && isset($paymentIntent->order_data['renewal_of_order_id'])) {
+                $originalOrder = Order::find($paymentIntent->order_data['renewal_of_order_id']);
+                if ($originalOrder && $originalOrder->devices && count($originalOrder->devices) > 0) {
+                    $devices = $originalOrder->devices;
+                }
+            }
+        }
+
+        // Fallback: use subscription-level credentials as single device
+        if (!$devices || count($devices) === 0) {
+            if ($order->subscription_url && $order->subscription_username && $order->subscription_password) {
+                $devices = [[
+                    'device_number' => 0,
+                    'username' => $order->subscription_username,
+                    'password' => $order->subscription_password,
+                    'url' => $order->subscription_url,
+                    'm3u_url' => $order->subscription_m3u_url ?? null,
+                ]];
+            } elseif ($originalOrder) {
+                if ($originalOrder->devices && count($originalOrder->devices) > 0) {
+                    $devices = $originalOrder->devices;
+                } elseif ($originalOrder->subscription_url && $originalOrder->subscription_username && $originalOrder->subscription_password) {
+                    $devices = [[
+                        'device_number' => 0,
+                        'username' => $originalOrder->subscription_username,
+                        'password' => $originalOrder->subscription_password,
+                        'url' => $originalOrder->subscription_url,
+                        'm3u_url' => $originalOrder->subscription_m3u_url ?? null,
+                    ]];
+                }
+            }
+        }
+
+        if (!$devices || count($devices) === 0) {
+            return redirect()->back()
+                ->with('error', 'No credentials found for this renewal. Please activate manually and enter credentials.');
+        }
+
+        $firstDevice = $devices[0];
+
+        $order->update([
+            'status' => 'active',
+            'starts_at' => $order->starts_at ?? now(),
+            'subscription_username' => $firstDevice['username'] ?? null,
+            'subscription_password' => $firstDevice['password'] ?? null,
+            'subscription_url' => $firstDevice['url'] ?? null,
+            'devices' => $devices,
+            'credentials_sent' => false,
+        ]);
+
+        if (!empty($order->referral_code)) {
+            $affiliateService = new AffiliateService();
+            $affiliateService->createReferral($order);
+        }
+
+        if ($request->boolean('send_credentials_email', true)) {
+            try {
+                if (!$originalOrder && $order->payment_id) {
+                    $paymentIntent = \App\Models\PaymentIntent::where('payment_intent_id', $order->payment_id)->first();
+                    if ($paymentIntent && isset($paymentIntent->order_data['renewal_of_order_id'])) {
+                        $originalOrder = Order::find($paymentIntent->order_data['renewal_of_order_id']);
+                    }
+                }
+
+                $renewalMail = new \App\Mail\AccountRenewedMail($order, $originalOrder);
+                if ($renewalMail->mailerName) {
+                    Mail::mailer($renewalMail->mailerName)->to($order->user->email)->send($renewalMail);
+                } else {
+                    Mail::to($order->user->email)->send($renewalMail);
+                }
+
+                $order->update([
+                    'credentials_sent' => true,
+                    'credentials_sent_at' => now(),
+                ]);
+
+                return redirect()->back()
+                    ->with('success', 'Renewal activated successfully! Account renewed email has been sent to the customer.');
+            } catch (\Exception $e) {
+                Log::error('Failed to send renewal email', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+                return redirect()->back()
+                    ->with('warning', 'Renewal activated successfully, but there was an issue sending the email. Please send it manually.');
+            }
+        }
+
+        return redirect()->back()
+            ->with('success', 'Renewal activated successfully.');
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Order $order)

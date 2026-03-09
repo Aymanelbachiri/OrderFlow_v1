@@ -617,6 +617,19 @@
                             }
                         })();
                         </script>
+                        @elseif($order->subscription_type === 'renewal' && $order->order_type === 'subscription' && $order->pricingPlan && $order->pricingPlan->plan_type !== 'reseller')
+                        {{-- Renewal: use existing credentials, no modal --}}
+                        <form method="POST" action="{{ route('admin.orders.activate-renewal', $order) }}" class="w-full">
+                            @csrf
+                            <input type="hidden" name="send_credentials_email" value="1">
+                            <button type="submit"
+                                    class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 shadow-md hover:shadow-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Activate Renewal</span>
+                            </button>
+                        </form>
                         @else
                         <button type="button"
                                 id="activate-order-btn-{{ $order->id }}"
