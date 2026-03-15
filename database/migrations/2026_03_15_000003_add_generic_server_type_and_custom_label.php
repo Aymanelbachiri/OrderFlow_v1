@@ -10,7 +10,16 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::getDriverName() === 'sqlite') {
-            // SQLite ignores enum constraints; the column is already a string
+            $currentSql = DB::selectOne("SELECT sql FROM sqlite_master WHERE type='table' AND name='pricing_plans'")->sql;
+            $newSql = str_replace(
+                "\"server_type\" in ('basic', 'premium')",
+                "\"server_type\" in ('basic', 'premium', 'generic')",
+                $currentSql
+            );
+            DB::statement('PRAGMA writable_schema = ON');
+            DB::statement("UPDATE sqlite_master SET sql = ? WHERE type = 'table' AND name = 'pricing_plans'", [$newSql]);
+            DB::statement('PRAGMA writable_schema = OFF');
+            DB::statement('PRAGMA integrity_check');
         } else {
             DB::statement("ALTER TABLE pricing_plans MODIFY COLUMN server_type ENUM('basic', 'premium', 'generic') NOT NULL");
         }
@@ -26,7 +35,18 @@ return new class extends Migration
             $table->dropColumn('custom_label');
         });
 
-        if (DB::getDriverName() !== 'sqlite') {
+        if (DB::getDriverName() === 'sqlite') {
+            $currentSql = DB::selectOne("SELECT sql FROM sqlite_master WHERE type='table' AND name='pricing_plans'")->sql;
+            $newSql = str_replace(
+                "\"server_type\" in ('basic', 'premium', 'generic')",
+                "\"server_type\" in ('basic', 'premium')",
+                $currentSql
+            );
+            DB::statement('PRAGMA writable_schema = ON');
+            DB::statement("UPDATE sqlite_master SET sql = ? WHERE type = 'table' AND name = 'pricing_plans'", [$newSql]);
+            DB::statement('PRAGMA writable_schema = OFF');
+            DB::statement('PRAGMA integrity_check');
+        } else {
             DB::statement("ALTER TABLE pricing_plans MODIFY COLUMN server_type ENUM('basic', 'premium') NOT NULL");
         }
     }
