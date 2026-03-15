@@ -65,9 +65,9 @@ class WordPressIntegrationController extends Controller
         // Get credit packs (single-user - no admin_id filtering)
         $creditPacks = ResellerCreditPack::active()->get()
             ->map(function($pack) use ($sourceName) {
-                $checkoutUrl = route('reseller.checkout.show');
+                $checkoutUrl = route('reseller.checkout.show', ['plan_id' => $pack->id]);
                 if ($sourceName) {
-                    $checkoutUrl .= (strpos($checkoutUrl, '?') !== false ? '&' : '?') . 'source=' . urlencode($sourceName);
+                    $checkoutUrl .= '&source=' . urlencode($sourceName);
                 }
                 
                 return [

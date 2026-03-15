@@ -276,7 +276,7 @@
                                             <input type="text" name="mac_address" id="mac_address" value="{{ old('mac_address') }}" required
                                                 placeholder="XX:XX:XX:XX:XX:XX"
                                                 class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 uppercase"
-                                                pattern="([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}">
+                                                pattern="([0-9A-Za-z]{2}:){5}[0-9A-Za-z]{2}">
                                             <button type="button" id="verify-mac-btn"
                                                 class="px-4 py-3 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors font-medium">
                                                 Verify
@@ -421,7 +421,7 @@
             // Auto-format MAC address as user types
             if (macInput) {
                 macInput.addEventListener('keyup', function() {
-                    let val = this.value.toUpperCase().replace(/[^0-9A-F]/g, '').substring(0, 12);
+                    let val = this.value.toUpperCase().replace(/[^0-9A-Z]/g, '').substring(0, 12);
                     this.value = (val.match(/.{1,2}/g) || []).join(':');
                     // Reset verification when MAC changes
                     macVerifiedInput.value = '0';

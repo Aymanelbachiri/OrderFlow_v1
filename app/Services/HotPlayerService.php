@@ -83,11 +83,11 @@ class HotPlayerService
 
     public static function isValidMacFormat(string $mac): bool
     {
-        // Accept various MAC formats
+        // Accept various MAC formats (alphanumeric, not just hex)
         $patterns = [
-            '/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/',  // XX:XX:XX:XX:XX:XX
-            '/^([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}$/',  // XX-XX-XX-XX-XX-XX
-            '/^[0-9A-Fa-f]{12}$/',                      // XXXXXXXXXXXX
+            '/^([0-9A-Za-z]{2}:){5}[0-9A-Za-z]{2}$/',  // XX:XX:XX:XX:XX:XX
+            '/^([0-9A-Za-z]{2}-){5}[0-9A-Za-z]{2}$/',  // XX-XX-XX-XX-XX-XX
+            '/^[0-9A-Za-z]{12}$/',                      // XXXXXXXXXXXX
         ];
 
         foreach ($patterns as $pattern) {
