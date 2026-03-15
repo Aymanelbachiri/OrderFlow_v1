@@ -310,6 +310,32 @@ class EmailService
     }
 
     /**
+     * Resolve admin notification recipients for an order.
+     * Returns ['emails' => [...], 'source' => Source|null].
+     * If the order's source has its own notify email, returns that; otherwise global admin emails.
+     */
+    public function resolveAdminRecipientsForOrder(Order $order): array
+    {
+        if ($order->source) {
+            $source = \App\Models\Source::where('name', $order->source)->first();
+            if ($source) {
+                $notifyEmail = $source->getNotifyEmail();
+                if ($notifyEmail) {
+                    return [
+                        'emails' => [$notifyEmail],
+                        'source' => $source,
+                    ];
+                }
+            }
+        }
+
+        return [
+            'emails' => $this->getAdminEmails(),
+            'source' => null,
+        ];
+    }
+
+    /**
      * Send email to all admins
      */
     public function sendToAdmins(string $subject, string $view, array $data): array

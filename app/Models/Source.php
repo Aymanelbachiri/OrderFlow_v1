@@ -14,6 +14,9 @@ class Source extends Model
         'return_url',
         'renewal_url',
         'is_active',
+        // Order Notification Email
+        'use_own_notify_email',
+        'notify_email',
         // SMTP Configuration
         'smtp_mailer',
         'smtp_host',
@@ -37,8 +40,22 @@ class Source extends Model
     {
         return [
             'is_active' => 'boolean',
+            'use_own_notify_email' => 'boolean',
             'smtp_port' => 'integer',
         ];
+    }
+
+    /**
+     * Get the email address to send order notifications to for this source.
+     * Returns the source's own email if toggled on, otherwise null (use global admin).
+     */
+    public function getNotifyEmail(): ?string
+    {
+        if ($this->use_own_notify_email && $this->notify_email) {
+            return $this->notify_email;
+        }
+
+        return null;
     }
 
     /**

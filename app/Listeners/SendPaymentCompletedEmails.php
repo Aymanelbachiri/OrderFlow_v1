@@ -3,7 +3,9 @@
 namespace App\Listeners;
 
 use App\Events\PaymentCompleted;
+use App\Models\Order;
 use App\Services\EmailService;
+use App\Services\SourceMailService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -46,21 +48,8 @@ class SendPaymentCompletedEmails
                 }
                 
                 // Send reseller-specific admin notification
-                // Use "main" source SMTP configuration for admin emails
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    $mainSource = \App\Models\Source::where('name', 'main')->first();
-                    $sourceMailService = new \App\Services\SourceMailService();
-                    $mailerName = $sourceMailService->configureMailForSource($mainSource);
-                    
-                    foreach ($adminEmails as $adminEmail) {
-                        $adminMail = new \App\Mail\NewResellerOrderAdminMail($order);
-                        if ($mailerName && $mainSource) {
-                            Mail::mailer($mailerName)->to($adminEmail)->send($adminMail);
-                        } else {
-                            Mail::to($adminEmail)->send($adminMail);
-                        }
-                    }
+                    $this->sendAdminNotification($order, new \App\Mail\NewResellerOrderAdminMail($order));
                 } catch (\Exception $adminEmailError) {
                     Log::error('Failed to send reseller admin notification email: ' . $adminEmailError->getMessage(), [
                         'order_id' => $order->id,
@@ -84,21 +73,8 @@ class SendPaymentCompletedEmails
                 }
                 
                 // Send custom product admin notification
-                // Use "main" source SMTP configuration for admin emails
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    $mainSource = \App\Models\Source::where('name', 'main')->first();
-                    $sourceMailService = new \App\Services\SourceMailService();
-                    $mailerName = $sourceMailService->configureMailForSource($mainSource);
-                    
-                    foreach ($adminEmails as $adminEmail) {
-                        $adminMail = new \App\Mail\CustomProductOrderAdminMail($order);
-                        if ($mailerName && $mainSource) {
-                            Mail::mailer($mailerName)->to($adminEmail)->send($adminMail);
-                        } else {
-                            Mail::to($adminEmail)->send($adminMail);
-                        }
-                    }
+                    $this->sendAdminNotification($order, new \App\Mail\CustomProductOrderAdminMail($order));
                 } catch (\Exception $adminEmailError) {
                     Log::error('Failed to send custom product admin notification email: ' . $adminEmailError->getMessage(), [
                         'order_id' => $order->id,
@@ -122,63 +98,13 @@ class SendPaymentCompletedEmails
                 }
 
                 // Send standard new order notification email to admin(s)
-                // Use "main" source SMTP configuration for admin emails
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    Log::info('Attempting to send admin emails', [
-                        'admin_emails' => $adminEmails,
-                        'order_id' => $order->id,
-                        'order_number' => $order->order_number,
-                    ]);
-                    
-                    if (empty($adminEmails)) {
-                        Log::warning('No admin emails found to send notification to', [
-                            'order_id' => $order->id,
-                            'order_number' => $order->order_number,
-                        ]);
-                    } else {
-                        // Get "main" source for SMTP configuration
-                        $mainSource = \App\Models\Source::where('name', 'main')->first();
-                        $sourceMailService = new \App\Services\SourceMailService();
-                        $mailerName = $sourceMailService->configureMailForSource($mainSource);
-                        
-                        foreach ($adminEmails as $adminEmail) {
-                            try {
-                                Log::info('Sending admin email to: ' . $adminEmail, [
-                                    'order_id' => $order->id,
-                                    'order_number' => $order->order_number,
-                                    'using_source' => $mainSource ? 'main' : 'default',
-                                ]);
-                                
-                                $adminMail = new \App\Mail\NewOrderAdminMail($order);
-                                
-                                if ($mailerName && $mainSource) {
-                                    Mail::mailer($mailerName)->to($adminEmail)->send($adminMail);
-                                } else {
-                                    Mail::to($adminEmail)->send($adminMail);
-                                }
-                                
-                                Log::info('Admin email sent successfully to: ' . $adminEmail, [
-                                    'order_id' => $order->id,
-                                    'order_number' => $order->order_number,
-                                ]);
-                            } catch (\Exception $singleAdminEmailError) {
-                                Log::error('Failed to send admin email to ' . $adminEmail . ': ' . $singleAdminEmailError->getMessage(), [
-                                    'order_id' => $order->id,
-                                    'order_number' => $order->order_number,
-                                    'admin_email' => $adminEmail,
-                                    'error' => $singleAdminEmailError->getMessage(),
-                                    'trace' => $singleAdminEmailError->getTraceAsString(),
-                                ]);
-                            }
-                        }
-                    }
+                    $this->sendAdminNotification($order, new \App\Mail\NewOrderAdminMail($order));
                 } catch (\Exception $adminEmailError) {
                     Log::error('Failed to send admin order notification email: ' . $adminEmailError->getMessage(), [
                         'order_id' => $order->id,
                         'order_number' => $order->order_number,
                         'error' => $adminEmailError->getMessage(),
-                        'trace' => $adminEmailError->getTraceAsString(),
                     ]);
                 }
             }
@@ -207,6 +133,64 @@ class SendPaymentCompletedEmails
     }
 
     /**
+     * Send admin notification email, routing to source-specific email when configured.
+     */
+    private function sendAdminNotification(Order $order, \Illuminate\Mail\Mailable $mailable, string $context = ''): void
+    {
+        $emailService = new EmailService();
+        $recipients = $emailService->resolveAdminRecipientsForOrder($order);
+        $adminEmails = $recipients['emails'];
+        $orderSource = $recipients['source'];
+
+        if (empty($adminEmails)) {
+            Log::warning("{$context}No admin emails found to send notification to", [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+            ]);
+            return;
+        }
+
+        $sourceMailService = new SourceMailService();
+
+        if ($orderSource) {
+            $mailerName = $sourceMailService->configureMailForSource($orderSource);
+        } else {
+            $mainSource = \App\Models\Source::where('name', 'main')->first();
+            $mailerName = $sourceMailService->configureMailForSource($mainSource);
+        }
+
+        foreach ($adminEmails as $adminEmail) {
+            try {
+                Log::info("{$context}Sending admin email to: {$adminEmail}", [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'using_source' => $orderSource ? $orderSource->name : ($mailerName ? 'main' : 'default'),
+                ]);
+
+                $freshMailable = clone $mailable;
+
+                if ($mailerName) {
+                    Mail::mailer($mailerName)->to($adminEmail)->send($freshMailable);
+                } else {
+                    Mail::to($adminEmail)->send($freshMailable);
+                }
+
+                Log::info("{$context}Admin email sent successfully to: {$adminEmail}", [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                ]);
+            } catch (\Exception $e) {
+                Log::error("{$context}Failed to send admin email to {$adminEmail}: " . $e->getMessage(), [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'admin_email' => $adminEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
      * Fallback email method using EmailService
      */
     private function sendFallbackEmails($order, $paymentIntent)
@@ -229,21 +213,8 @@ class SendPaymentCompletedEmails
                 }
                 
                 // Send reseller-specific admin notification
-                // Use "main" source SMTP configuration for admin emails
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    $mainSource = \App\Models\Source::where('name', 'main')->first();
-                    $sourceMailService = new \App\Services\SourceMailService();
-                    $mailerName = $sourceMailService->configureMailForSource($mainSource);
-                    
-                    foreach ($adminEmails as $adminEmail) {
-                        $adminMail = new \App\Mail\NewResellerOrderAdminMail($order);
-                        if ($mailerName && $mainSource) {
-                            Mail::mailer($mailerName)->to($adminEmail)->send($adminMail);
-                        } else {
-                            Mail::to($adminEmail)->send($adminMail);
-                        }
-                    }
+                    $this->sendAdminNotification($order, new \App\Mail\NewResellerOrderAdminMail($order), 'Fallback: ');
                 } catch (\Exception $adminEmailError) {
                     Log::error('Fallback: Failed to send reseller admin notification email: ' . $adminEmailError->getMessage());
                 }
@@ -261,21 +232,8 @@ class SendPaymentCompletedEmails
                 }
                 
                 // Send custom product admin notification
-                // Use "main" source SMTP configuration for admin emails
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    $mainSource = \App\Models\Source::where('name', 'main')->first();
-                    $sourceMailService = new \App\Services\SourceMailService();
-                    $mailerName = $sourceMailService->configureMailForSource($mainSource);
-                    
-                    foreach ($adminEmails as $adminEmail) {
-                        $adminMail = new \App\Mail\CustomProductOrderAdminMail($order);
-                        if ($mailerName && $mainSource) {
-                            Mail::mailer($mailerName)->to($adminEmail)->send($adminMail);
-                        } else {
-                            Mail::to($adminEmail)->send($adminMail);
-                        }
-                    }
+                    $this->sendAdminNotification($order, new \App\Mail\CustomProductOrderAdminMail($order), 'Fallback: ');
                 } catch (\Exception $adminEmailError) {
                     Log::error('Fallback: Failed to send custom product admin notification email: ' . $adminEmailError->getMessage());
                 }
@@ -294,61 +252,12 @@ class SendPaymentCompletedEmails
 
                 // Fallback email to admin using Mailable
                 try {
-                    $adminEmails = $emailService->getAdminEmails();
-                    Log::info('Fallback: Attempting to send admin emails', [
-                        'admin_emails' => $adminEmails,
-                        'order_id' => $order->id,
-                        'order_number' => $order->order_number,
-                    ]);
-                    
-                    if (empty($adminEmails)) {
-                        Log::warning('Fallback: No admin emails found to send notification to', [
-                            'order_id' => $order->id,
-                            'order_number' => $order->order_number,
-                        ]);
-                    } else {
-                        // Get "main" source for SMTP configuration
-                        $mainSource = \App\Models\Source::where('name', 'main')->first();
-                        $sourceMailService = new \App\Services\SourceMailService();
-                        $mailerName = $sourceMailService->configureMailForSource($mainSource);
-                        
-                        foreach ($adminEmails as $adminEmail) {
-                            try {
-                                Log::info('Fallback: Sending admin email to: ' . $adminEmail, [
-                                    'order_id' => $order->id,
-                                    'order_number' => $order->order_number,
-                                    'using_source' => $mainSource ? 'main' : 'default',
-                                ]);
-                                
-                                $adminMail = new \App\Mail\NewOrderAdminMail($order);
-                                
-                                if ($mailerName && $mainSource) {
-                                    Mail::mailer($mailerName)->to($adminEmail)->send($adminMail);
-                                } else {
-                                    Mail::to($adminEmail)->send($adminMail);
-                                }
-                                
-                                Log::info('Fallback: Admin email sent successfully to: ' . $adminEmail, [
-                                    'order_id' => $order->id,
-                                    'order_number' => $order->order_number,
-                                ]);
-                            } catch (\Exception $singleAdminEmailError) {
-                                Log::error('Fallback: Failed to send admin email to ' . $adminEmail . ': ' . $singleAdminEmailError->getMessage(), [
-                                    'order_id' => $order->id,
-                                    'order_number' => $order->order_number,
-                                    'admin_email' => $adminEmail,
-                                    'error' => $singleAdminEmailError->getMessage(),
-                                    'trace' => $singleAdminEmailError->getTraceAsString(),
-                                ]);
-                            }
-                        }
-                    }
+                    $this->sendAdminNotification($order, new \App\Mail\NewOrderAdminMail($order), 'Fallback: ');
                 } catch (\Exception $adminEmailError) {
                     Log::error('Fallback: Failed to send admin order notification email: ' . $adminEmailError->getMessage(), [
                         'order_id' => $order->id,
                         'order_number' => $order->order_number,
                         'error' => $adminEmailError->getMessage(),
-                        'trace' => $adminEmailError->getTraceAsString(),
                     ]);
                 }
             }

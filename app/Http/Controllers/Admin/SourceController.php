@@ -47,6 +47,9 @@ class SourceController extends Controller
             'return_url' => 'required|url|max:2048',
             'renewal_url' => 'nullable|url|max:2048',
             'is_active' => 'sometimes|boolean',
+            // Order Notification Email
+            'use_own_notify_email' => 'sometimes|boolean',
+            'notify_email' => 'nullable|email|max:255|required_if:use_own_notify_email,1',
             // SMTP Configuration
             'smtp_mailer' => 'nullable|string|max:255',
             'smtp_host' => 'nullable|string|max:255',
@@ -67,6 +70,7 @@ class SourceController extends Controller
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
+        $validated['use_own_notify_email'] = (bool) ($validated['use_own_notify_email'] ?? false);
         $validated['smtp_mailer'] = $validated['smtp_mailer'] ?? 'smtp';
 
         Source::create($validated);
@@ -90,6 +94,9 @@ class SourceController extends Controller
             'return_url' => 'required|url|max:2048',
             'renewal_url' => 'nullable|url|max:2048',
             'is_active' => 'sometimes|boolean',
+            // Order Notification Email
+            'use_own_notify_email' => 'sometimes|boolean',
+            'notify_email' => 'nullable|email|max:255|required_if:use_own_notify_email,1',
             // SMTP Configuration
             'smtp_mailer' => 'nullable|string|max:255',
             'smtp_host' => 'nullable|string|max:255',
@@ -110,6 +117,7 @@ class SourceController extends Controller
         ]);
 
         $validated['is_active'] = (bool) ($validated['is_active'] ?? $source->is_active);
+        $validated['use_own_notify_email'] = (bool) ($validated['use_own_notify_email'] ?? false);
         $validated['smtp_mailer'] = $validated['smtp_mailer'] ?? 'smtp';
 
         // Don't update password if it's empty (to preserve existing password)

@@ -38,6 +38,24 @@
                 </div>
             </div>
 
+            <!-- Order Notification Email -->
+            <div class="border-b pb-4">
+                <h2 class="text-lg font-semibold mb-4">Order Notification Email</h2>
+                <p class="text-sm text-gray-600 mb-4">Choose whether new order notifications for this source are sent to its own email or the global admin email.</p>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <input id="use_own_notify_email" type="checkbox" name="use_own_notify_email" value="1" class="rounded" {{ old('use_own_notify_email') ? 'checked' : '' }} onchange="document.getElementById('notify_email_field').classList.toggle('hidden', !this.checked)">
+                        <label for="use_own_notify_email" class="text-sm">Send order notifications to a custom email for this source</label>
+                    </div>
+                    <div id="notify_email_field" class="{{ old('use_own_notify_email') ? '' : 'hidden' }}">
+                        <label class="block text-sm font-medium mb-1">Notification Email</label>
+                        <input type="email" name="notify_email" value="{{ old('notify_email') }}" class="w-full px-3 py-2 border rounded" placeholder="orders@example.com">
+                        <p class="text-xs text-gray-500 mt-1">New order notifications for this source will be sent to this email instead of the global admin email.</p>
+                        @error('notify_email')<div class="text-sm text-red-600 mt-1">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+            </div>
+
             <!-- SMTP Configuration -->
             <div class="border-b pb-4">
                 <h2 class="text-lg font-semibold mb-4">SMTP Configuration</h2>
