@@ -146,7 +146,7 @@
                                 <select id="duration_months" name="duration_months" required 
                                         class="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 appearance-none">
                                     <option value="">Select Duration</option>
-                                    @foreach([1, 3, 6, 12] as $duration)
+                                    @foreach([1, 3, 6, 12, 24] as $duration)
                                         <option value="{{ $duration }}" {{ old('duration_months') == $duration ? 'selected' : '' }}>{{ $duration }} Month{{ $duration > 1 ? 's' : '' }}</option>
                                     @endforeach
                                 </select>
