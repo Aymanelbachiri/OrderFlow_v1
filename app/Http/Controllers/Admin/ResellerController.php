@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 
 class ResellerController extends Controller
 {
+    use \App\Traits\SourceScopeable;
     /**
      * Display a listing of the resource.
      */
@@ -23,6 +24,7 @@ class ResellerController extends Controller
                             $q->where('order_type', 'credit_pack')->where('status', 'pending');
                         }
                     ]);
+        $this->scopeBySource($query);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -93,6 +95,7 @@ class ResellerController extends Controller
      */
     public function show(User $reseller)
     {
+        $this->authorizeSourceAccess($reseller->source);
         $reseller->load(['orders.pricingPlan', 'orders.resellerCreditPack']);
 
         // Calculate reseller statistics

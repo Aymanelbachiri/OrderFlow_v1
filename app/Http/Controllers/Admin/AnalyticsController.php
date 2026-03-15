@@ -14,6 +14,8 @@ use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    use \App\Traits\SourceScopeable;
+
     public function index(Request $request)
     {
         $dateRange = $request->get('range', '30'); // Default to last 30 days
@@ -85,8 +87,10 @@ class AnalyticsController extends Controller
 
     private function getRevenueBySource($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
-            ->whereIn('orders.status', ['active', 'completed'])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
+            ->whereIn('orders.status', ['active', 'completed']);
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->join('users', 'orders.user_id', '=', 'users.id')
             ->select(
                 'users.role',
@@ -107,8 +111,10 @@ class AnalyticsController extends Controller
 
     private function getRevenueByPaymentMethod($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
-            ->whereIn('orders.status', ['active', 'completed'])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
+            ->whereIn('orders.status', ['active', 'completed']);
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->select(
                 'orders.payment_method',
                 DB::raw('SUM(orders.amount) as total_revenue'),
@@ -128,10 +134,12 @@ class AnalyticsController extends Controller
 
     private function getPopularPlans($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
             ->whereIn('orders.status', ['active', 'completed'])
             ->whereNotNull('orders.pricing_plan_id')
-            ->where('orders.order_type', '!=', 'credit_pack')
+            ->where('orders.order_type', '!=', 'credit_pack');
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->join('pricing_plans', 'orders.pricing_plan_id', '=', 'pricing_plans.id')
             ->select(
                 'pricing_plans.name',
@@ -147,9 +155,11 @@ class AnalyticsController extends Controller
 
     private function getPopularCreditPacks($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
             ->whereIn('orders.status', ['active', 'completed'])
-            ->where('orders.order_type', 'credit_pack')
+            ->where('orders.order_type', 'credit_pack');
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->join('reseller_credit_packs', 'orders.pricing_plan_id', '=', 'reseller_credit_packs.id')
             ->select(
                 'reseller_credit_packs.name',
@@ -166,10 +176,12 @@ class AnalyticsController extends Controller
 
     private function getPopularCustomProducts($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
             ->whereIn('orders.status', ['active', 'completed'])
             ->where('orders.order_type', 'custom_product')
-            ->whereNotNull('orders.custom_product_id')
+            ->whereNotNull('orders.custom_product_id');
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->join('custom_products', 'orders.custom_product_id', '=', 'custom_products.id')
             ->select(
                 'custom_products.name',
@@ -185,10 +197,12 @@ class AnalyticsController extends Controller
 
     private function getTopClients($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
             ->whereIn('orders.status', ['active', 'completed'])
             ->join('users', 'orders.user_id', '=', 'users.id')
-            ->where('users.role', 'client')
+            ->where('users.role', 'client');
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->select(
                 'users.name',
                 'users.email',
@@ -203,10 +217,12 @@ class AnalyticsController extends Controller
 
     private function getTopResellers($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate])
             ->whereIn('orders.status', ['active', 'completed'])
             ->join('users', 'orders.user_id', '=', 'users.id')
-            ->where('users.role', 'reseller')
+            ->where('users.role', 'reseller');
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->select(
                 'users.name',
                 'users.email',
@@ -224,50 +240,43 @@ class AnalyticsController extends Controller
         $trends = [];
         
         if ($range === '7') {
-            // Daily trends for last 7 days
             for ($i = 6; $i >= 0; $i--) {
                 $date = now()->subDays($i);
-                $revenue = Order::whereIn('status', ['active', 'completed'])
-                    ->whereDate('created_at', $date)
-                    ->sum('amount');
+                $revenue = $this->scopeBySource(Order::whereIn('status', ['active', 'completed'])
+                    ->whereDate('created_at', $date))->sum('amount');
                 
                 $trends[] = [
                     'date' => $date->format('M d'),
                     'revenue' => (float) $revenue,
-                    'orders' => Order::whereDate('created_at', $date)->count()
+                    'orders' => $this->scopeBySource(Order::whereDate('created_at', $date))->count()
                 ];
             }
         } elseif ($range === '30') {
-            // Weekly trends for last 30 days
             for ($i = 3; $i >= 0; $i--) {
                 $weekStart = now()->subWeeks($i)->startOfWeek();
                 $weekEnd = now()->subWeeks($i)->endOfWeek();
                 
-                $revenue = Order::whereIn('status', ['active', 'completed'])
-                    ->whereBetween('created_at', [$weekStart, $weekEnd])
-                    ->sum('amount');
+                $revenue = $this->scopeBySource(Order::whereIn('status', ['active', 'completed'])
+                    ->whereBetween('created_at', [$weekStart, $weekEnd]))->sum('amount');
                 
                 $trends[] = [
                     'date' => $weekStart->format('M d') . ' - ' . $weekEnd->format('M d'),
                     'revenue' => (float) $revenue,
-                    'orders' => Order::whereBetween('created_at', [$weekStart, $weekEnd])->count()
+                    'orders' => $this->scopeBySource(Order::whereBetween('created_at', [$weekStart, $weekEnd]))->count()
                 ];
             }
         } else {
-            // Monthly trends
             for ($i = 11; $i >= 0; $i--) {
                 $date = now()->subMonths($i);
-                $revenue = Order::whereIn('status', ['active', 'completed'])
+                $revenue = $this->scopeBySource(Order::whereIn('status', ['active', 'completed'])
                     ->whereMonth('created_at', $date->month)
-                    ->whereYear('created_at', $date->year)
-                    ->sum('amount');
+                    ->whereYear('created_at', $date->year))->sum('amount');
                 
                 $trends[] = [
                     'date' => $date->format('M Y'),
                     'revenue' => (float) $revenue,
-                    'orders' => Order::whereMonth('created_at', $date->month)
-                        ->whereYear('created_at', $date->year)
-                        ->count()
+                    'orders' => $this->scopeBySource(Order::whereMonth('created_at', $date->month)
+                        ->whereYear('created_at', $date->year))->count()
                 ];
             }
         }
@@ -277,7 +286,9 @@ class AnalyticsController extends Controller
 
     private function getOrderStatusDistribution($startDate, $endDate)
     {
-        return Order::whereBetween('orders.created_at', [$startDate, $endDate])
+        $query = Order::whereBetween('orders.created_at', [$startDate, $endDate]);
+        $this->scopeBySource($query, 'orders.source');
+        return $query
             ->select(
                 'orders.status',
                 DB::raw('COUNT(orders.id) as count'),
@@ -304,21 +315,27 @@ class AnalyticsController extends Controller
 
     private function getSummaryStats($startDate, $endDate)
     {
-        $totalRevenue = Order::whereBetween('orders.created_at', [$startDate, $endDate])
-            ->whereIn('orders.status', ['active', 'completed'])
-            ->sum('orders.amount');
+        $totalRevenue = $this->scopeBySource(Order::whereBetween('orders.created_at', [$startDate, $endDate])
+            ->whereIn('orders.status', ['active', 'completed']), 'orders.source')->sum('orders.amount');
             
-        $totalOrders = Order::whereBetween('orders.created_at', [$startDate, $endDate])->count();
+        $totalOrders = $this->scopeBySource(Order::whereBetween('orders.created_at', [$startDate, $endDate]), 'orders.source')->count();
         
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
         
-        $newCustomers = User::whereBetween('users.created_at', [$startDate, $endDate])->count();
+        $newCustomers = $this->scopeBySource(User::whereBetween('users.created_at', [$startDate, $endDate]))->count();
         
-        $repeatCustomers = User::whereHas('orders', function ($query) use ($startDate, $endDate) {
+        $allowedSources = auth()->user()->getAllowedSourceNames();
+        $repeatCustomers = User::whereHas('orders', function ($query) use ($startDate, $endDate, $allowedSources) {
             $query->whereBetween('created_at', [$startDate, $endDate]);
+            if ($allowedSources !== null) {
+                $query->whereIn('source', $allowedSources);
+            }
         })
-        ->whereHas('orders', function ($query) use ($startDate, $endDate) {
+        ->whereHas('orders', function ($query) use ($startDate, $allowedSources) {
             $query->where('created_at', '<', $startDate);
+            if ($allowedSources !== null) {
+                $query->whereIn('source', $allowedSources);
+            }
         })
         ->count();
 

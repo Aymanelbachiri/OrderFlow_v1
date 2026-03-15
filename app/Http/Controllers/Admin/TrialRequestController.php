@@ -14,9 +14,11 @@ use Illuminate\Support\Facades\Http;
 
 class TrialRequestController extends Controller
 {
+    use \App\Traits\SourceScopeable;
     public function index(Request $request)
     {
         $query = TrialRequest::query()->orderBy('created_at', 'desc');
+        $this->scopeBySource($query);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -35,10 +37,10 @@ class TrialRequestController extends Controller
         $trialRequests = $query->paginate(20)->withQueryString();
 
         $stats = [
-            'total' => TrialRequest::count(),
-            'pending' => TrialRequest::where('status', 'pending')->count(),
-            'approved' => TrialRequest::where('status', 'approved')->count(),
-            'rejected' => TrialRequest::where('status', 'rejected')->count(),
+            'total' => $this->scopeBySource(TrialRequest::query())->count(),
+            'pending' => $this->scopeBySource(TrialRequest::where('status', 'pending'))->count(),
+            'approved' => $this->scopeBySource(TrialRequest::where('status', 'approved'))->count(),
+            'rejected' => $this->scopeBySource(TrialRequest::where('status', 'rejected'))->count(),
         ];
 
         // Get sources for the approval modal

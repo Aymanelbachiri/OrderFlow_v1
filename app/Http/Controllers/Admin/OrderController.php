@@ -17,12 +17,14 @@ use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
+    use \App\Traits\SourceScopeable;
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $query = Order::with(['user', 'pricingPlan', 'resellerCreditPack', 'payments', 'affiliateReferral.affiliate']);
+        $this->scopeBySource($query);
 
         // Filter by status
         if ($request->filled('status')) {
@@ -95,25 +97,23 @@ class OrderController extends Controller
 
         $orders = $query->latest()->paginate(20);
 
-        // Get statistics for dashboard
-        $totalOrdersCount = Order::count();
-        $activeOrdersCount = Order::where('status', 'active')->count();
-        $pendingOrdersCount = Order::where('status', 'pending')->count();
-        $expiredOrdersCount = Order::whereNotNull('expires_at')
-            ->where('expires_at', '<', now())
-            ->count();
-        $expiringSoonCount = Order::whereNotNull('expires_at')
+        // Get statistics for dashboard (scoped)
+        $totalOrdersCount = $this->scopeBySource(Order::query())->count();
+        $activeOrdersCount = $this->scopeBySource(Order::where('status', 'active'))->count();
+        $pendingOrdersCount = $this->scopeBySource(Order::where('status', 'pending'))->count();
+        $expiredOrdersCount = $this->scopeBySource(Order::whereNotNull('expires_at')
+            ->where('expires_at', '<', now()))->count();
+        $expiringSoonCount = $this->scopeBySource(Order::whereNotNull('expires_at')
             ->where('expires_at', '>=', now())
-            ->where('expires_at', '<=', now()->addDays(7))
-            ->count();
-        $resellerOrdersCount = Order::where(function ($q) {
+            ->where('expires_at', '<=', now()->addDays(7)))->count();
+        $resellerOrdersCount = $this->scopeBySource(Order::where(function ($q) {
             $q->whereHas('pricingPlan', function ($planQuery) {
                 $planQuery->where('plan_type', 'reseller');
             })->orWhereNotNull('reseller_credit_pack_id');
-        })->count();
+        }))->count();
 
-        // Calculate total revenue
-        $totalRevenue = Order::where('status', '!=', 'cancelled')->sum('amount');
+        // Calculate total revenue (scoped)
+        $totalRevenue = $this->scopeBySource(Order::where('status', '!=', 'cancelled'))->sum('amount');
 
         return view('admin.orders.index', compact(
             'orders',
@@ -357,6 +357,7 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
+        $this->authorizeSourceAccess($order->source);
         $order->load(['user', 'pricingPlan', 'resellerCreditPack', 'payments', 'renewalNotifications']);
 
         return view('admin.orders.show', compact('order'));
@@ -367,6 +368,7 @@ class OrderController extends Controller
      */
     public function edit(Order $order)
     {
+        $this->authorizeSourceAccess($order->source);
         $sources = Source::orderBy('name')->get();
         $users = User::whereIn('role', ['client', 'reseller'])->orderBy('name')->get();
         $pricingPlans = PricingPlan::where('is_active', true)->orderBy('display_name')->get();
@@ -380,6 +382,7 @@ class OrderController extends Controller
      */
     public function update(Request $request, Order $order)
     {
+        $this->authorizeSourceAccess($order->source);
         // Log all request data for debugging
         Log::info('Order update request', [
             'order_id' => $order->id,
@@ -715,6 +718,7 @@ class OrderController extends Controller
     public function export(Request $request)
     {
         $query = Order::with(['user', 'pricingPlan']);
+        $this->scopeBySource($query);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -765,6 +769,7 @@ class OrderController extends Controller
      */
     public function activate(Request $request, Order $order)
     {
+        $this->authorizeSourceAccess($order->source);
         if ($order->status !== 'pending') {
             return redirect()->back()
                 ->with('error', 'Only pending orders can be activated.');
@@ -1065,6 +1070,7 @@ class OrderController extends Controller
      */
     public function activateRenewal(Request $request, Order $order)
     {
+        $this->authorizeSourceAccess($order->source);
         if ($order->status !== 'pending') {
             return redirect()->back()
                 ->with('error', 'Only pending orders can be activated.');
@@ -1178,6 +1184,7 @@ class OrderController extends Controller
      */
     public function destroy(Order $order)
     {
+        $this->authorizeSourceAccess($order->source);
         // Log the deletion for audit purposes
         Log::info('Order deleted by admin', [
             'order_id' => $order->id,

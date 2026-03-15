@@ -40,6 +40,14 @@ class Source extends Model
             'smtp_port' => 'integer',
         ];
     }
+
+    /**
+     * Agents assigned to this source.
+     */
+    public function agents()
+    {
+        return $this->belongsToMany(User::class, 'agent_source');
+    }
 }
 
 

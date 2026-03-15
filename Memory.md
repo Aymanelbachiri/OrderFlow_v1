@@ -17,9 +17,15 @@
   Reason: Allow admins to paste M3U URL to auto-fill credentials (url, username, password) or enter manually. All credential emails include M3U link.
   Date: 2026-03-09
 
+- Decision: Agent role with source-based access control
+  Reason: Allow admins to create agent users who can only manage data (orders, clients, resellers, trials, analytics) from their assigned sources. Agents cannot access global settings, pricing, credit packs, custom products, sources, WordPress, payment config, or affiliates.
+  Date: 2026-03-09
+
 ## 4. Database Schema
 - Orders table: subscription_username, subscription_password, subscription_url, subscription_m3u_url (legacy), devices (JSON)
 - M3U URL is per device: stored when pasted via Fill from M3U, or built from url+username+password. Emails include stored/built M3U link per device.
+- Users table: role enum now includes 'agent' (admin, client, reseller, agent)
+- agent_source pivot table: user_id (FK), source_id (FK) - links agents to their allowed sources
 
 ## 5. API Contracts
 - (Web routes for admin order management)
@@ -38,3 +44,7 @@
 - Order model: getM3uUrl(), buildM3uUrl() helpers
 - Order edit: all fields editable; per-device Fill from M3U for subscription credentials
 - Renewal activation: Activate button uses existing credentials (no modal); POST to orders.activate-renewal
+- Agent management: CRUD at admin.agents.* routes; agents assigned to sources via agent_source pivot
+- Source scoping: SourceScopeable trait (app/Traits/SourceScopeable.php) applied to OrderController, ClientController, ResellerController, TrialRequestController, AnalyticsController, DashboardController
+- Route split: admin+agent routes (dashboard, clients, orders, resellers, trials, analytics) vs admin-only routes (agents, pricing, credit packs, custom products, sources, affiliates, settings, WordPress, payment config)
+- Sidebar: admin-only items hidden for agents via @if(auth()->user()->isAdmin())

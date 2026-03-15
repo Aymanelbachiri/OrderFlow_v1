@@ -523,6 +523,7 @@
                             </a>
                         </li>
 
+                        @if(auth()->user()->isAdmin())
                         <!-- Affiliates -->
                         <li>
                             <a href="{{ route('admin.affiliates.index') }}"
@@ -532,6 +533,7 @@
                                 <span class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Affiliates</span>
                             </a>
                         </li>
+                        @endif
 
                         <!-- Trial Requests -->
                         <li>
@@ -555,6 +557,7 @@
                             </a>
                         </li>
 
+                        @if(auth()->user()->isAdmin())
                         <!-- Credit Packs -->
                         <li>
                             <a href="{{ route('admin.reseller-credit-packs.index') }}"
@@ -591,8 +594,7 @@
                                     Products</span>
                             </a>
                         </li>
-
-
+                        @endif
 
                         <!-- Analytics -->
                         <li>
@@ -603,6 +605,17 @@
                                     class="fas fa-chart-line mr-3 group-hover:scale-110 transition-transform duration-200"></i>
                                 <span
                                     class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Analytics</span>
+                            </a>
+                        </li>
+
+                        @if(auth()->user()->isAdmin())
+                        <!-- Agents -->
+                        <li>
+                            <a href="{{ route('admin.agents.index') }}"
+                                class="nav-link flex items-center px-4 py-3 text-white hover:bg-[#DC4822]/10 hover:text-[#DC4822] rounded-lg transition-all duration-200 font-medium group {{ request()->routeIs('admin.agents.*') ? 'bg-[#DC4822]/10 text-[#DC4822] border-r-4 border-[#DC4822]' : '' }}"
+                                title="Agents">
+                                <i class="fas fa-user-shield mr-3 group-hover:scale-110 transition-transform duration-200"></i>
+                                <span class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Agents</span>
                             </a>
                         </li>
 
@@ -653,6 +666,7 @@
                                     class="group-hover:translate-x-1 transition-transform duration-200 sidebar-text">Settings</span>
                             </a>
                         </li>
+                        @endif
                     </div>
 
                     <!-- Common Links -->

@@ -48,6 +48,7 @@ class RolePermissionSeeder extends Seeder
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $clientRole = Role::firstOrCreate(['name' => 'client', 'guard_name' => 'web']);
         $resellerRole = Role::firstOrCreate(['name' => 'reseller', 'guard_name' => 'web']);
+        $agentRole = Role::firstOrCreate(['name' => 'agent', 'guard_name' => 'web']);
 
         // Assign permissions
         $adminRole->syncPermissions(Permission::all()); // replaces givePermissionTo()
@@ -67,5 +68,14 @@ class RolePermissionSeeder extends Seeder
             'view-reseller-revenue',
         ])->get();
         $resellerRole->syncPermissions($resellerPermissions);
+
+        // Assign agent permissions (source-scoped subset of admin)
+        $agentPermissions = Permission::whereIn('name', [
+            'manage-orders',
+            'manage-users',
+            'manage-resellers',
+            'view-analytics',
+        ])->get();
+        $agentRole->syncPermissions($agentPermissions);
     }
 }

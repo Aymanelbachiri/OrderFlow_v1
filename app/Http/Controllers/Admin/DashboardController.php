@@ -12,44 +12,37 @@ use App\Services\PerformanceService;
 
 class DashboardController extends Controller
 {
+    use \App\Traits\SourceScopeable;
+
     public function index()
     {
-        // Calculate dashboard statistics from orders
-        $totalRevenue = Order::whereIn('status', ['active', 'completed'])->sum('amount');
-        $monthlyRevenue = Order::whereIn('status', ['active', 'completed'])
+        $totalRevenue = $this->scopeBySource(Order::whereIn('status', ['active', 'completed']))->sum('amount');
+        $monthlyRevenue = $this->scopeBySource(Order::whereIn('status', ['active', 'completed'])
             ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('amount');
+            ->whereYear('created_at', now()->year))->sum('amount');
 
-        $activeClients = User::where('role', 'client')
-            ->where('is_active', true)
-            ->count();
+        $activeClients = $this->scopeBySource(User::where('role', 'client')
+            ->where('is_active', true))->count();
 
-        $activeResellers = User::where('role', 'reseller')
-            ->where('is_active', true)
-            ->count();
+        $activeResellers = $this->scopeBySource(User::where('role', 'reseller')
+            ->where('is_active', true))->count();
 
-        $expiringSubscriptions = Order::whereNotNull('expires_at')
+        $expiringSubscriptions = $this->scopeBySource(Order::whereNotNull('expires_at')
             ->where('expires_at', '>=', now())
-            ->where('expires_at', '<=', now()->addDays(7))
-            ->count();
+            ->where('expires_at', '<=', now()->addDays(7)))->count();
 
-        $pendingOrders = Order::where('status', 'pending')->count();
+        $pendingOrders = $this->scopeBySource(Order::where('status', 'pending'))->count();
 
-        // Recent orders
-        $recentOrders = Order::with(['user', 'pricingPlan', 'resellerCreditPack'])
-            ->latest()
-            ->take(10)
-            ->get();
+        $recentOrdersQuery = Order::with(['user', 'pricingPlan', 'resellerCreditPack'])->latest();
+        $this->scopeBySource($recentOrdersQuery);
+        $recentOrders = $recentOrdersQuery->take(10)->get();
 
-        // Monthly revenue chart data (last 12 months)
         $monthlyRevenueData = [];
         for ($i = 11; $i >= 0; $i--) {
             $date = now()->subMonths($i);
-            $revenue = Order::whereIn('status', ['active', 'completed'])
+            $revenue = $this->scopeBySource(Order::whereIn('status', ['active', 'completed'])
                 ->whereMonth('created_at', $date->month)
-                ->whereYear('created_at', $date->year)
-                ->sum('amount');
+                ->whereYear('created_at', $date->year))->sum('amount');
 
             $monthlyRevenueData[] = [
                 'month' => $date->format('M Y'),

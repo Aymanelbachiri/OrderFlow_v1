@@ -71,7 +71,7 @@ class HotPlayerService
     protected function normalizeMac(string $mac): string
     {
         // Remove any separators and convert to uppercase
-        $mac = strtoupper(preg_replace('/[^A-Fa-f0-9]/', '', $mac));
+        $mac = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $mac));
         
         // Format as XX:XX:XX:XX:XX:XX
         if (strlen($mac) === 12) {

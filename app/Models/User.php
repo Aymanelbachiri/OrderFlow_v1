@@ -102,6 +102,46 @@ class User extends Authenticatable
         return $this->role === 'reseller';
     }
 
+    public function isAgent()
+    {
+        return $this->role === 'agent';
+    }
+
+    /**
+     * Sources assigned to this user (agents only).
+     */
+    public function assignedSources()
+    {
+        return $this->belongsToMany(Source::class, 'agent_source');
+    }
+
+    /**
+     * Get source names the agent is allowed to manage.
+     * Admins get null (no restriction). Agents get their assigned source names.
+     */
+    public function getAllowedSourceNames(): ?array
+    {
+        if ($this->isAdmin()) {
+            return null;
+        }
+
+        return $this->assignedSources()->pluck('name')->toArray();
+    }
+
+    public function canAccessSource(?string $sourceName): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if (!$this->isAgent()) {
+            return false;
+        }
+
+        $allowed = $this->getAllowedSourceNames();
+        return in_array($sourceName, $allowed);
+    }
+
     public function isSuspended()
     {
         return !$this->is_active || $this->suspended_at !== null;

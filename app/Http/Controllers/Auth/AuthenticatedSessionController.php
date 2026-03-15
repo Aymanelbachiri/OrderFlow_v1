@@ -31,12 +31,12 @@ class AuthenticatedSessionController extends Controller
         // Get the authenticated user
         $user = Auth::user();
 
-        // Only admins can access the dashboard
-        if ($user->role === 'admin') {
+        // Admins and agents can access the dashboard
+        if ($user->role === 'admin' || $user->role === 'agent') {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
 
-        // Non-admin users are redirected to the home page
+        // Non-admin/agent users are redirected to the home page
         return redirect()->intended(route('home', absolute: false));
     }
 

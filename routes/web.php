@@ -81,13 +81,13 @@ Route::middleware(['require.iframe.source'])->group(function () {
     Route::post('/affiliate/fetch-subscriptions', [\App\Http\Controllers\AffiliateController::class, 'fetchSubscriptions'])->name('affiliate.fetch-subscriptions');
 });
 
-// Authenticated dashboard -> only admin kept
+// Authenticated dashboard -> admin and agent
 Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
-})->middleware(['auth', 'verified', 'role:admin'])->name('dashboard');
+})->middleware(['auth', 'verified', 'role:admin,agent'])->name('dashboard');
 
-// Admin routes
-Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+// Admin routes accessible by both admin and agent (source-scoped for agents)
+Route::middleware(['auth', 'verified', 'role:admin,agent'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Client management
@@ -105,6 +105,30 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/orders/{order}/activate-renewal', [\App\Http\Controllers\Admin\OrderController::class, 'activateRenewal'])->name('orders.activate-renewal');
     Route::get('/orders/export', [\App\Http\Controllers\Admin\OrderController::class, 'export'])->name('orders.export');
 
+    // Reseller management
+    Route::resource('resellers', \App\Http\Controllers\Admin\ResellerController::class);
+    Route::post('/resellers/{reseller}/suspend', [\App\Http\Controllers\Admin\ResellerController::class, 'suspend'])->name('resellers.suspend');
+    Route::post('/resellers/{reseller}/reactivate', [\App\Http\Controllers\Admin\ResellerController::class, 'reactivate'])->name('resellers.reactivate');
+    Route::post('/resellers/{reseller}/toggle-status', [\App\Http\Controllers\Admin\ResellerController::class, 'toggleStatus'])->name('resellers.toggle-status');
+    Route::post('/resellers/{reseller}/send-password-reset', [\App\Http\Controllers\Admin\ResellerController::class, 'sendPasswordReset'])->name('resellers.send-password-reset');
+
+    // Trial requests management
+    Route::get('/trial-requests', [\App\Http\Controllers\Admin\TrialRequestController::class, 'index'])->name('trial-requests.index');
+    Route::get('/trial-requests/{trialRequest}', [\App\Http\Controllers\Admin\TrialRequestController::class, 'show'])->name('trial-requests.show');
+    Route::post('/trial-requests/{trialRequest}/approve', [\App\Http\Controllers\Admin\TrialRequestController::class, 'approve'])->name('trial-requests.approve');
+    Route::post('/trial-requests/{trialRequest}/reject', [\App\Http\Controllers\Admin\TrialRequestController::class, 'reject'])->name('trial-requests.reject');
+    Route::post('/trial-requests/generate-m3u', [\App\Http\Controllers\Admin\TrialRequestController::class, 'generateTrialM3u'])->name('trial-requests.generate-m3u');
+    Route::delete('/trial-requests/{trialRequest}', [\App\Http\Controllers\Admin\TrialRequestController::class, 'destroy'])->name('trial-requests.destroy');
+
+    // Analytics
+    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
+});
+
+// Admin-only routes (not accessible by agents)
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Agent management
+    Route::resource('agents', \App\Http\Controllers\Admin\AgentController::class)->except(['show']);
+
     // Pricing management
     Route::resource('pricing', \App\Http\Controllers\Admin\PricingController::class);
 
@@ -115,14 +139,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     // Source management
     Route::resource('sources', \App\Http\Controllers\Admin\SourceController::class);
     Route::post('/sources/{source}/test-smtp', [\App\Http\Controllers\Admin\SourceController::class, 'testSmtp'])->name('sources.test-smtp');
-
-
-    // Reseller management
-    Route::resource('resellers', \App\Http\Controllers\Admin\ResellerController::class);
-    Route::post('/resellers/{reseller}/suspend', [\App\Http\Controllers\Admin\ResellerController::class, 'suspend'])->name('resellers.suspend');
-    Route::post('/resellers/{reseller}/reactivate', [\App\Http\Controllers\Admin\ResellerController::class, 'reactivate'])->name('resellers.reactivate');
-    Route::post('/resellers/{reseller}/toggle-status', [\App\Http\Controllers\Admin\ResellerController::class, 'toggleStatus'])->name('resellers.toggle-status');
-    Route::post('/resellers/{reseller}/send-password-reset', [\App\Http\Controllers\Admin\ResellerController::class, 'sendPasswordReset'])->name('resellers.send-password-reset');
 
     // Reseller credit pack management
     Route::resource('reseller-credit-packs', \App\Http\Controllers\Admin\ResellerCreditPackController::class);
@@ -136,17 +152,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/affiliates/{affiliate}/referrals/{referral}/approve', [\App\Http\Controllers\Admin\AffiliateController::class, 'approveReward'])->name('affiliates.referrals.approve');
     Route::post('/affiliates/{affiliate}/referrals/{referral}/reject', [\App\Http\Controllers\Admin\AffiliateController::class, 'rejectReward'])->name('affiliates.referrals.reject');
     Route::post('/affiliates/{affiliate}/grant-reward', [\App\Http\Controllers\Admin\AffiliateController::class, 'grantDirectReward'])->name('affiliates.grant-reward');
-
-    // Trial requests management
-    Route::get('/trial-requests', [\App\Http\Controllers\Admin\TrialRequestController::class, 'index'])->name('trial-requests.index');
-    Route::get('/trial-requests/{trialRequest}', [\App\Http\Controllers\Admin\TrialRequestController::class, 'show'])->name('trial-requests.show');
-    Route::post('/trial-requests/{trialRequest}/approve', [\App\Http\Controllers\Admin\TrialRequestController::class, 'approve'])->name('trial-requests.approve');
-    Route::post('/trial-requests/{trialRequest}/reject', [\App\Http\Controllers\Admin\TrialRequestController::class, 'reject'])->name('trial-requests.reject');
-    Route::post('/trial-requests/generate-m3u', [\App\Http\Controllers\Admin\TrialRequestController::class, 'generateTrialM3u'])->name('trial-requests.generate-m3u');
-    Route::delete('/trial-requests/{trialRequest}', [\App\Http\Controllers\Admin\TrialRequestController::class, 'destroy'])->name('trial-requests.destroy');
-
-    // Analytics
-    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
 
     // System settings
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
@@ -166,8 +171,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/settings/test-renewals', [\App\Http\Controllers\Admin\SettingsController::class, 'testRenewalReminders'])->name('settings.test-renewals');
 });
 
-// Profile routes (admin only)
-Route::middleware(['auth', 'role:admin'])->group(function () {
+// Profile routes (admin and agent)
+Route::middleware(['auth', 'role:admin,agent'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

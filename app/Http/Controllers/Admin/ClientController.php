@@ -12,12 +12,14 @@ use Illuminate\Support\Facades\Log;
 
 class ClientController extends Controller
 {
+    use \App\Traits\SourceScopeable;
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $query = User::whereIn('role', ['client', 'reseller'])->with(['orders']);
+        $this->scopeBySource($query);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -94,6 +96,7 @@ class ClientController extends Controller
      */
     public function show(User $client)
     {
+        $this->authorizeSourceAccess($client->source);
         $client->load(['orders.pricingPlan', 'payments']);
 
         return view('admin.clients.show', compact('client'));
