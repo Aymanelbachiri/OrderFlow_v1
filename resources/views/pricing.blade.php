@@ -8,37 +8,39 @@
     <!-- Pricing Plans Section -->
     <div class="py-20 bg-white dark:bg-gray-900">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Package Type Toggle Switch -->
+            <!-- Package Type Selector -->
             <div class="flex justify-center mb-16 animate-fade-in-up">
-                <div class="relative bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl shadow-lg">
-                    <div class="flex items-center space-x-1">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 px-3">Basic</span>
-                        <div class="relative">
-                            <input type="checkbox" id="package-toggle" class="sr-only" onchange="togglePackageType()">
-                            <label for="package-toggle" class="flex items-center cursor-pointer">
-                                <div class="relative">
-                                    <div
-                                        class="w-16 h-8 bg-gray-300 dark:bg-gray-600 rounded-full shadow-inner transition-colors duration-300">
-                                    </div>
-                                    <div
-                                        class="toggle-dot absolute w-6 h-6 bg-white rounded-full shadow-md top-1 left-1 transition-transform duration-300 flex items-center justify-center">
-                                        <div
-                                            class="w-3 h-3 bg-blue-500 rounded-full transition-colors duration-300 dot-inner">
-                                        </div>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 px-3">Premium</span>
-                    </div>
-                    <div class="text-center mt-2">
-                        <span id="package-label" class="text-lg font-bold text-blue-500">Basic Package</span>
+                <div class="relative bg-gray-100 dark:bg-gray-800 p-2 rounded-2xl shadow-lg">
+                    <div class="flex flex-wrap justify-center gap-1">
+                        @if(isset($pricingPlans['basic']))
+                            <button onclick="showPackageType('basic')" 
+                                class="package-type-tab active px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg"
+                                data-type="basic">
+                                Basic
+                            </button>
+                        @endif
+                        @if(isset($pricingPlans['premium']))
+                            <button onclick="showPackageType('premium')" 
+                                class="package-type-tab px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                data-type="premium">
+                                Premium
+                            </button>
+                        @endif
+                        @if(isset($genericPlans) && $genericPlans->count() > 0)
+                            @foreach($genericPlans as $label => $deviceGroups)
+                                <button onclick="showPackageType('generic-{{ Str::slug($label) }}')" 
+                                    class="package-type-tab px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                    data-type="generic-{{ Str::slug($label) }}">
+                                    {{ $label }}
+                                </button>
+                            @endforeach
+                        @endif
                     </div>
                 </div>
             </div>
 
             <!-- Basic Server Plans -->
-            <div id="basic-plans" class="server-plans">
+            <div id="basic-plans" class="server-plans package-section">
                 <div class="text-center mb-12 animate-fade-in-up">
                     <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">Basic Server Plans</h2>
                     <p class="text-xl text-gray-600 dark:text-gray-300">Perfect for casual viewing with HD quality and
@@ -159,7 +161,7 @@
             </div>
 
             <!-- Premium Server Plans -->
-            <div id="premium-plans" class="server-plans hidden">
+            <div id="premium-plans" class="server-plans package-section hidden">
                 <div class="text-center mb-12 animate-fade-in-up">
                     <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">Premium Server Plans</h2>
                     <p class="text-xl text-gray-600 dark:text-gray-300">Enhanced experience with premium channels, 4K
@@ -280,36 +282,111 @@
                     </div>
                 @endif
             </div>
+
+            <!-- Generic Server Plans -->
+            @if(isset($genericPlans) && $genericPlans->count() > 0)
+                @foreach($genericPlans as $label => $deviceGroups)
+                    @php $slug = Str::slug($label); @endphp
+                    <div id="generic-{{ $slug }}-plans" class="server-plans package-section hidden">
+                        <div class="text-center mb-12 animate-fade-in-up">
+                            <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">{{ $label }} Plans</h2>
+                            <p class="text-xl text-gray-600 dark:text-gray-300">Explore our {{ $label }} subscription options</p>
+                        </div>
+
+                        <!-- Device Tabs -->
+                        <div class="flex justify-center mb-12">
+                            <div class="bg-gray-100 dark:bg-gray-800 p-2 rounded-2xl shadow-lg">
+                                <div class="flex flex-wrap justify-center gap-1">
+                                    @foreach($deviceGroups as $deviceCount => $plans)
+                                        <button onclick="showDevicePlans('generic-{{ $slug }}', {{ $deviceCount }})"
+                                            class="generic-{{ $slug }}-device-tab {{ $loop->first ? 'active bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' }} px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300">
+                                            {{ $deviceCount }} Device{{ $deviceCount > 1 ? 's' : '' }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Device Plans Content -->
+                        @foreach($deviceGroups as $deviceCount => $plans)
+                            <div id="generic-{{ $slug }}-device-{{ $deviceCount }}"
+                                class="generic-{{ $slug }}-device-content {{ $loop->first ? 'active' : '' }}"
+                                style="{{ $loop->first ? '' : 'display: none;' }}">
+                                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+                                    {{ $deviceCount }} Device{{ $deviceCount > 1 ? 's' : '' }} Plan</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-6">
+                                    @foreach($plans as $index => $plan)
+                                        <div class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 hover:transform hover:scale-105 animate-fade-in-up {{ $plan->duration_months == 12 ? 'border-2 border-amber-500 ring-4 ring-amber-100 dark:ring-amber-900/50' : 'border border-gray-200 dark:border-gray-700' }}"
+                                            style="animation-delay: {{ $index * 0.1 }}s">
+                                            @if($plan->duration_months == 12)
+                                                <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+                                                    <span class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg whitespace-nowrap">
+                                                        BEST VALUE
+                                                    </span>
+                                                </div>
+                                            @endif
+
+                                            <div class="text-center">
+                                                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900 dark:to-amber-800 rounded-2xl mb-6">
+                                                    <span class="text-2xl font-bold text-amber-500">{{ $plan->duration_months }}M</span>
+                                                </div>
+
+                                                <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                                    {{ $plan->duration_months }} Month{{ $plan->duration_months > 1 ? 's' : '' }}
+                                                </h4>
+
+                                                <div class="mb-6">
+                                                    <div class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                                                        ${{ number_format($plan->price, 0) }}</div>
+                                                    <div class="text-lg text-gray-500 dark:text-gray-400">
+                                                        ${{ number_format($plan->price / $plan->duration_months, 2) }}/month
+                                                    </div>
+                                                    @if($plan->duration_months > 1)
+                                                        <div class="text-sm text-amber-500 font-medium">Save
+                                                            {{ round((1 - $plan->price / $plan->duration_months / ($plan->price / 1)) * 100) }}%
+                                                        </div>
+                                                    @endif
+                                                </div>
+
+                                                @if($plan->features)
+                                                    <ul class="text-left space-y-3 mb-8">
+                                                        @foreach($plan->features as $feature)
+                                                            <li class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                                                <div class="w-5 h-5 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                                                    <svg class="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                                    </svg>
+                                                                </div>
+                                                                {{ $feature }}
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+
+                                                <a href="{{ route('checkout.show', ['plan_id' => $plan->id, 'source' => 'main']) }}"
+                                                    class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl block text-center group-hover:shadow-2xl">
+                                                    Subscribe
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endforeach
+            @endif
         </div>
     </div>
 
     <style>
-        /* Toggle Switch Styles */
-        .toggle-dot {
-            transition: transform 0.3s ease;
-        }
-
-        #package-toggle:checked~label .toggle-dot {
-            transform: translateX(32px);
-        }
-
-        #package-toggle:checked~label .toggle-dot .dot-inner {
-            background-color: #8b5cf6 !important;
-        }
-
-        #package-toggle:checked~label>div>div {
-            background-color: #8b5cf6;
-        }
-
-        /* Device Tab Styles */
-        .basic-device-tab.active,
-        .premium-device-tab.active {
+        /* Package Type Tab Styles */
+        .package-type-tab.active {
             position: relative;
             overflow: hidden;
         }
 
-        .basic-device-tab.active::before,
-        .premium-device-tab.active::before {
+        .package-type-tab.active::before {
             content: '';
             position: absolute;
             top: 0;
@@ -320,8 +397,7 @@
             transition: left 0.5s ease;
         }
 
-        .basic-device-tab:hover::before,
-        .premium-device-tab:hover::before {
+        .package-type-tab:hover::before {
             left: 100%;
         }
 
@@ -371,111 +447,97 @@
     </style>
 
     <script>
-        function togglePackageType() {
-            const toggle = document.getElementById('package-toggle');
-            const label = document.getElementById('package-label');
-            const basicPlans = document.getElementById('basic-plans');
-            const premiumPlans = document.getElementById('premium-plans');
+        const tabGradients = {
+            'basic': ['from-blue-500', 'to-indigo-600'],
+            'premium': ['from-indigo-500', 'to-purple-600'],
+        };
+        const defaultGradient = ['from-amber-500', 'to-orange-600'];
 
-            if (toggle.checked) {
-                // Switch to Premium
-                label.textContent = 'Premium Package';
-                label.classList.remove('text-blue-500');
-                label.classList.add('text-purple-500');
-                basicPlans.classList.add('hidden');
-                premiumPlans.classList.remove('hidden');
+        function getGradient(type) {
+            return tabGradients[type] || defaultGradient;
+        }
 
-                // Show first premium device tab
-                const firstPremiumTab = document.querySelector('.premium-device-tab');
-                if (firstPremiumTab) {
-                    const deviceCount = firstPremiumTab.textContent.match(/\d+/)[0];
-                    showDevicePlans('premium', parseInt(deviceCount));
-                }
-            } else {
-                // Switch to Basic
-                label.textContent = 'Basic Package';
-                label.classList.remove('text-purple-500');
-                label.classList.add('text-blue-500');
-                premiumPlans.classList.add('hidden');
-                basicPlans.classList.remove('hidden');
+        function getDeviceGradient(packageType) {
+            if (packageType === 'basic') return ['from-blue-500', 'to-indigo-600'];
+            if (packageType === 'premium') return ['from-indigo-500', 'to-purple-600'];
+            return ['from-amber-500', 'to-orange-600'];
+        }
 
-                // Show first basic device tab
-                const firstBasicTab = document.querySelector('.basic-device-tab');
-                if (firstBasicTab) {
-                    const deviceCount = firstBasicTab.textContent.match(/\d+/)[0];
-                    showDevicePlans('basic', parseInt(deviceCount));
-                }
+        function showPackageType(type) {
+            // Hide all package sections
+            document.querySelectorAll('.package-section').forEach(el => el.classList.add('hidden'));
+
+            // Show the selected section
+            const target = document.getElementById(type + '-plans');
+            if (target) {
+                target.classList.remove('hidden');
+            }
+
+            // Reset all package type tabs
+            const gradient = getGradient(type);
+            document.querySelectorAll('.package-type-tab').forEach(tab => {
+                tab.classList.remove('active', 'bg-gradient-to-r', 'text-white', 'shadow-lg',
+                    'from-blue-500', 'to-indigo-600', 'from-indigo-500', 'to-purple-600',
+                    'from-amber-500', 'to-orange-600');
+                tab.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-700');
+            });
+
+            // Style the active tab
+            const activeTab = document.querySelector(`.package-type-tab[data-type="${type}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active', 'bg-gradient-to-r', 'text-white', 'shadow-lg', ...gradient);
+                activeTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-700');
+            }
+
+            // Show first device tab of the selected package
+            const firstDeviceTab = document.querySelector(`.${type}-device-tab`);
+            if (firstDeviceTab) {
+                const deviceCount = parseInt(firstDeviceTab.textContent.match(/\d+/)[0]);
+                showDevicePlans(type, deviceCount);
             }
         }
 
         function showDevicePlans(packageType, deviceCount) {
-            // Hide all device contents for the current package type
             document.querySelectorAll(`.${packageType}-device-content`).forEach(el => {
                 el.classList.remove('active');
                 el.style.display = 'none';
             });
 
-            // Show selected device content
             const targetContent = document.getElementById(`${packageType}-device-${deviceCount}`);
             if (targetContent) {
                 targetContent.style.display = 'block';
                 targetContent.classList.add('active');
             }
 
-            // Update tab styles - Reset all tabs for current package type
+            const deviceGradient = getDeviceGradient(packageType);
+
             document.querySelectorAll(`.${packageType}-device-tab`).forEach(tab => {
-                tab.classList.remove('active');
-                if (packageType === 'basic') {
-                    tab.classList.remove('bg-gradient-to-r', 'from-orange-500', 'to-red-600', 'text-white',
-                        'shadow-lg');
-                } else {
-                    tab.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-purple-600', 'text-white',
-                        'shadow-lg');
-                }
-                tab.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200',
-                    'dark:hover:bg-gray-700');
+                tab.classList.remove('active', 'bg-gradient-to-r', 'text-white', 'shadow-lg',
+                    'from-blue-500', 'to-indigo-600', 'from-indigo-500', 'to-purple-600',
+                    'from-amber-500', 'to-orange-600', 'from-orange-500', 'to-red-600');
+                tab.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-700');
             });
 
-            // Style active tab
-            const activeTabs = document.querySelectorAll(`.${packageType}-device-tab`);
-            activeTabs.forEach(tab => {
+            document.querySelectorAll(`.${packageType}-device-tab`).forEach(tab => {
                 const tabDeviceCount = parseInt(tab.textContent.match(/\d+/)[0]);
                 if (tabDeviceCount === deviceCount) {
-                    tab.classList.add('active');
-                    tab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200',
-                        'dark:hover:bg-gray-700');
-                    if (packageType === 'basic') {
-                        tab.classList.add('bg-gradient-to-r', 'from-orange-500', 'to-red-600', 'text-white',
-                            'shadow-lg');
-                    } else {
-                        tab.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-purple-600', 'text-white',
-                            'shadow-lg');
-                    }
+                    tab.classList.add('active', 'bg-gradient-to-r', 'text-white', 'shadow-lg', ...deviceGradient);
+                    tab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-700');
                 }
             });
         }
 
-        // Legacy function for backward compatibility
         function showServerType(type) {
-            const toggle = document.getElementById('package-toggle');
-            if (type === 'premium') {
-                toggle.checked = true;
-            } else {
-                toggle.checked = false;
-            }
-            togglePackageType();
+            showPackageType(type);
         }
 
-        // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize with first basic device tab active
-            const firstBasicTab = document.querySelector('.basic-device-tab');
-            if (firstBasicTab) {
-                const deviceCount = parseInt(firstBasicTab.textContent.match(/\d+/)[0]);
-                showDevicePlans('basic', deviceCount);
+            // Show the first available package type
+            const firstTab = document.querySelector('.package-type-tab');
+            if (firstTab) {
+                showPackageType(firstTab.dataset.type);
             }
 
-            // Initialize animation observer
             const animatedElements = document.querySelectorAll('.animate-fade-in-up');
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -484,9 +546,7 @@
                         entry.target.style.transform = 'translateY(0)';
                     }
                 });
-            }, {
-                threshold: 0.1
-            });
+            }, { threshold: 0.1 });
 
             animatedElements.forEach(el => {
                 if (!el.style.opacity) {

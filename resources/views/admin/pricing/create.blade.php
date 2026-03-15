@@ -51,6 +51,7 @@
                                     <option value="">Select Server Type</option>
                                     <option value="basic" {{ old('server_type') === 'basic' ? 'selected' : '' }}>Basic</option>
                                     <option value="premium" {{ old('server_type') === 'premium' ? 'selected' : '' }}>Premium</option>
+                                    <option value="generic" {{ old('server_type') === 'generic' ? 'selected' : '' }}>Generic (Custom Name)</option>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                     <svg class="w-5 h-5 text-[#201E1F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,6 +60,23 @@
                                 </div>
                             </div>
                             @error('server_type')
+                                <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span>{{ $message }}</span>
+                                </p>
+                            @enderror
+                        </div>
+
+                        <!-- Custom Label (shown when Generic is selected) -->
+                        <div id="custom-label-wrapper" style="{{ old('server_type') === 'generic' ? '' : 'display: none;' }}">
+                            <label for="custom_label" class="block text-sm font-semibold text-[#201E1F] mb-2">Plan Display Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="custom_label" name="custom_label" value="{{ old('custom_label') }}" 
+                                   class="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300"
+                                   placeholder="e.g. Standard, Gold, Enterprise">
+                            <p class="mt-1 text-xs text-[#201E1F]/50">This name will be displayed in checkout and pricing pages</p>
+                            @error('custom_label')
                                 <p class="mt-2 text-sm text-red-600 flex items-center space-x-1">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
@@ -464,16 +482,33 @@ function removeFeature(button) {
     }
 }
 
+function toggleCustomLabel() {
+    const serverType = document.getElementById('server_type').value;
+    const wrapper = document.getElementById('custom-label-wrapper');
+    if (serverType === 'generic') {
+        wrapper.style.display = '';
+    } else {
+        wrapper.style.display = 'none';
+    }
+}
+
 function updatePreview() {
     // Get form values
     const serverType = document.getElementById('server_type').value;
+    const customLabel = document.getElementById('custom_label').value;
     const planType = document.getElementById('plan_type').value;
     const deviceCount = document.getElementById('device_count').value;
     const duration = document.getElementById('duration_months').value;
     const price = document.getElementById('price').value;
+
+    toggleCustomLabel();
+
+    const serverLabel = serverType === 'generic'
+        ? (customLabel || 'Custom')
+        : (serverType ? serverType.charAt(0).toUpperCase() + serverType.slice(1) : '-');
     
     // Update preview elements
-    document.getElementById('preview-server').textContent = serverType ? serverType.charAt(0).toUpperCase() + serverType.slice(1) : '-';
+    document.getElementById('preview-server').textContent = serverLabel;
     document.getElementById('preview-devices').textContent = deviceCount ? deviceCount : '-';
     document.getElementById('preview-type').textContent = planType ? (planType === 'regular' ? 'Regular' : 'Reseller') : '-';
     
@@ -481,14 +516,14 @@ function updatePreview() {
     const priceValue = parseFloat(price) || 0;
     const durationValue = parseInt(duration) || 1;
     
-    document.getElementById('preview-price').textContent = ' + priceValue.toFixed(2);
+    document.getElementById('preview-price').textContent = '$' + priceValue.toFixed(2);
     document.getElementById('preview-duration').textContent = '/ ' + durationValue + ' month' + (durationValue > 1 ? 's' : '');
-    document.getElementById('preview-monthly').textContent = ' + (priceValue / durationValue).toFixed(2) + '/month';
+    document.getElementById('preview-monthly').textContent = '$' + (priceValue / durationValue).toFixed(2) + '/month';
     
     // Update plan name based on selections
     let planName = 'New Plan';
     if (serverType && deviceCount && duration) {
-        planName = serverType.charAt(0).toUpperCase() + serverType.slice(1) + ' ' + deviceCount + ' Device' + (deviceCount > 1 ? 's' : '') + ' - ' + duration + ' Month' + (duration > 1 ? 's' : '');
+        planName = serverLabel + ' ' + deviceCount + ' Device' + (deviceCount > 1 ? 's' : '') + ' - ' + duration + ' Month' + (duration > 1 ? 's' : '');
     }
     document.getElementById('preview-name').textContent = planName;
     
@@ -539,7 +574,7 @@ function updatePreview() {
 // Add event listeners for real-time preview updates
 document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners to all form inputs
-    const formInputs = document.querySelectorAll('select, input[type="number"], input[name="features[]"]');
+    const formInputs = document.querySelectorAll('select, input[type="number"], input[name="features[]"], #custom_label');
     formInputs.forEach(input => {
         input.addEventListener('input', updatePreview);
         input.addEventListener('change', updatePreview);

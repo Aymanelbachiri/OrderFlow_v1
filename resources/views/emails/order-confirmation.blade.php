@@ -124,7 +124,7 @@
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; font-weight: bold;">Server Type:</td>
-                    <td style="padding: 8px 0; text-transform: capitalize;">{{ $order->pricingPlan->server_type }}</td>
+                    <td style="padding: 8px 0; text-transform: capitalize;">{{ $order->pricingPlan->server_label }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; font-weight: bold;">Device Count:</td>

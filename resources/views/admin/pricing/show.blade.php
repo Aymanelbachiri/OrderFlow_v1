@@ -60,8 +60,15 @@
                         
                         <div>
                             <label class="block text-sm font-semibold text-[#201E1F] mb-2">Server Type</label>
-                            <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full {{ $pricingPlan->server_type === 'premium' ? 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 border border-purple-300' : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 border border-emerald-300' }}">
-                                {{ ucfirst($pricingPlan->server_type) }}
+                            @php
+                                $showBadgeClass = match($pricingPlan->server_type) {
+                                    'premium' => 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 border border-purple-300',
+                                    'generic' => 'bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 border border-amber-300',
+                                    default => 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 border border-emerald-300',
+                                };
+                            @endphp
+                            <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full {{ $showBadgeClass }}">
+                                {{ $pricingPlan->server_label }}
                             </span>
                         </div>
                         
@@ -185,7 +192,7 @@
                         <div class="space-y-3 text-sm mb-6">
                             <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                                 <span class="text-[#201E1F]/70">Server:</span>
-                                <span class="font-semibold text-[#201E1F]">{{ ucfirst($pricingPlan->server_type) }}</span>
+                                <span class="font-semibold text-[#201E1F]">{{ $pricingPlan->server_label }}</span>
                             </div>
                             <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                                 <span class="text-[#201E1F]/70">Devices:</span>

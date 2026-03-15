@@ -25,12 +25,17 @@
   Reason: Each source can optionally receive new order notifications at its own email address (toggle). When enabled, admin notifications for that source go to the source's notify_email using the source's SMTP. When disabled, notifications go to the global admin email using the "main" source SMTP.
   Date: 2026-03-15
 
+- Decision: Generic plan type for pricing plans
+  Reason: Allow admins to create plans that are neither "basic" nor "premium" with a custom display name (custom_label) shown in checkout, pricing pages, and emails.
+  Date: 2026-03-15
+
 ## 4. Database Schema
 - Orders table: subscription_username, subscription_password, subscription_url, subscription_m3u_url (legacy), devices (JSON)
 - M3U URL is per device: stored when pasted via Fill from M3U, or built from url+username+password. Emails include stored/built M3U link per device.
 - Users table: role enum now includes 'agent' (admin, client, reseller, agent)
 - agent_source pivot table: user_id (FK), source_id (FK) - links agents to their allowed sources
 - Sources table: use_own_notify_email (bool, default false), notify_email (nullable string) - per-source order notification routing
+- Pricing Plans table: server_type enum now includes 'generic' (basic, premium, generic); custom_label (nullable string) - display name for generic plans
 
 ## 5. API Contracts
 - (Web routes for admin order management)
@@ -55,3 +60,4 @@
 - Route split: admin+agent routes (dashboard, clients, orders, resellers, trials, analytics) vs admin-only routes (agents, pricing, credit packs, custom products, sources, affiliates, settings, WordPress, payment config)
 - Sidebar: admin-only items hidden for agents via @if(auth()->user()->isAdmin())
 - Source notification emails: toggle per source (use_own_notify_email) routes admin order notifications to source's own email or global admin email. Logic centralized in SendPaymentCompletedEmails::sendAdminNotification() and EmailService::resolveAdminRecipientsForOrder()
+- Generic pricing plan type: server_type='generic' + custom_label field. Displayed in admin (create/edit/index/show), public pricing page (as separate tab per custom_label), checkout, order views, and emails using server_label accessor.

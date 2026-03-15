@@ -45,24 +45,45 @@
         </div>
 
         @if(isset($pricingPlans['regular']))
-            @foreach(['basic', 'premium'] as $serverType)
+            @foreach(['basic', 'premium', 'generic'] as $serverType)
                 @if(isset($pricingPlans['regular'][$serverType]))
                     <div class="px-6 py-6 {{ !$loop->last ? 'border-b border-[#D63613]/10' : '' }}">
                         <div class="flex items-center space-x-3 mb-6">
-                            <div class="w-8 h-8 bg-gradient-to-br {{ $serverType === 'basic' ? 'from-emerald-400 to-emerald-600' : 'from-purple-400 to-purple-600' }} rounded-lg flex items-center justify-center">
+                            @php
+                                $gradientClass = match($serverType) {
+                                    'basic' => 'from-emerald-400 to-emerald-600',
+                                    'premium' => 'from-purple-400 to-purple-600',
+                                    'generic' => 'from-amber-400 to-amber-600',
+                                };
+                                $badgeClass = match($serverType) {
+                                    'basic' => 'bg-emerald-100 text-emerald-700',
+                                    'premium' => 'bg-purple-100 text-purple-700',
+                                    'generic' => 'bg-amber-100 text-amber-700',
+                                };
+                                $badgeText = match($serverType) {
+                                    'basic' => 'Standard',
+                                    'premium' => 'High Performance',
+                                    'generic' => 'Custom',
+                                };
+                            @endphp
+                            <div class="w-8 h-8 bg-gradient-to-br {{ $gradientClass }} rounded-lg flex items-center justify-center">
                                 @if($serverType === 'basic')
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-                                @else
+                                @elseif($serverType === 'premium')
                                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"></path>
                                     </svg>
+                                @else
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"></path>
+                                    </svg>
                                 @endif
                             </div>
-                            <h3 class="text-lg font-semibold text-[#201E1F]">{{ ucfirst($serverType) }} Server</h3>
-                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {{ $serverType === 'basic' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700' }}">
-                                {{ $serverType === 'basic' ? 'Standard' : 'High Performance' }}
+                            <h3 class="text-lg font-semibold text-[#201E1F]">{{ $serverType === 'generic' ? 'Generic' : ucfirst($serverType) }} Server</h3>
+                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {{ $badgeClass }}">
+                                {{ $badgeText }}
                             </span>
                         </div>
 
@@ -82,6 +103,9 @@
                                         <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:border-[#D63613]/30">
                                             <div class="flex justify-between items-start mb-4">
                                                 <div>
+                                                    @if($plan->server_type === 'generic' && $plan->custom_label)
+                                                        <p class="text-xs font-medium text-amber-600 mb-1">{{ $plan->custom_label }}</p>
+                                                    @endif
                                                     <h5 class="font-semibold text-[#201E1F] mb-1">{{ $plan->duration_months }} Month{{ $plan->duration_months > 1 ? 's' : '' }}</h5>
                                                     <div class="flex items-baseline space-x-1">
                                                         <span class="text-3xl font-bold text-[#D63613]">${{ number_format($plan->price, 2) }}</span>

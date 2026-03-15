@@ -537,7 +537,7 @@
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-[#201E1F]/60">Server Type</label>
                         <input type="text" 
-                               value="{{ ucfirst($order->pricingPlan->server_type) }}"
+                               value="{{ $order->pricingPlan->server_label }}"
                                class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-[#201E1F]"
                                readonly>
                     </div>

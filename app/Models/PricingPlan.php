@@ -14,6 +14,7 @@ class PricingPlan extends Model
     protected $fillable = [
         'name',
         'server_type',
+        'custom_label',
         'plan_type',
         'device_count',
         'duration_months',
@@ -35,7 +36,7 @@ class PricingPlan extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'server_type', 'device_count', 'duration_months', 'price', 'is_active'])
+            ->logOnly(['name', 'server_type', 'custom_label', 'device_count', 'duration_months', 'price', 'is_active'])
             ->logOnlyDirty();
     }
 
@@ -70,6 +71,16 @@ class PricingPlan extends Model
     public function getDisplayNameAttribute()
     {
         $planTypeLabel = $this->plan_type === 'reseller' ? 'Reseller ' : '';
-        return $planTypeLabel . ucfirst($this->server_type) . ' - ' . $this->device_count . ' Device(s) - ' . $this->duration_months . ' Month(s)';
+        $serverLabel = $this->server_type === 'generic'
+            ? ($this->custom_label ?: 'Custom')
+            : ucfirst($this->server_type);
+        return $planTypeLabel . $serverLabel . ' - ' . $this->device_count . ' Device(s) - ' . $this->duration_months . ' Month(s)';
+    }
+
+    public function getServerLabelAttribute()
+    {
+        return $this->server_type === 'generic'
+            ? ($this->custom_label ?: 'Custom')
+            : ucfirst($this->server_type);
     }
 }

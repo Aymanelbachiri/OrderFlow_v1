@@ -183,7 +183,7 @@ class PublicRenewalController extends Controller
         $validated = $request->validate([
             'email' => 'required|email',
             'pricing_plan_id' => 'nullable|exists:pricing_plans,id',
-            'server_type' => 'nullable|in:basic,premium',
+            'server_type' => 'nullable|in:basic,premium,generic',
             'device_count' => 'nullable|integer|min:1',
             'duration_months' => 'nullable|integer|min:1',
             'payment_method' => \App\Services\PaymentService::getPaymentMethodValidationRules(),

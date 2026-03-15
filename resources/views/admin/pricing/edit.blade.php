@@ -68,8 +68,24 @@
                             <option value="">Select Server Type</option>
                             <option value="basic" {{ old('server_type', $pricingPlan->server_type) == 'basic' ? 'selected' : '' }}>Basic</option>
                             <option value="premium" {{ old('server_type', $pricingPlan->server_type) == 'premium' ? 'selected' : '' }}>Premium</option>
+                            <option value="generic" {{ old('server_type', $pricingPlan->server_type) == 'generic' ? 'selected' : '' }}>Generic (Custom Name)</option>
                         </select>
                         @error('server_type')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Custom Label (shown when Generic is selected) -->
+                    <div id="custom-label-wrapper" class="space-y-2" style="{{ old('server_type', $pricingPlan->server_type) === 'generic' ? '' : 'display: none;' }}">
+                        <label for="custom_label" class="block text-sm font-medium text-[#201E1F]/60">Plan Display Name <span class="text-red-500">*</span></label>
+                        <input type="text" 
+                               id="custom_label" 
+                               name="custom_label" 
+                               value="{{ old('custom_label', $pricingPlan->custom_label) }}"
+                               class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[#201E1F] focus:border-[#D63613] focus:ring-2 focus:ring-[#D63613]/20 transition-all duration-300 @error('custom_label') border-red-300 @enderror"
+                               placeholder="e.g. Standard, Gold, Enterprise">
+                        <p class="text-xs text-[#201E1F]/50">This name will be displayed in checkout and pricing pages</p>
+                        @error('custom_label')
                             <p class="text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -346,13 +362,30 @@ function removeFeature(button) {
     }
 }
 
+function toggleCustomLabel() {
+    const serverType = document.getElementById('server_type').value;
+    const wrapper = document.getElementById('custom-label-wrapper');
+    if (serverType === 'generic') {
+        wrapper.style.display = '';
+    } else {
+        wrapper.style.display = 'none';
+    }
+}
+
 function updatePreview() {
     const serverType = document.getElementById('server_type').value;
+    const customLabel = document.getElementById('custom_label').value;
     const deviceCount = document.getElementById('device_count').value;
     const duration = document.getElementById('duration_months').value;
+
+    toggleCustomLabel();
+
+    const serverLabel = serverType === 'generic'
+        ? (customLabel || 'Custom')
+        : (serverType ? serverType.charAt(0).toUpperCase() + serverType.slice(1) : '');
     
-    if (serverType && deviceCount && duration) {
-        const name = `${serverType.charAt(0).toUpperCase() + serverType.slice(1)} - ${deviceCount} Device${deviceCount > 1 ? 's' : ''} - ${duration} Month${duration > 1 ? 's' : ''}`;
+    if (serverLabel && deviceCount && duration) {
+        const name = `${serverLabel} - ${deviceCount} Device${deviceCount > 1 ? 's' : ''} - ${duration} Month${duration > 1 ? 's' : ''}`;
         document.getElementById('preview-name').textContent = name;
         document.getElementById('preview-display-name').textContent = name;
     }
@@ -360,6 +393,7 @@ function updatePreview() {
 
 // Add event listeners for preview updates
 document.getElementById('server_type').addEventListener('change', updatePreview);
+document.getElementById('custom_label').addEventListener('input', updatePreview);
 document.getElementById('device_count').addEventListener('input', updatePreview);
 document.getElementById('duration_months').addEventListener('change', updatePreview);
 

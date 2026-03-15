@@ -499,7 +499,7 @@
                     
                     <div class="space-y-2">
                         <label class="block text-sm font-medium text-[#201E1F]/60">Server Type</label>
-                        <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200 capitalize">{{ $order->pricingPlan->server_type }}</p>
+                        <p class="text-sm text-[#201E1F] bg-white rounded-lg px-4 py-3 border border-gray-200 capitalize">{{ $order->pricingPlan->server_label }}</p>
                     </div>
                     
                     <div class="space-y-2">

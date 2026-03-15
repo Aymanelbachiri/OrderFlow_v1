@@ -38,7 +38,8 @@ class PricingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'server_type' => 'required|in:basic,premium',
+            'server_type' => 'required|in:basic,premium,generic',
+            'custom_label' => 'nullable|required_if:server_type,generic|string|max:100',
             'plan_type' => 'required|in:regular,reseller',
             'device_count' => 'required|integer|min:1|max:10',
             'duration_months' => 'required|integer|min:1|max:24',
@@ -49,9 +50,15 @@ class PricingController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Generate name
+        if ($validated['server_type'] !== 'generic') {
+            $validated['custom_label'] = null;
+        }
+
         $planTypePrefix = $validated['plan_type'] === 'reseller' ? 'Reseller ' : '';
-        $validated['name'] = $planTypePrefix . ucfirst($validated['server_type']) . ' - ' .
+        $serverLabel = $validated['server_type'] === 'generic'
+            ? ($validated['custom_label'] ?? 'Custom')
+            : ucfirst($validated['server_type']);
+        $validated['name'] = $planTypePrefix . $serverLabel . ' - ' .
                            $validated['device_count'] . ' Device(s) - ' .
                            $validated['duration_months'] . ' Month(s)';
 
@@ -86,7 +93,8 @@ class PricingController extends Controller
     public function update(Request $request, PricingPlan $pricing)
     {
         $validated = $request->validate([
-            'server_type' => 'required|in:basic,premium',
+            'server_type' => 'required|in:basic,premium,generic',
+            'custom_label' => 'nullable|required_if:server_type,generic|string|max:100',
             'plan_type' => 'required|in:regular,reseller',
             'device_count' => 'required|integer|min:1|max:10',
             'duration_months' => 'required|integer|min:1|max:24',
@@ -97,9 +105,15 @@ class PricingController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Update name
+        if ($validated['server_type'] !== 'generic') {
+            $validated['custom_label'] = null;
+        }
+
         $planTypePrefix = $validated['plan_type'] === 'reseller' ? 'Reseller ' : '';
-        $validated['name'] = $planTypePrefix . ucfirst($validated['server_type']) . ' - ' .
+        $serverLabel = $validated['server_type'] === 'generic'
+            ? ($validated['custom_label'] ?? 'Custom')
+            : ucfirst($validated['server_type']);
+        $validated['name'] = $planTypePrefix . $serverLabel . ' - ' .
                            $validated['device_count'] . ' Device(s) - ' .
                            $validated['duration_months'] . ' Month(s)';
 

@@ -16,14 +16,23 @@ class HomeController extends Controller
     public function pricing()
     {
         $pricingPlans = PricingPlan::where('is_active', true)
-            ->where('plan_type', 'regular') // Only show regular plans on pricing page
+            ->where('plan_type', 'regular')
             ->orderBy('server_type')
             ->orderBy('device_count')
             ->orderBy('duration_months')
             ->get()
             ->groupBy(['server_type', 'device_count']);
 
-        return view('pricing', compact('pricingPlans'));
+        $genericPlans = PricingPlan::where('is_active', true)
+            ->where('plan_type', 'regular')
+            ->where('server_type', 'generic')
+            ->orderBy('custom_label')
+            ->orderBy('device_count')
+            ->orderBy('duration_months')
+            ->get()
+            ->groupBy(['custom_label', 'device_count']);
+
+        return view('pricing', compact('pricingPlans', 'genericPlans'));
     }
 
     // public function blog()
