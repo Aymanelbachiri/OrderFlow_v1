@@ -47,7 +47,7 @@
 ## 7. Known Issues / Constraints
 - M3U URL parsing expects format: ...?username=xxx&password=yyy (get.php style)
 - SMTP SSL hostname mismatch: When host (e.g. mail.smarters-proiptv.com) uses a cert with different CN (e.g. *.web-hosting.com), set MAIL_VERIFY_PEER=false in .env
-- SQLite CHECK constraint: Laravel enum() creates a CHECK constraint in SQLite. The migration 2026_03_15_000001 uses PRAGMA writable_schema to update the constraint to include 'agent'. Must run `php artisan migrate` after pulling.
+- SQLite CHECK constraint: Laravel enum() creates a CHECK constraint in SQLite. The migration 2026_03_15_000001 uses PRAGMA writable_schema to update the constraint to include 'agent'. The migration 2026_03_15_000003 uses the same approach to add 'generic' to pricing_plans.server_type. Must run `php artisan migrate` after pulling.
 
 ## 8. Current State
 - Subscription activation: each device has its own "Fill from M3U" for per-device URLs
